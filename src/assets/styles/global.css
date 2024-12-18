@@ -1,0 +1,70 @@
+/* 全局样式表 */
+html,
+body {
+    height: 100%;
+    width: 100%;
+    min-height: 100vh;
+    min-width: 100vw;
+
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    overflow-y: hidden;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /*忽略边框的盒装模型*/
+    
+}
+
+#app {
+    min-height: 100vh;
+    min-width: 100vw;
+
+    max-width: 2880px;
+
+    height: 100%;
+    width: 100%;
+
+    /* padding: 0 50px;
+    padding-top: 15px; */
+    position: relative;
+    
+    
+}
+
+:root {
+    --primary-100: #d4eaf7;
+    --primary-200: #b6ccd8;
+    --primary-300: #3b3c3d;
+    --accent-100: #71c4ef;
+    --accent-200: #00668c;
+    --text-100: #1d1c1c;
+    --text-200: #313d44;
+    --bg-100: #fffefb;
+    --bg-200: #f5f4f1;
+    --bg-300: #cccbc8;
+
+}
+
+body {
+    color: var(--text-100);
+    background-color: #F4F4F6;
+}
+
+/* 去除a标签的默认样式 */
+a {
+    text-decoration: none;
+    /* 去除下划线 */
+    color: inherit;
+    /* 使用继承的颜色，保持链接文字颜色与父元素一致 */
+}
+
+a:hover {
+    text-decoration: none;
+    /* 在悬停时仍然去除下划线 */
+    color: inherit;
+}
