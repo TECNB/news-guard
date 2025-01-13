@@ -67,7 +67,7 @@ const menus = [
         children: [
             { label: '文字', path: '/verify-text' },
             { label: '图片', path: '/verify-image' },
-            { label: '音频', path: '/' },
+            { label: '音频', path: '/verify-audio' },
             { label: '视频', path: '/' },
 
         ],
@@ -92,6 +92,11 @@ const menus = [
         label: '虚假新闻预测',
         icon: 'Position',
         path: '/prediction'
+    },
+    {
+        label: '虚假新闻还原',
+        icon: 'Position',
+        path: '/restore'
     },
 ];
 

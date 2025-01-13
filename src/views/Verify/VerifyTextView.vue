@@ -81,95 +81,99 @@
                     </p>
                 </div>
             </div>
-            <div v-if="activeTab === 1" class="mt-10">
-                <!-- 句子分析 -->
-                <div class="border-b pb-5">
-                    <p class="text-[#49CFAD] text-xl font-bold text-left ">可能由AI书写的句子</p>
-                    <div class="flex justify-start items-center gap-2 mt-2">
-                        <div class="w-4 h-4 bg-yellow-200 rounded-lg" />
-                        <div class="w-4 h-4 bg-yellow-500 rounded-lg" />
-                        <div class="w-4 h-4 bg-yellow-700 rounded-lg" />
-                        <p class="text-gray-300 font-bold">AI 影响大</p>
+            <div v-if="activeTab === 1" class="h-[90%] mt-10">
+                <el-scrollbar height="100%">
+                    <!-- 句子分析 -->
+                    <div class="border-b pb-5">
+                        <p class="text-[#49CFAD] text-xl font-bold text-left ">可能由AI书写的句子</p>
+                        <div class="flex justify-start items-center gap-2 mt-2">
+                            <div class="w-4 h-4 bg-yellow-200 rounded-lg" />
+                            <div class="w-4 h-4 bg-yellow-500 rounded-lg" />
+                            <div class="w-4 h-4 bg-yellow-700 rounded-lg" />
+                            <p class="text-gray-300 font-bold">AI 影响大</p>
+                        </div>
                     </div>
-                </div>
-                <div class="border-b pb-5">
-                    <div class="flex justify-start items-center gap-2 mt-5">
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4 bg-yellow-700 rounded-lg" />
-                        <p class="text-gray-500 font-bold">更多信息，请访问推特官网或联系新闻部门。</p>
+
+                    <div class="border-b pb-5">
+                        <div v-for="(sentence, index) in aiSentences" :key="index"
+                            class="flex justify-start items-center gap-2 mt-5">
+                            <div v-for="i in 3" :key="i" :class="{
+                                'w-4 h-4 border rounded-lg': true,
+                                'bg-yellow-200': sentence.importance === 1 && i === 1,
+                                'bg-yellow-500': sentence.importance === 2 && i === 2,
+                                'bg-yellow-700': sentence.importance === 3 && i === 3
+                            }" />
+                            <p class="text-gray-500 font-bold">{{ sentence.text }}</p>
+                        </div>
                     </div>
-                    <div class="flex justify-start items-center gap-2 mt-5">
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4 bg-yellow-700 rounded-lg" />
-                        <p class="text-gray-500 font-bold">埃隆•马斯克是特斯拉、SpaceX、Neuralinx...</p>
+
+                    <!-- 句子分析 -->
+                    <div class="border-b py-5">
+                        <p class="text-[#49CFAD] text-xl font-bold text-left ">可能由人类书写的句子</p>
+                        <div class="flex justify-start items-center gap-2 mt-2">
+                            <div class="w-4 h-4 bg-green-200 rounded-lg" />
+                            <div class="w-4 h-4 bg-green-500 rounded-lg" />
+                            <div class="w-4 h-4 bg-green-700 rounded-lg" />
+                            <p class="text-gray-300 font-bold">人类 影响大</p>
+                        </div>
                     </div>
-                    <div class="flex justify-start items-center gap-2 mt-5">
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4 bg-yellow-700 rounded-lg" />
-                        <p class="text-gray-500 font-bold">全球扩展与本地化：针对不同地区推出...</p>
+
+                    <div class="border-b pb-5">
+                        <div v-for="(sentence, index) in humanSentences" :key="index"
+                            class="flex justify-start items-center gap-2 mt-5">
+                            <div v-for="i in 3" :key="i" :class="{
+                                'w-4 h-4 border rounded-lg': true,
+                                'bg-green-200': sentence.importance === 1 && i === 1,
+                                'bg-green-500': sentence.importance === 2 && i === 2,
+                                'bg-green-700': sentence.importance === 3 && i === 3
+                            }" />
+                            <p class="text-gray-500 font-bold">{{ sentence.text }}</p>
+                        </div>
                     </div>
-                    <div class="flex justify-start items-center gap-2 mt-5">
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4 bg-yellow-700 rounded-lg" />
-                        <p class="text-gray-500 font-bold">此次收购引发了业界广泛讨论。支持者认为...</p>
-                    </div>
-                    <div class="flex justify-start items-center gap-2 mt-5">
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4 bg-yellow-500 rounded-lg" />
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <p class="text-gray-500 font-bold">愿景与目标</p>
-                    </div>
-                </div>
 
 
-                <!-- 句子分析 -->
-                <div class="border-b py-5">
-                    <p class="text-[#49CFAD] text-xl font-bold text-left ">可能由人类书写的句子</p>
-                    <div class="flex justify-start items-center gap-2 mt-2">
-                        <div class="w-4 h-4 bg-green-200 rounded-lg" />
-                        <div class="w-4 h-4 bg-green-500 rounded-lg" />
-                        <div class="w-4 h-4 bg-green-700 rounded-lg" />
-                        <p class="text-gray-300 font-bold">人类 影响大</p>
-                    </div>
-                </div>
+                </el-scrollbar>
 
-                <div class="border-b pb-5">
-                    <div class="flex justify-start items-center gap-2 mt-5">
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4 bg-green-700 rounded-lg" />
-                        <p class="text-gray-500 font-bold">马斯克完成推特收购，引领社交媒体新时代...</p>
-                    </div>
-                    <div class="flex justify-start items-center gap-2 mt-5">
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4 bg-green-700 rounded-lg" />
-                        <p class="text-gray-500 font-bold">马斯克曾公开强调，他的收购目标是推动....</p>
-                    </div>
-                    <div class="flex justify-start items-center gap-2 mt-5">
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4 bg-green-500 rounded-lg" />
-                        <div class="w-4 h-4  border rounded-lg" />
-                        
-                        <p class="text-gray-500 font-bold">此次收购引发了业界广泛讨论...</p>
-                    </div>
-                    <div class="flex justify-start items-center gap-2 mt-5">
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4  border rounded-lg" />
-                        <div class="w-4 h-4 bg-green-700 rounded-lg" />
-                        <p class="text-gray-500 font-bold">经过多轮谈判，最终尘埃落定</p>
-                    </div>
-                </div>
 
             </div>
-            <div v-if="activeTab === 2" class="mt-10">
-                <!-- 短语分析 -->
-                <p class="text-[#49CFAD] text-xl font-bold">短语分析</p>
-                <p class="text-[#777777] mt-5">这里是短语分析的内容...</p>
+            <div v-if="activeTab === 2" class="h-[90%] mt-10">
+                <!-- 来源分析 -->
+                <p class="text-[#49CFAD] text-xl font-bold text-left ">发现下面三句可能来源</p>
+                <p class="text-green-300 text-left ">点击句子发现来源</p>
+
+                <div class="w-full flex justify-center items-center">
+                    <div class="flex-1 h-3 bg-blue-100" />
+                    <div class="flex-1 h-3 bg-blue-200" />
+                    <div class="flex-1 h-3 bg-purple-200 " />
+                    <div class="flex-1 h-3 bg-red-100" />
+                    <div class="flex-1 h-3 bg-red-200" />
+                </div>
+                <div class="w-full flex justify-between items-center mt-2">
+                    <p class="text-xs font-bold text-gray-400">发现一些模糊来源</p>
+                    <p class="text-xs font-bold text-gray-600">发现一些精确来源</p>
+                    <p class="text-xs font-bold text-red-300">发现大量精确来源</p>
+                </div>
+                <el-scrollbar height="85%" class="mt-2">
+                    <div v-for="(sentence, index) in sourceSentences" :key="index"
+                        class="shadow-md border flex flex-col justify-center items-start gap-1 px-3 py-2 rounded-md mt-3">
+                        <p class="text-sm text-gray-500 font-bold">句子{{ index + 1 }}</p>
+                        <p class="text-left font-bold">{{ sentence.text }}</p>
+                        <div :class="{
+                            'bg-blue-100': sentence.importance === 1,
+                            'bg-purple-200': sentence.importance === 2,
+                            'bg-red-200': sentence.importance === 3
+                        }" class="rounded-md p-1">
+                            <p :class="{
+                                'text-gray-400': sentence.importance === 1,
+                                'text-gray-600': sentence.importance === 2,
+                                'text-red-500': sentence.importance === 3
+                            }" class="text-xs font-bold cursor-pointer">
+                                {{ sentence.importance === 1 ? '发现一些模糊来源' : sentence.importance === 2 ? '发现一些精确来源' :
+                                '发现大量精确来源' }}
+                            </p>
+                        </div>
+                    </div>
+                </el-scrollbar>
             </div>
         </div>
     </div>
@@ -196,10 +200,30 @@ const allType = ref([
     { name: "芬兰文", objectId: "14" },
 ]);
 
+const aiSentences = ref([
+    { text: '更多信息，请访问推特官网或联系新闻部门。', importance: 3 },
+    { text: '埃隆•马斯克是特斯拉、SpaceX、Neuralinx...', importance: 3 },
+    { text: '全球扩展与本地化：针对不同地区推出...', importance: 3 },
+    { text: '此次收购引发了业界广泛讨论。支持者认为...', importance: 3 },
+    { text: '愿景与目标', importance: 2 },
+]);
+
+const humanSentences = ref([
+    { text: '马斯克完成推特收购，引领社交媒体新时代...', importance: 3 },
+    { text: '马斯克曾公开强调，他的收购目标是推动...', importance: 3 },
+    { text: '此次收购引发了业界广泛讨论...', importance: 2 },
+    { text: '经过多轮谈判，最终尘埃落定', importance: 3 },
+]);
+
+const sourceSentences = ref([
+    { text: '马斯克完成控特收胸，引领社交媒体新时代', importance: 1 },
+    { text: '马斯克表示：“擁特是一座数字时代的城布广场，它承壁看无數关于未来的可能性。我期转通过创新。撞动推特成为更开放。更包赛的公共讨论平台。‘', importance: 2 },
+    { text: '马斯克曾公开强调，他的收购目标是推动行业进步', importance: 3 },
+]);
 // 文本输入、选中语言、分析类型
 const category = ref('简体中文');
 const text = ref('');
-const tabs = ['概述', '句子分析', '短语分析'];
+const tabs = ['概述', '句子分析', '来源分析'];
 const activeTab = ref(0);
 
 // 检测文本函数

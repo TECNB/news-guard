@@ -33,6 +33,10 @@ const routes: Array<RouteRecordRaw> = [
             {
                 path: '/prediction',
                 component: () => import("../views/FakeNewsPredictionView.vue"),
+            },
+            {
+                path: '/restore',
+                component: () => import("../views/FakeNewsRestoreView.vue"),
             }
         ],
     },
