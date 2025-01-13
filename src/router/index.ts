@@ -7,21 +7,33 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import("../views/IndexView.vue"),
         children: [
             {
+                path: "/",
+                component: () => import("../views/StatisticView.vue"),
+            },
+            {
                 path: "/verify-text",
-        component: () => import("../views/Verify/VerifyTextView.vue"),
+                component: () => import("../views/Verify/VerifyTextView.vue"),
             },
             {
                 path: "/verify-image",
-        component: () => import("../views/Verify/VerifyImageView.vue"),
+                component: () => import("../views/Verify/VerifyImageView.vue"),
             },
             {
                 path: "/verify-audio",
-        component: () => import("../views/Verify/VerifyAudioView.vue"),
+                component: () => import("../views/Verify/VerifyAudioView.vue"),
             },
             {
                 path: "/verify-video",
-        component: () => import("../views/Verify/VerifyVideoView.vue"),
+                component: () => import("../views/Verify/VerifyVideoView.vue"),
             },
+            {
+                path: '/review',
+                component: () => import("../views/FakeNewsReviewView.vue"),
+            },
+            {
+                path: '/prediction',
+                component: () => import("../views/FakeNewsPredictionView.vue"),
+            }
         ],
     },
 ];

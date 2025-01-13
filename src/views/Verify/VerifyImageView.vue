@@ -28,7 +28,7 @@
             </div>
             <div class="h-[85%] flex justify-between items-center gap-5 mt-10">
                 <div class="h-full flex-1 flex justify-between items-center border rounded-xl  bg-green-50">
-                    <img class="" src="/Users/tec/Desktop/dingzhen 3.png" alt="">
+                    <img class="" src="/Users/tec/Desktop/Pic/news-guard/dingzhen 3.png" alt="">
                 </div>
                 <div class="h-full flex-1">
                     <div class="h-[15%] border rounded-xl bg-green-50 flex justify-center items-center">
@@ -65,7 +65,7 @@
                             </el-progress>
                         </div>
                         <div class="flex-1 h-full flex justify-center items-center border rounded-xl  bg-green-50">
-                            <radarContainer :width="160" :height="160" :data="radarData"
+                            <RadarContainer :width="160" :height="160" :data="radarData"
                                 :chartOption="radarOptions" />
                         </div>
                     </div>

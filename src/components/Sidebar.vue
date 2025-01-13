@@ -83,6 +83,16 @@ const menus = [
         icon: 'PieChart',
         path: '/'
     },
+    {
+        label: '虚假新闻盘点',
+        icon: 'Compass',
+        path: '/review'
+    },
+    {
+        label: '虚假新闻预测',
+        icon: 'Position',
+        path: '/prediction'
+    },
 ];
 
 
