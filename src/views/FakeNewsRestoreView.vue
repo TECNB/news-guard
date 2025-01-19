@@ -1,6 +1,6 @@
 <template>
     <div class="FakeNewsRestoreView w-full px-5 py-3">
-        <div class="w-[92%] flex justify-between items-center border-b -mx-5 px-7 pb-2 ">
+        <div class="w-full flex justify-between items-center border-b px-7 pb-2 ">
             <p class="text-2xl font-bold">虚假新闻还原工作流</p>
 
             <div class="flex justify-center items-center gap-5">
@@ -170,31 +170,31 @@ interface PipelineStage {
 // stage为ref类型
 const stages = ref<PipelineStage[]>([
     {
-        title: '数据源',
+        title: '数据收集',
         num: 2,
         status: 'notStarted',
         completedTasks: 0
     },
     {
-        title: '数据预处理',
+        title: '新闻预处理',
         num: 1,
         status: 'notStarted',
         completedTasks: 0
     },
     {
-        title: '图表生成',
+        title: '虚假新闻检测',
         num: 3,
         status: 'notStarted',
         completedTasks: 0
     },
     {
-        title: '报表生成',
+        title: '还原分析',
         num: 1,
         status: 'notStarted',
         completedTasks: 0
     },
     {
-        title: '新阶段',
+        title: '报告生成',
         num: 0,
         status: 'notStarted',
         completedTasks: 0
@@ -203,14 +203,14 @@ const stages = ref<PipelineStage[]>([
 
 const tasks = [
     {
-        title: '数据源',
-        subTasks: [ // 使用 subTasks 替换 children
+        title: '数据收集',
+        subTasks: [
             {
-                title: '年度空气质量统计表',
+                title: '爬取新闻数据',
                 subTasks: []
             },
             {
-                title: '碳排放来源表',
+                title: '获取第三方验证数据',
                 subTasks: []
             }
         ]

@@ -32,6 +32,9 @@ body {
     /* padding: 0 50px;
     padding-top: 15px; */
     position: relative;
+
+    /* 横向不滚动 */
+    overflow-x: hidden;
     
     
 }

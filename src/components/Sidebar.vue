@@ -95,7 +95,7 @@ const menus = [
     },
     {
         label: '虚假新闻还原',
-        icon: 'Position',
+        icon: 'MagicStick',
         path: '/restore'
     },
 ];
