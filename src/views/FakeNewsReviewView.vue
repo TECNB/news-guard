@@ -583,59 +583,73 @@
       displayedMessages.value.push({ type: 'loading', content: '' });
   
       try {
-        const response = await AIChat(systemContent.value, userContent, relatedData.value);
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-  
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error('Failed to get reader from response body');
-  
-        const textDecoder = new TextDecoder();
-        let completeMessage = ''; // 用于累积AI的回复内容
-  
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-  
-          const chunkText = textDecoder.decode(value);
-          const results = chunkText.split('\n\n').filter(Boolean).map((item) => item.replace(/^data: /, ''));
-  
-          for (let i = 0; i < results.length; i++) {
-            const chunk = results[i];
-            if (chunk.indexOf('DONE') === -1) {
-              try {
-                const chunkData = JSON.parse(chunk);
-                const content = chunkData.choices[0]?.delta?.content;
-                if (content) {
-                  completeMessage += content;
-                  // Update the last AI message's content
-                  if (displayedMessages.value[displayedMessages.value.length - 1].type === 'loading') {
-                    displayedMessages.value[displayedMessages.value.length - 1].content = completeMessage;
-                  } else {
-                    displayedMessages.value.push({ type: 'ai', content: completeMessage });
-                  }
-                }
-              } catch (e) {
-                console.error('JSON解析出错:', e, chunk);
-              }
+  const response = await AIChat(userContent);
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('Failed to get reader from response body');
+
+  const textDecoder = new TextDecoder();
+  let completeMessage = ''; // 用于累积AI的回复内容
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunkText = textDecoder.decode(value);
+    const results = chunkText.split('\n\n').filter(Boolean).map((item) => item.replace(/^data: /, ''));
+
+    for (let i = 0; i < results.length; i++) {
+      const chunk = results[i];
+      
+      // 如果数据中包含 'DONE'，表示流式传输已完成，跳过处理
+      if (chunk.indexOf('DONE') === -1) {
+        try {
+          // 尝试解析为JSON
+          const chunkData = JSON.parse(chunk);
+          const content = chunkData.choices[0]?.delta?.content;
+
+          if (content) {
+            completeMessage += content;
+            // 更新显示的最后一条AI消息
+            if (displayedMessages.value[displayedMessages.value.length - 1].type === 'loading') {
+              displayedMessages.value[displayedMessages.value.length - 1].content = completeMessage;
+            } else {
+              displayedMessages.value.push({ type: 'ai', content: completeMessage });
             }
           }
+        } catch (e) {
+          // 如果解析为JSON失败，直接将chunk当作纯文本处理
+          console.error('JSON解析出错:', e, chunk);
+          completeMessage += chunk; // 直接将非JSON数据拼接到文本中
+
+          // 更新显示的消息
+          if (displayedMessages.value[displayedMessages.value.length - 1].type === 'loading') {
+            displayedMessages.value[displayedMessages.value.length - 1].content = completeMessage;
+          } else {
+            displayedMessages.value.push({ type: 'ai', content: completeMessage });
+          }
         }
-  
-        // 移除加载占位符
-        displayedMessages.value.pop();
-  
-        // 添加最终的AI消息并应用打字效果
-        displayedMessages.value.push({ type: 'ai', content: '' });
-        typeEffect(completeMessage, 50);
-  
-      } catch (error) {
-        console.log("message.value",message.value)
-        console.error('请求失败:', error);
-        displayedMessages.value.pop(); // 移除加载占位符
-        displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
       }
+    }
+  }
+
+  // 移除加载占位符
+  displayedMessages.value.pop();
+
+  // 添加最终的AI消息并应用打字效果
+  displayedMessages.value.push({ type: 'ai', content: '' });
+  typeEffect(completeMessage, 50);
+
+} catch (error) {
+  console.log("message.value", message.value);
+  console.error('请求失败:', error);
+  displayedMessages.value.pop(); // 移除加载占位符
+  displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
+}
+
   
     }
   };
