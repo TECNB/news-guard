@@ -18,7 +18,8 @@ const props = defineProps<{
         xAxisData: string[];
         seriesData: number[];
     };
-    chartOption: (xAxisData: string[], seriesData: number[]) => ECBasicOption
+    chartOption: (xAxisData: string[], seriesData: number[],yAxisLabel: string) => ECBasicOption
+    yAxisLabel: string
 }>();
 
 const lineContainer = ref<HTMLElement | null>(null);
@@ -40,7 +41,7 @@ const initAirLineChart = () => {
 // 渲染图表
 const renderAirLine = () => {
     // 使用从父组件传入的 airLineOptions 函数生成图表选项
-    const options = props.chartOption(props.data.xAxisData, props.data.seriesData);
+    const options = props.chartOption(props.data.xAxisData, props.data.seriesData,props.yAxisLabel);
 
     // 使用 ECharts 实例的 setOption 方法渲染图表
     line?.setOption(options);

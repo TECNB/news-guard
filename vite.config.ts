@@ -31,6 +31,11 @@ export default defineConfig({
         target: 'http://127.0.0.1:8000/ask_fake_news',	//实际请求地址
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/ask_fake_news/, ""),
+      },
+      '/generate_chart': {
+        target: 'http://127.0.0.1:8000/generate_chart',	//实际请求地址
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/generate_chart/, ""),
       }
       
     }

@@ -1,6 +1,6 @@
 import { ECBasicOption } from 'echarts/types/dist/shared';
 
-const countLineOptions = (xAxisData: string[], seriesData: number[]): ECBasicOption => {
+const lineOptions = (xAxisData: string[], seriesData: number[], yAxisLabel: string): ECBasicOption => {
     return {
         xAxis: {
             type: 'category',
@@ -9,7 +9,7 @@ const countLineOptions = (xAxisData: string[], seriesData: number[]): ECBasicOpt
         yAxis: {
             type: 'value',
             position: 'left',
-            name: '检测数量',  // 添加 y 轴标签
+            name: yAxisLabel,  // 添加 y 轴标签
             nameTextStyle: {
                 padding: [0, 0, 10, -30],  // 调整 AQI 标签位置
             },
@@ -52,4 +52,4 @@ const countLineOptions = (xAxisData: string[], seriesData: number[]): ECBasicOpt
     };
 };
 
-export default countLineOptions;
+export default lineOptions;

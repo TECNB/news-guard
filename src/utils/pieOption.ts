@@ -1,7 +1,7 @@
 import { ECBasicOption } from 'echarts/types/dist/shared';
 
 
-const typePieOption = (seriesData: { value: number; name: string }[]):ECBasicOption => {
+const pieOption = (seriesData: { value: number; name: string;}[],seriesName:string ):ECBasicOption => {
     return {
         tooltip: {
             trigger: 'item',
@@ -17,7 +17,7 @@ const typePieOption = (seriesData: { value: number; name: string }[]):ECBasicOpt
         },
         series: [
             {
-                name: '虚假新闻占比',
+                name: seriesName,
                 type: 'pie',
                 radius: ['40%', '70%'],
                 center: ['30%', '50%'],
@@ -47,4 +47,4 @@ const typePieOption = (seriesData: { value: number; name: string }[]):ECBasicOpt
     };
 };
 
-export default typePieOption;
+export default pieOption;

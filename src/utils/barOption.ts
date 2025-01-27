@@ -1,6 +1,6 @@
 import { ECBasicOption } from 'echarts/types/dist/shared';
 
-const hotBarOption = (xAxisData: string[], seriesData: number[]): ECBasicOption => {
+const barOption = (xAxisData: string[], seriesData: number[], yAxisLabel: string): ECBasicOption => {
     return {
         xAxis: {
             type: 'category',
@@ -12,7 +12,7 @@ const hotBarOption = (xAxisData: string[], seriesData: number[]): ECBasicOption 
         yAxis: {
             type: 'value',
             position: 'left',
-            name: '热门虚假新闻标题',  // Y轴标签修改为碳排放量
+            name: yAxisLabel,  // 使用传入的yAxisLabel参数
             nameTextStyle: {
                 padding: [0, 0, 10, 0],  // 调整标签位置
             },
@@ -25,7 +25,6 @@ const hotBarOption = (xAxisData: string[], seriesData: number[]): ECBasicOption 
         },
         series: [
             {
-                name: '热度',
                 type: 'bar',
                 data: seriesData,
                 color: ['#5DB1FF'],  // 颜色改为适合碳排放的颜色
@@ -39,4 +38,4 @@ const hotBarOption = (xAxisData: string[], seriesData: number[]): ECBasicOption 
     };
 };
 
-export default hotBarOption;
+export default barOption;

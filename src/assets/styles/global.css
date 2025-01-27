@@ -35,8 +35,8 @@ body {
 
     /* 横向不滚动 */
     overflow-x: hidden;
-    
-    
+    /* 纵向不滚动 */
+    overflow-y: hidden;
 }
 
 :root {

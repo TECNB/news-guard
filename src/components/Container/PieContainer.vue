@@ -15,7 +15,8 @@ const props = defineProps<{
     data: {
         seriesData: { value: number; name: string }[]
     };
-    chartOption: (seriesData: { value: number; name: string }[]) => ECBasicOption
+    chartOption: (seriesData: { value: number; name: string }[],seriesName: string) => ECBasicOption;
+    seriesName: string
 }>();
 
 const pieContainer = ref<HTMLElement | null>(null);
@@ -35,7 +36,7 @@ const initForestPieChart = () => {
 
 const renderForestPie = () => {
 
-    let options = props.chartOption(props.data.seriesData);
+    let options = props.chartOption(props.data.seriesData,props.seriesName);
 
     // 使用 setOption 方法设置图表配置
     pie?.setOption(options);

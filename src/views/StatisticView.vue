@@ -70,12 +70,12 @@
             <!-- 假新闻热度柱状图 -->
             <div class="flex-[2] flex justify-between items-center shadow-md rounded-xl border p-5 mt-5">
                 <BarContainer class="border rounded-xl" width="100%" :height="200" :data="hotBarData"
-                    :chartOption="hotBarOption" />
+                    :chartOption="barOption" />
             </div>
             <!-- 假新闻类别占比饼图 -->
             <div class="flex-1 flex justify-between items-center shadow-md rounded-xl border p-5 mt-5">
                 <PieContainer class="border rounded-xl" width="100%" :height="200" :data="typePieData"
-                    :chartOption="typePieOption" />
+                    :chartOption="pieOption" />
             </div>
         </div>
 
@@ -94,13 +94,13 @@
 <script setup lang="ts">
 import { } from "vue"
 import { typePieData } from "../constants/typePieData";
-import typePieOption from "../utils/typePieOption";
+import pieOption from "../utils/pieOption";
 
 import { hotBarData } from "../constants/hotBarData";
-import hotBarOption from "../utils/hotBarOption";
+import barOption from "../utils/barOption";
 
 import { countLineData } from "../constants/countLineData";
-import countLineOptions from "../utils/countLineOptions";
+import countLineOptions from "../utils/lineOptions";
 
 
 </script>
