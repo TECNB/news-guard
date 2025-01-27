@@ -65,7 +65,8 @@
 import { ref, watch, onMounted } from "vue";
 import { ElMessage } from 'element-plus';
 import { suggestions } from '../constants/suggestions'; // 导入建议列表
-import { Chat, generateChart } from '../utils/AIChat'; // 导入AIChat
+import { Chat } from '../utils/AIChat'; // 导入AIChat
+import { generateChart } from '../api/fakeNewsReview.ts';
 
 
 import { useChatStore } from '../stores/ChatStore.ts';
@@ -182,19 +183,12 @@ const handleEnter = async () => {
     displayedMessages.value.push({ type: 'loading', content: '' })
     // 请求generateChart函数，无需流式传输
     try {
-      const response = await generateChart(userContent, 'line');
-      const data = await response.json();
-      
+      const data = await generateChart(userContent, 'line').then((res) => res.data);
+      console.log("data", data);
+
       // 去掉外层的```json```部分
-      const jsonString = data.replace(/^```json\s*|\s*```$/g, '').trim();
-      aiContent = jsonString;
-      
-
-      // 将字符串转换为 JSON 对象
-      const jsonObject = JSON.parse(jsonString);
-
-      console.log("jsonObject", jsonObject);  // 输出提取后的 JSON 对象
-
+      const jsonResult = data.replace(/^```json\s*|\s*```$/g, '').trim();
+      aiContent = jsonResult;
 
     } catch (error) {
       console.log("message.value", message.value);
@@ -234,18 +228,12 @@ const handleEnter = async () => {
     displayedMessages.value.push({ type: 'loading', content: '' })
     // 请求generateChart函数，无需流式传输
     try {
-      const response = await generateChart(userContent, 'bar');
-      const data = await response.json();
-      
+      const data = await generateChart(userContent, 'bar').then((res) => res.data);
+      console.log("data", data);
+
       // 去掉外层的```json```部分
-      const jsonString = data.replace(/^```json\s*|\s*```$/g, '').trim();
-      aiContent = jsonString;
-      
-
-      // 将字符串转换为 JSON 对象
-      const jsonObject = JSON.parse(jsonString);
-
-      console.log("jsonObject", jsonObject);  // 输出提取后的 JSON 对象
+      const jsonResult = data.replace(/^```json\s*|\s*```$/g, '').trim();
+      aiContent = jsonResult;
 
 
     } catch (error) {
@@ -286,19 +274,12 @@ const handleEnter = async () => {
     displayedMessages.value.push({ type: 'loading', content: '' })
     // 请求generateChart函数，无需流式传输
     try {
-      const response = await generateChart(userContent, 'pie');
-      const data = await response.json();
-      
+      const data = await generateChart(userContent, 'pie').then((res) => res.data);
+      console.log("data", data);
+
       // 去掉外层的```json```部分
-      const jsonString = data.replace(/^```json\s*|\s*```$/g, '').trim();
-      aiContent = jsonString;
-      
-
-      // 将字符串转换为 JSON 对象
-      const jsonObject = JSON.parse(jsonString);
-
-      console.log("jsonObject", jsonObject);  // 输出提取后的 JSON 对象
-
+      const jsonResult = data.replace(/^```json\s*|\s*```$/g, '').trim();
+      aiContent = jsonResult;
 
     } catch (error) {
       console.log("message.value", message.value);

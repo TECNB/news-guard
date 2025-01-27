@@ -1,5 +1,5 @@
 <template>
-  <div class="FakeNewsPredictionView p-5">
+  <div class="h-[85%] p-5">
     <div class="flex justify-between items-center pb-3 border-b">
       <p class="text-lg font-bold">虚假新闻预测</p>
       <img class="w-9 h-9 rounded-full object-cover aspect-square" src="../assets/images/avatar.png">
@@ -21,32 +21,32 @@
     </div>
 
     <!-- 下面为具体当天的虚假新闻列表 -->
-    <div class="Table mt-5">
-      <!-- 顶部搜索栏 -->
-      <div class="tableBar flex justify-between items-center mb-4">
-        <div class="SearchInput flex justify-between items-center">
-          <div class="">
-            <el-icon :size="16">
-              <Search />
-            </el-icon>
-            <input type="text" class="ml-2" placeholder="请输入文字进行搜索" v-model="input" @keyup.enter="filterData" />
+    <div class="h-[80%]">
+      <div class="Table h-[100%] mt-5">
+        <!-- 顶部搜索栏 -->
+        <div class="tableBar flex justify-between items-center mb-4">
+          <div class="SearchInput flex justify-between items-center">
+            <div class="">
+              <el-icon :size="16">
+                <Search />
+              </el-icon>
+              <input type="text" class="ml-2" placeholder="请输入文字进行搜索" v-model="input" @keyup.enter="filterData" />
+            </div>
+            <div class="!block md:!hidden" @click="toggleFilter">
+              <el-icon :size="16">
+                <Operation />
+              </el-icon>
+            </div>
           </div>
-          <div class="!block md:!hidden" @click="toggleFilter">
-            <el-icon :size="16">
+          <div class="FilterBox md:!flex items-center cursor-pointer !hidden" @click="toggleFilter">
+            <el-icon>
               <Operation />
             </el-icon>
+            <p class="ml-2">筛选</p>
           </div>
         </div>
-        <div class="FilterBox md:!flex items-center cursor-pointer !hidden" @click="toggleFilter">
-          <el-icon>
-            <Operation />
-          </el-icon>
-          <p class="ml-2">筛选</p>
-        </div>
-      </div>
 
-      <!-- 筛选选项 -->
-      <el-scrollbar>
+        <!-- 筛选选项 -->
         <div class="flex justify-start items-center gap-8 mb-5" v-if="filterVisible">
           <p v-for="(option, index) in filterOptions" :key="index" :class="[
             selectedFilter === option.value ? 'text-green-400 p-2 bg-green-50 rounded-md cursor-pointer whitespace-nowrap' : 'text-gray-500 cursor-pointer whitespace-nowrap'
@@ -54,52 +54,55 @@
             {{ option.label }}
           </p>
         </div>
-      </el-scrollbar>
 
-      <!-- 表格数据 -->
-      <el-scrollbar height="100%">
-        <el-table :data="tableData" class="tableBox" table-layout="fixed" @selection-change="handleSelectionChange"
-          v-loading="loading" :row-style="{ height: '80px' }">
-          <el-table-column prop="createdAt" label="事件日期">
-            <template #default="{ row }">
-              <span>{{ new Date(row.createdAt).toLocaleString() }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="name" label="事件主题" />
-          <el-table-column prop="category" label="分类" >
-            <template #default="{ row }">
-              <div class="w-fit bg-gray-100 rounded-md px-2 py-1">
-                <p class="font-bold text-gray-500">{{ row.category }}</p>
-              </div>
-              
-            </template>
-          </el-table-column>
-          <el-table-column prop="prediction" label="虚假新闻预测结果" />
+        <!-- 表格数据 -->
+        <el-scrollbar>
+          <el-table :data="tableData" class="tableBox" table-layout="fixed" @selection-change="handleSelectionChange"
+            v-loading="loading" :row-style="{ height: '80px' }">
+            <el-table-column prop="date" label="事件日期">
+              <template #default="{ row }">
+                <span>{{ new Date(row.date).toLocaleString() }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="headline" label="事件主题" />
+            <el-table-column prop="field" label="分类">
+              <template #default="{ row }">
+                <div class="w-fit bg-gray-100 rounded-md px-2 py-1">
+                  <p class="font-bold text-gray-500">{{ row.field }}</p>
+                </div>
+
+              </template>
+            </el-table-column>
+            <el-table-column prop="prediction" label="虚假新闻预测结果" />
 
 
-          <el-table-column label="操作" width="200" align="center">
-            <template #default="{ row }">
-              <el-button text bg type="success" size="small" @click="">
-                查看
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-scrollbar>
+            <el-table-column label="操作" width="200" align="center">
+              <template #default="{ row }">
+                <el-button text bg type="success" size="small" @click="">
+                  查看
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-scrollbar>
 
-      <!-- 分页 -->
-      <el-config-provider :locale="zhCn">
-        <el-pagination class="pageList" :page-sizes="[10, 20, 30]" :page-size="pageSize"
-          :layout="isMediumScreen ? 'total, sizes, prev, pager, next, jumper' : 'sizes, prev, pager, next'"
-          :total="counts" :current-page.sync="page" @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"></el-pagination>
-      </el-config-provider>
+
+        <!-- 分页 -->
+        <el-config-provider :locale="zhCn">
+          <el-pagination class="pageList" :page-sizes="[10, 20, 30]" :page-size="pageSize"
+            :layout="isMediumScreen ? 'total, sizes, prev, pager, next, jumper' : 'sizes, prev, pager, next'"
+            :total="counts" :current-page.sync="page" @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"></el-pagination>
+        </el-config-provider>
+      </div>
     </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount, onMounted } from "vue"
+import { ref, onBeforeUnmount, onMounted } from "vue"
+import { showFakeNews } from '../api/fakeNewsPrediction';
 
 const categories = ref<string[]>(['最新', '经济', '社会', '文化', '科技', '体育', '健康', '教育', '娱乐', '国际', '政治', '环境', '旅游'])
 const selectedCategory = ref<string>('最新')
@@ -130,38 +133,7 @@ const filterVisible = ref(false);
 
 
 const input = ref('');
-const tableData = ref([
-  {
-    createdAt: new Date().toISOString(),
-    name: '气候变化的经济影响',  // 真实新闻
-    prediction: '气候变化背后隐藏的全球经济崩溃危机',  // 转为虚假新闻后的主题
-    category: '环境',
-  },
-  {
-    createdAt: new Date(Date.now() - 86400000).toISOString(), // 昨天的时间
-    name: '新冠疫苗的最新研究进展',  // 真实新闻
-    prediction: '新冠疫苗实际上引发全球大规模死亡事件',  // 转为虚假新闻后的主题
-    category: '健康',
-  },
-  {
-    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(), // 前天的时间
-    name: '科技巨头将在未来五年内实现全自动驾驶',  // 真实新闻
-    prediction: '科技巨头隐瞒自动驾驶技术带来的巨大安全隐患',  // 转为虚假新闻后的主题
-    category: '科技',
-  },
-  {
-    createdAt: new Date(Date.now() - 3 * 86400000).toISOString(), // 三天前的时间
-    name: '全球经济在2025年将出现复苏',  // 真实新闻
-    prediction: '2025年全球经济崩溃的警告已被掩盖',  // 转为虚假新闻后的主题
-    category: '经济',
-  },
-  {
-    createdAt: new Date(Date.now() - 4 * 86400000).toISOString(), // 四天前的时间
-    name: '某名人捐赠数百万美元支持教育',  // 真实新闻
-    prediction: '某名人的捐赠背后隐藏着非法资金转移的真相',  // 转为虚假新闻后的主题
-    category: '社会',
-  },
-]);
+const tableData = ref([]);
 
 const pageSize = ref(10);
 const counts = ref(tableData.value.length);
@@ -206,21 +178,22 @@ onMounted(async () => {
 });
 
 const fetchTableData = async () => {
-  // loading.value = true;
-  // const data = {
-  //     page: page.value,
-  //     size: pageSize.value,
-  // };
-  // try {
-  //     const res = await getAllActivityPlace(data);
-  //     loading.value = false;
-  //     allData.value = res.data.records;
-  //     counts.value = res.data.total;
-  //     tableData.value = allData.value;
-  // } catch (error) {
-  //     loading.value = false;
-  //     console.error('获取数据失败:', error);
-  // }
+  loading.value = true;
+  const data = {
+    page: page.value,
+    size: pageSize.value,
+  };
+  try {
+    const res = await showFakeNews(data);
+    loading.value = false;
+    allData.value = res.data.records;
+    counts.value = res.data.total;
+    tableData.value = allData.value;
+    console.log('tableData', tableData.value)
+  } catch (error) {
+    loading.value = false;
+    console.error('获取数据失败:', error);
+  }
 };
 
 const toggleFilter = () => {
@@ -334,10 +307,6 @@ const toUpdateActivity = (id: string) => {
 
 .Table {
   width: auto;
-  height: 92%;
-
-  background: #fff;
-  border-radius: 16px;
 
   .tableBar {
     display: flex;
