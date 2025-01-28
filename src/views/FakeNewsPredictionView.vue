@@ -73,7 +73,7 @@
 
               </template>
             </el-table-column>
-            <el-table-column prop="prediction" label="虚假新闻预测结果" />
+            <el-table-column prop="predicted_fake_headline" label="虚假新闻预测结果" />
 
 
             <el-table-column label="操作" width="200" align="center">
@@ -102,7 +102,7 @@
 
 <script setup lang="ts">
 import { ref, onBeforeUnmount, onMounted } from "vue"
-import { showFakeNews } from '../api/fakeNewsPrediction';
+import { showHotNews } from '../api/fakeNewsPrediction';
 
 const categories = ref<string[]>(['最新', '经济', '社会', '文化', '科技', '体育', '健康', '教育', '娱乐', '国际', '政治', '环境', '旅游'])
 const selectedCategory = ref<string>('最新')
@@ -184,7 +184,7 @@ const fetchTableData = async () => {
     size: pageSize.value,
   };
   try {
-    const res = await showFakeNews(data);
+    const res = await showHotNews(data);
     loading.value = false;
     allData.value = res.data.records;
     counts.value = res.data.total;

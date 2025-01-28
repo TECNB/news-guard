@@ -4,3 +4,7 @@ import axios from 'axios';
 export const showFakeNews = (param:any): Promise<any> => {
     return axios.get('api/show_fake_news',param);
 };
+
+export const showHotNews = (param:any): Promise<any> => {
+    return axios.get('api/show_hot_news',param);
+};
