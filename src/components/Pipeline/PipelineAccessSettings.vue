@@ -44,11 +44,7 @@
             <template #reference>
                 <div class="w-7 h-7 absolute -left-14 top-8 bg-black rounded-full z-50 flex justify-center items-center"
                     @click="showAccessSettings">
-                    <!-- <i class="fa-light fa-up-to-bracket fa-rotate-90 " style="color: white;"></i> -->
-                    <!-- TODO:记得回来改图标 -->
-                    <el-icon>
-                        <Share />
-                    </el-icon>
+                    <i class="fa-light fa-up-to-bracket fa-rotate-90 " style="color: white;"></i>
                 </div>
             </template>
         </el-popover>

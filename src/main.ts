@@ -15,6 +15,7 @@ const pinia = createPinia()
 
 // import * as echarts from "echarts";            // 全局引入echarts
 
+import '@fortawesome/fontawesome-free/css/all.min.css';
 import "tailwindcss/tailwind.css"
 
 
