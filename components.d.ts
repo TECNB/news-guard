@@ -27,6 +27,7 @@ declare module 'vue' {
     ElUpload: typeof import('element-plus/es')['ElUpload']
     HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
     LineContainer: typeof import('./src/components/Container/LineContainer.vue')['default']
+    MaskLayer: typeof import('./src/components/MaskLayer.vue')['default']
     PieContainer: typeof import('./src/components/Container/PieContainer.vue')['default']
     PipelineAccessSettings: typeof import('./src/components/Pipeline/PipelineAccessSettings.vue')['default']
     PipelineHeader: typeof import('./src/components/Pipeline/PipelineHeader.vue')['default']
@@ -35,7 +36,13 @@ declare module 'vue' {
     RadarContainer: typeof import('./src/components/Container/RadarContainer.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SettingChart: typeof import('./src/components/Pipeline/SettingChart.vue')['default']
+    SettingDataSource: typeof import('./src/components/Pipeline/SettingDataSource.vue')['default']
+    SettingPreprocess: typeof import('./src/components/Pipeline/SettingPreprocess.vue')['default']
+    SettingStatement: typeof import('./src/components/Pipeline/SettingStatement.vue')['default']
     Sidebar: typeof import('./src/components/Sidebar.vue')['default']
+    SidebarStatement: typeof import('./src/components/Pipeline/SidebarStatement.vue')['default']
+    Statement2: typeof import('./src/components/Pipeline/Statement2.vue')['default']
     VerifyTextView: typeof import('./src/components/VerifyTextView.vue')['default']
   }
   export interface ComponentCustomProperties {

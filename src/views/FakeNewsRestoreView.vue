@@ -127,6 +127,7 @@
         <MaskLayer :ifShow="settingVisible4" backgroundColor="rgba(0, 0, 0, 0.4)" />
 
         <MaskLayer :ifShow="statementVisible" />
+        <!-- TODO:下面是最终要出现的界面，后续记得替换 -->
         <Statement2 :ifShow="statementVisible" @updateIfShow="updateStatementVisible" />
     </div>
 </template>
@@ -138,6 +139,12 @@ import PipelineHeader from '../components/Pipeline/PipelineHeader.vue';
 import PipelineMainData from '../components/Pipeline/PipelineMainData.vue';
 import PipelineMainTask from '../components/Pipeline/PipelineMainTask.vue';
 import PipelineAccessSettings from '../components/Pipeline/PipelineAccessSettings.vue';
+
+import MaskLayer from '../components/MaskLayer.vue';
+import SettingDataSource from '../components/Pipeline/SettingDataSource.vue';
+import SettingPreprocess from '../components/Pipeline/SettingPreprocess.vue';
+import SettingChart from '../components/Pipeline/SettingChart.vue';
+import SettingStatement from '../components/Pipeline/SettingStatement.vue';
 
 const statementVisible = ref(false);
 
