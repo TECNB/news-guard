@@ -42,6 +42,7 @@ declare module 'vue' {
     SettingStatement: typeof import('./src/components/Pipeline/SettingStatement.vue')['default']
     Sidebar: typeof import('./src/components/Sidebar.vue')['default']
     SidebarStatement: typeof import('./src/components/Pipeline/SidebarStatement.vue')['default']
+    Statement: typeof import('./src/components/Pipeline/Statement.vue')['default']
     Statement2: typeof import('./src/components/Pipeline/Statement2.vue')['default']
     VerifyTextView: typeof import('./src/components/VerifyTextView.vue')['default']
   }

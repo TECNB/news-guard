@@ -128,13 +128,16 @@
 
         <MaskLayer :ifShow="statementVisible" />
         <!-- TODO:下面是最终要出现的界面，后续记得替换 -->
-        <Statement2 :ifShow="statementVisible" @updateIfShow="updateStatementVisible" />
+        <Statement :ifShow="statementVisible" :fakeNewsData="fakeNewsData" @updateIfShow="updateStatementVisible" />
     </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { ElScrollbar } from 'element-plus';
+
+import { restore } from '../api/fakeNewsRestore';
+
 import PipelineHeader from '../components/Pipeline/PipelineHeader.vue';
 import PipelineMainData from '../components/Pipeline/PipelineMainData.vue';
 import PipelineMainTask from '../components/Pipeline/PipelineMainTask.vue';
@@ -145,6 +148,8 @@ import SettingDataSource from '../components/Pipeline/SettingDataSource.vue';
 import SettingPreprocess from '../components/Pipeline/SettingPreprocess.vue';
 import SettingChart from '../components/Pipeline/SettingChart.vue';
 import SettingStatement from '../components/Pipeline/SettingStatement.vue';
+
+import Statement from '../components/Pipeline/Statement.vue';
 
 const statementVisible = ref(false);
 
@@ -291,9 +296,30 @@ const stopTimer = (index: number) => {
     clearInterval(intervals[index]); // 清除定时器
 };
 
+let fakeNewsData = ref('');
+
 const handlePipeline = async () => {
     console.log('handlePipeline');
 
+    const userContent = `
+        标题: "科学家发现外星人即将入侵地球，全球军队已开始备战"
+
+        内容: 
+        "近日，一项震惊全球的科学研究表明，外星文明已经注意到地球，并计划在未来两个月内入侵。科学家们发现，一些未知的飞行物体正在接近地球轨道，全球各大国的军队已经开始部署防御系统。根据军事专家的分析，外星人将很快与地球接触，可能会引发一场史无前例的战争。各国政府已经在秘密制定应对措施，而民众则被要求保持警惕。"
+    `;
+
+
+    const data = await restore(userContent).then((res) => res.data);
+    console.log("data", data);
+
+    // 去掉外层的```json```部分
+    const jsonResult = data.replace(/^```json\s*|\s*```$/g, '').trim();
+    fakeNewsData.value = jsonResult;
+    console.log('fakeNewsData.value:', fakeNewsData.value);
+
+
+
+    statementVisible.value = true;
 
     // Stage 1
     stages.value[0].status = 'inProgress';
@@ -336,6 +362,12 @@ const handlePipeline = async () => {
     console.log('All stages completed.');
 
     statementVisible.value = true;
+
+    // 等待 restore 完成
+    // response.then((res) => {
+    //     console.log('Restore response:', res);
+    //     // 你可以在这里处理 response
+    // });
 };
 
 const inputSlider = (value: number) => {
