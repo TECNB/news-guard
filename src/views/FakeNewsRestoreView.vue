@@ -195,13 +195,13 @@ const stages = ref<PipelineStage[]>([
         completedTasks: 0
     },
     {
-        title: '还原分析',
+        title: '报告生成',
         num: 1,
         status: 'notStarted',
         completedTasks: 0
     },
     {
-        title: '报告生成',
+        title: '新阶段',
         num: 0,
         status: 'notStarted',
         completedTasks: 0
@@ -214,51 +214,54 @@ const tasks = [
         subTasks: [
             {
                 title: '爬取新闻数据',
-                subTasks: []
+                type: 'parallel'
             },
             {
                 title: '获取第三方验证数据',
-                subTasks: []
-            }
+                type: 'parallel'
+            },
         ]
     },
     {
-        title: '数据预处理',
+        title: '新闻预处理',
         subTasks: [
             {
                 title: '缺失值和异常值清洗',
-                subTasks: [
-                    {
-                        title: '标准化数据',
-                        subTasks: []
-                    }
-                ]
+                type: 'serial',
+            },
+            {
+                title: '标准化数据',
+                type: 'serial',
+            },
+            {
+                title: '获取第三方验证数据',
+                type: 'parallel'
             },
         ]
     },
     {
-        title: '图表生成',
+        title: '虚假新闻检测',
         subTasks: [
             {
                 title: '获取时间轴',
-                subTasks: []
+                type: 'parallel'
             },
             {
                 title: '取数',
-                subTasks: []
+                type: 'parallel'
             },
             {
                 title: '图表选择',
-                subTasks: []
+                type: 'parallel'
             }
         ]
     },
     {
-        title: '报表生成',
+        title: '报告生成',
         subTasks: [
             {
                 title: '输出文件类型选择',
-                subTasks: []
+                type: 'parallel'
             }
         ]
     }
@@ -290,7 +293,7 @@ const stopTimer = (index: number) => {
 
 const handlePipeline = async () => {
     console.log('handlePipeline');
-    
+
 
     // Stage 1
     stages.value[0].status = 'inProgress';
