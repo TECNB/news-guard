@@ -2,7 +2,7 @@
     <div class="Statement" v-if="props.ifShow">
         <div class="p-6 bg-blue-800 text-white rounded-lg shadow-xl mb-6 relative">
             <!-- 关闭按钮 -->
-            <div class="absolute top-3 right-3">
+            <div class="absolute top-3 right-3 cursor-pointer">
                 <i class="fa-solid fa-xl fa-times" @click="toggleVisibility"></i>
             </div>
 

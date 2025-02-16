@@ -39,6 +39,12 @@
         </div>
       </div>
     </div>
+
+    <!-- 过程连线 -->
+    <div class="w-11 absolute -left-11 top-6 border border-gray-400 border-b-[3px]">
+    </div>
+    <div class="w-11 absolute -right-11 top-6 border border-gray-400 border-b-[3px]">
+    </div>
   </div>
 </template>
 
@@ -46,14 +52,14 @@
 import { } from "vue"
 
 const props = defineProps(['tasks']);
-const emit = defineEmits(['show']);
+const emit = defineEmits(['show', 'addSerialTask']); // 添加 addSerialTask 事件
 const show = (index: number) => {
   console.log(index)
   emit('show', index)
 }
 // 判断任务是否为串行任务（即是否全部子任务为串行）
-const serialTasks = props.tasks.subTasks.filter((task:any) => task.type === 'serial');
-const parallelTasks = props.tasks.subTasks.filter((task:any) => task.type === 'parallel');
+const serialTasks = props.tasks.subTasks.filter((task: any) => task.type === 'serial');
+const parallelTasks = props.tasks.subTasks.filter((task: any) => task.type === 'parallel');
 
 // 方法：根据外层的 title 设置动态参数
 const handleClick = () => {
@@ -77,7 +83,13 @@ const handleClick = () => {
 // 方法：处理串行任务添加按钮点击事件
 const handleSerialTaskAdd = () => {
   console.log('添加串行任务');
-  // 这里可以加上你希望的逻辑来处理串行任务的增加
+  const newSerialTask = {
+    title: '新串行任务',  // 这里可以根据需求动态设置标题
+    type: 'serial'
+  };
+
+  // 触发事件并将新任务传递给父组件
+  emit('addSerialTask', newSerialTask);
 };
 </script>
 

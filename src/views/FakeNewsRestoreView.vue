@@ -26,7 +26,7 @@
         <el-scrollbar height="100%" class="w-[1300px]" ref="scrollbarRef" @scroll="handleScroll">
             <!-- 头部 -->
             <div class="flex justify-start items-start gap-10 px-5 pt-5 w-[1780px]">
-                <div class="" v-for="(info, index) in stages">
+                <div class="" v-for="(info, index) in stages" :key="index">
                     <PipelineHeader :info="info" :timer="timers[index]" />
                 </div>
             </div>
@@ -38,7 +38,7 @@
                     <!-- 主要部分 -->
                     <div class="w-72 h-[800px] border-r-2 border-gray-500 border-dashed translate-x-7 p-5">
                         <div class="-translate-x-5">
-                            <PipelineMainData :tasks="tasks[0].subTasks" @show="showSetting" />
+                            <PipelineMainData :tasks="tasks[0].subTasks" @show="showSetting" :key="key2"/>
                         </div>
                     </div>
                 </div>
@@ -52,7 +52,8 @@
                         <PipelineAccessSettings />
 
                         <!-- 任务列 -->
-                        <PipelineMainTask :tasks="tasks[1]" @show="showSetting" />
+                        <PipelineMainTask :tasks="tasks[1]" @show="showSetting" @addSerialTask="handleAddSerialTask"
+                            :key="key1" />
                     </div>
                 </div>
 
@@ -110,7 +111,8 @@
         </el-scrollbar>
 
 
-        <SettingDataSource :ifShow="settingVisible1" @updateIfShow="updateSettingVisible1" />
+        <SettingDataSource :ifShow="settingVisible1" @updateIfShow="updateSettingVisible1"
+            @textDetected="handleTextDetected" @addParallelTask="handleAddDataSerialTask"/>
         <!-- 遮罩层 -->
         <MaskLayer :ifShow="settingVisible1" backgroundColor="rgba(0, 0, 0, 0.4)" />
 
@@ -213,16 +215,12 @@ const stages = ref<PipelineStage[]>([
     }
 ])
 
-const tasks = [
+let tasks = ref([
     {
         title: '数据收集',
         subTasks: [
             {
                 title: '爬取新闻数据',
-                type: 'parallel'
-            },
-            {
-                title: '获取第三方验证数据',
                 type: 'parallel'
             },
         ]
@@ -270,7 +268,9 @@ const tasks = [
             }
         ]
     }
-]
+])
+const key1 = ref('');
+const key2 = ref('');
 
 
 onMounted(() => {
@@ -278,6 +278,21 @@ onMounted(() => {
     const containerWidth = scrollbarRef.value?.$el.clientWidth || 0
     maxScroll.value = innerWidth - containerWidth
 })
+
+// 处理添加串行任务事件
+const handleAddSerialTask = (newTask: any) => {
+    // 在适当的任务（例如，新闻预处理）中添加新的串行任务
+    tasks.value[1].subTasks.push(newTask);
+    console.log('添加串行任务成功', tasks.value[1].subTasks);
+    key1.value = Math.random().toString();
+};
+
+const handleAddDataSerialTask = (newTask: any) => {
+    // 在适当的任务（例如，新闻预处理）中添加新的串行任务
+    tasks.value[0].subTasks.push(newTask);
+    console.log('添加串行任务成功', tasks.value[0].subTasks);
+    key2.value = Math.random().toString();
+};
 
 const updateStatementVisible = (value: boolean) => {
     statementVisible.value = value;
@@ -298,28 +313,19 @@ const stopTimer = (index: number) => {
 
 let fakeNewsData = ref('');
 
+let userContent = '';
+
+// 处理 textDetected 事件
+const handleTextDetected = (text: string) => {
+    console.log('检测到的文字:', text);
+    userContent = text;
+};
+
 const handlePipeline = async () => {
     console.log('handlePipeline');
 
-    const userContent = `
-        标题: "科学家发现外星人即将入侵地球，全球军队已开始备战"
-
-        内容: 
-        "近日，一项震惊全球的科学研究表明，外星文明已经注意到地球，并计划在未来两个月内入侵。科学家们发现，一些未知的飞行物体正在接近地球轨道，全球各大国的军队已经开始部署防御系统。根据军事专家的分析，外星人将很快与地球接触，可能会引发一场史无前例的战争。各国政府已经在秘密制定应对措施，而民众则被要求保持警惕。"
-    `;
-
-
-    const data = await restore(userContent).then((res) => res.data);
-    console.log("data", data);
-
-    // 去掉外层的```json```部分
-    const jsonResult = data.replace(/^```json\s*|\s*```$/g, '').trim();
-    fakeNewsData.value = jsonResult;
-    console.log('fakeNewsData.value:', fakeNewsData.value);
-
-
-
-    statementVisible.value = true;
+    // 在 Stage 1 开始之前启动 restore 请求
+    const restorePromise = restore(userContent).then((res) => res.data);
 
     // Stage 1
     stages.value[0].status = 'inProgress';
@@ -356,18 +362,22 @@ const handlePipeline = async () => {
     startTimer(3); // 开始计时
     await delay(2000);
     stopTimer(3); // 停止计时
+
+    // 等待 restore 请求完成后，才更新 Stage 4 的状态
+    const data = await restorePromise;
+    console.log("data", data);
+
+    // 去掉外层的```json```部分
+    const jsonResult = data.replace(/^```json\s*|\s*```$/g, '').trim();
+    fakeNewsData.value = JSON.parse(jsonResult); // 转换为对象
+    console.log('fakeNewsData.value:', fakeNewsData.value);
+
+    // 完成 Stage 4
     stages.value[3].status = 'completed';
     console.log(`Stage 4 completed in ${timers.value[3]} s`);
 
     console.log('All stages completed.');
-
     statementVisible.value = true;
-
-    // 等待 restore 完成
-    // response.then((res) => {
-    //     console.log('Restore response:', res);
-    //     // 你可以在这里处理 response
-    // });
 };
 
 const inputSlider = (value: number) => {

@@ -15,7 +15,7 @@
                     <div
                         class="w-24 h-24 relative flex flex-col justify-center items-center gap-9 rounded-md shadow-[0_2px_6px_0_rgba(37,43,58,0.12)] pt-2 cursor-pointer">
                         <i class="fa-regular fa-table-cells fa-xl"></i>
-                        <p class="text-sm">现有数据</p>
+                        <p class="text-sm">文本数据</p>
                         <div class="absolute top-0 right-1">
                             <i class="fa-regular fa-circle-check"></i>
                         </div>
@@ -43,47 +43,36 @@
                     </div>
                 </div>
 
-                <p class="text-text-200">选择现有数据</p>
-                <el-select v-model="formName1" placeholder="请点击选择分类" size="large" clearable :teleported="false"
-                    style="width: 360px;">
-                    <el-option v-for="(text, index) in allTexts" :key="index" :label="text" :value="text" />
-                </el-select>
-                <p class="text-text-200">连接数据库</p>
-
-                <el-select v-model="formName2" placeholder="请点击选择分类" size="large" clearable :teleported="false"
-                    style="width: 360px;">
-                    <el-option v-for="(text, index) in allTexts" :key="index" :label="text" :value="text" />
-                </el-select>
-
-                <p class="text-text-200">连接方式</p>
-
-                <el-select v-model="selectedConnectionMethod" placeholder="请点击选择连接方式" size="large" clearable
-                    :teleported="false" style="width: 360px;">
-                    <el-option v-for="(method, index) in connectionMethods" :key="index" :label="method"
-                        :value="method" />
-                </el-select>
+                <!-- 文本输入 -->
+                <div class="w-full mt-5">
+                    <el-input v-model="text" placeholder="请输入需要判断的文字" :rows="19" type="textarea" />
+                </div>
 
             </div>
 
         </el-scrollbar>
         <div class="w-full flex justify-between items-center absolute bottom-3 border-t pt-3 -mx-5 px-5">
-            <div class="flex flex-1 justify-start items-center gap-3">
-                <p class="text-text-300 text-sm">新数据源会稍后加入您的表格</p>
-            </div>
-            <div class="">
-                <div class="bg-text-100 rounded-xl cursor-pointer py-3 px-8" @click="toggleVisibility">
-                    <p class="text-white font-bold">确认配置</p>
+            <!-- 检测按钮与字数 -->
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="text-[#777777]">{{ text.length }}/5000 字数</p>
                 </div>
-            </div>
-
-            <div class="flex flex-1 justify-end items-center">
                 <div
                     class="flex justify-between items-center gap-3 cursor-pointer rounded-xl hover:bg-gray-200 transition p-2">
                     <i class="fa-regular fa-arrow-rotate-right" style="color: #999;"></i>
                     <p class="text-text-300">恢复默认值</p>
                 </div>
-                <div class="">
+            </div>
+
+
+
+            <div class="flex justify-end items-center">
+
+                <div class="bg-[#49CFAD] w-fit rounded-lg px-2 py-3 cursor-pointer" @click="detectText">
+                    <p class="text-white font-bold">检测文字</p>
                 </div>
+
+
             </div>
 
         </div>
@@ -92,33 +81,31 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { formContant } from '../../constants/formContant';
+import { ref } from 'vue';
 
 const props = defineProps(['ifShow']);
-const emit = defineEmits();
+const emit = defineEmits(['updateIfShow', 'textDetected','addParallelTask']);
 
-let formName1 = ref('')
-let formName2 = ref('')
-
-// 自定义连接方式数组
-const connectionMethods = [
-    '外连接',
-    '内连接',
-    '全连接',
-];
-
-// 选择的连接方式
-const selectedConnectionMethod = ref<string>('');
+const text = ref('');
 
 const toggleVisibility = () => {
     emit('updateIfShow', false);
 };
 
-// 计算属性，获取所有 text 字段
-const allTexts = computed(() => {
-    return formContant.flatMap(category => category.items.map(item => item.text));
-});
+// 当点击 "检测文字" 按钮时，调用这个函数
+const detectText = () => {
+    // 通过 emit 将 text 传递给父组件
+    emit('textDetected', text.value);
+    emit('updateIfShow', false);
+    console.log('添加串行任务');
+    const newParallelTask = {
+        title: '文本数据',  // 这里可以根据需求动态设置标题
+        type: 'parallel'
+    };
+
+    // 触发事件并将新任务传递给父组件
+    emit('addParallelTask', newParallelTask);
+};
 </script>
 
 <style lang="scss" scoped>
@@ -176,5 +163,13 @@ const allTexts = computed(() => {
 //下拉框的文本颜色选中之后的样式
 .el-select-dropdown__item.is-selected {
     color: var(--text-200);
+}
+
+// 下面是textarea组件的自定义样式
+.el-textarea {
+    font-size: 16px;
+    font-weight: bold;
+
+    --el-input-focus-border-color: var(--accent-200);
 }
 </style>
