@@ -25,7 +25,7 @@
                 </div>
 
 
-                <div class="flex flex-col gap-4 mt-4" v-if="activeIndex==0">
+                <div class="flex flex-col gap-4 mt-4" v-if="activeIndex == 0">
                     <p class="text-text-200">日期范围设置</p>
                     <el-select v-model="formName1" placeholder="请点击选择一种图表" size="large" clearable :teleported="false"
                         style="width: 360px;">
@@ -54,7 +54,7 @@
                             :value="method" />
                     </el-select>
                 </div>
-                <div class="flex flex-col gap-4 mt-4" v-if="activeIndex==1">
+                <div class="flex flex-col gap-4 mt-4" v-if="activeIndex == 1">
                     <p class="text-text-200">输出类型选择</p>
                     <el-select v-model="formName1" placeholder="请点击选择一种类型" size="large" clearable :teleported="false"
                         style="width: 360px;">
@@ -76,11 +76,12 @@
                     </el-select>
 
                 </div>
-                <div class="flex flex-col gap-4 mt-4" v-if="activeIndex==2">
+                <div class="flex flex-col gap-4 mt-4" v-if="activeIndex == 2">
                     <p class="text-text-200">文件分发</p>
                     <el-select v-model="formName1" placeholder="请点击选择类型" size="large" clearable :teleported="false"
                         style="width: 360px;">
-                        <el-option v-for="(text, index) in afterOutputMethods" :key="index" :label="text" :value="text" />
+                        <el-option v-for="(text, index) in afterOutputMethods" :key="index" :label="text"
+                            :value="text" />
                     </el-select>
                     <p class="text-text-200">API 集成</p>
 
@@ -103,25 +104,17 @@
 
         </el-scrollbar>
         <div class="w-full flex justify-between items-center absolute bottom-3 border-t pt-3 -mx-5 px-5">
-            <div class="flex flex-1 justify-start items-center gap-3">
-                <p class="text-text-300 text-sm">新数据源会稍后加入您的表格</p>
-            </div>
-            <div class="">
-                <div class="bg-text-100 rounded-xl cursor-pointer py-3 px-8" @click="toggleVisibility">
-                    <p class="text-white font-bold">确认配置</p>
-                </div>
-            </div>
-
-            <div class="flex flex-1 justify-end items-center">
+            <div class="flex flex-1 justify-start items-center">
                 <div
                     class="flex justify-between items-center gap-3 cursor-pointer rounded-xl hover:bg-gray-200 transition p-2">
                     <i class="fa-regular fa-arrow-rotate-right" style="color: #999;"></i>
                     <p class="text-text-300">恢复默认值</p>
                 </div>
-                <div class="">
-                </div>
             </div>
 
+            <div class="bg-black rounded-xl cursor-pointer py-3 px-8" @click="toggleVisibility">
+                <p class="text-white font-bold">确认配置</p>
+            </div>
         </div>
 
     </div>

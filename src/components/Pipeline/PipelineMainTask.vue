@@ -29,14 +29,15 @@
         </div>
       </div>
 
-      <!-- 并行任务添加按钮（始终位于最后） -->
-      <div
-        class="flex flex-col bg-white p-2 border-4 border-transparent cursor-pointer rounded-xl shadow-md mt-5 hover:shadow-lg"
-        @click="handleClick">
-        <div class="flex justify-center items-center gap-2">
-          <i class="fa-regular fa-plus"></i>
-          <p class="font-bold opacity-100">并行任务</p>
-        </div>
+
+    </div>
+    <!-- 并行任务添加按钮（始终位于最后） -->
+    <div
+      class="flex flex-col bg-white p-2 border-4 border-transparent cursor-pointer rounded-xl shadow-md mt-5 hover:shadow-lg"
+      @click="handleParallelTaskAdd">
+      <div class="flex justify-center items-center gap-2">
+        <i class="fa-regular fa-plus"></i>
+        <p class="font-bold opacity-100">并行任务</p>
       </div>
     </div>
 
@@ -52,7 +53,7 @@
 import { } from "vue"
 
 const props = defineProps(['tasks']);
-const emit = defineEmits(['show', 'addSerialTask']); // 添加 addSerialTask 事件
+const emit = defineEmits(['show', 'taskType']); // 添加 addSerialTask 事件
 const show = (index: number) => {
   console.log(index)
   emit('show', index)
@@ -62,7 +63,7 @@ const serialTasks = props.tasks.subTasks.filter((task: any) => task.type === 'se
 const parallelTasks = props.tasks.subTasks.filter((task: any) => task.type === 'parallel');
 
 // 方法：根据外层的 title 设置动态参数
-const handleClick = () => {
+const handleParallelTaskAdd = () => {
   let taskId;
   switch (props.tasks.title) {
     case '新闻预处理':
@@ -78,18 +79,32 @@ const handleClick = () => {
       taskId = 1; // 默认值，可以根据需要调整
   }
   show(taskId);
+
+  // 触发事件并将新任务传递给父组件
+  emit('taskType', "parallel");
 };
 
 // 方法：处理串行任务添加按钮点击事件
 const handleSerialTaskAdd = () => {
   console.log('添加串行任务');
-  const newSerialTask = {
-    title: '新串行任务',  // 这里可以根据需求动态设置标题
-    type: 'serial'
-  };
+  let taskId;
+  switch (props.tasks.title) {
+    case '新闻预处理':
+      taskId = 2;
+      break;
+    case '虚假新闻检测':
+      taskId = 3;
+      break;
+    case '报告生成':
+      taskId = 4;
+      break;
+    default:
+      taskId = 1; // 默认值，可以根据需要调整
+  }
+  show(taskId);
 
   // 触发事件并将新任务传递给父组件
-  emit('addSerialTask', newSerialTask);
+  emit('taskType', "serial");
 };
 </script>
 

@@ -52,7 +52,7 @@
                         <PipelineAccessSettings />
 
                         <!-- 任务列 -->
-                        <PipelineMainTask :tasks="tasks[1]" @show="showSetting" @addSerialTask="handleAddSerialTask"
+                        <PipelineMainTask :tasks="tasks[1]" @show="showSetting" @taskType="handleTaskType"
                             :key="key1" />
                     </div>
                 </div>
@@ -112,11 +112,11 @@
 
 
         <SettingDataSource :ifShow="settingVisible1" @updateIfShow="updateSettingVisible1"
-            @textDetected="handleTextDetected" @addParallelTask="handleAddDataSerialTask"/>
+            @textDetected="handleTextDetected" @addTask="addDataTask"/>
         <!-- 遮罩层 -->
-        <MaskLayer :ifShow="settingVisible1" backgroundColor="rgba(0, 0, 0, 0.4)" />
+        <MaskLayer :ifShow="settingVisible1" backgroundColor="rgba(0, 0, 0, 0.4)"/>
 
-        <SettingPreprocess :ifShow="settingVisible2" @updateIfShow="updateSettingVisible2" />
+        <SettingPreprocess :ifShow="settingVisible2" :taskType="taskType" @updateIfShow="updateSettingVisible2" @textDetected="handleTextDetected" @addTask="addPreprocessTask"/>
         <!-- 遮罩层 -->
         <MaskLayer :ifShow="settingVisible2" backgroundColor="rgba(0, 0, 0, 0.4)" />
 
@@ -185,13 +185,13 @@ interface PipelineStage {
 const stages = ref<PipelineStage[]>([
     {
         title: '数据收集',
-        num: 2,
+        num: 1,
         status: 'notStarted',
         completedTasks: 0
     },
     {
         title: '新闻预处理',
-        num: 1,
+        num: 3,
         status: 'notStarted',
         completedTasks: 0
     },
@@ -203,7 +203,7 @@ const stages = ref<PipelineStage[]>([
     },
     {
         title: '报告生成',
-        num: 1,
+        num: 2,
         status: 'notStarted',
         completedTasks: 0
     },
@@ -219,26 +219,21 @@ let tasks = ref([
     {
         title: '数据收集',
         subTasks: [
-            {
-                title: '爬取新闻数据',
-                type: 'parallel'
-            },
+            
         ]
     },
     {
         title: '新闻预处理',
         subTasks: [
             {
-                title: '缺失值和异常值清洗',
+                title: '语言检测与转换',
                 type: 'serial',
+                description: '检测新闻语言并统一转换为中文'
             },
             {
-                title: '标准化数据',
-                type: 'serial',
-            },
-            {
-                title: '获取第三方验证数据',
-                type: 'parallel'
+                title: '新闻分类',
+                type: 'parallel',
+                description: '对新闻进行主题分类，帮助后续分析'
             },
         ]
     },
@@ -246,16 +241,19 @@ let tasks = ref([
         title: '虚假新闻检测',
         subTasks: [
             {
-                title: '获取时间轴',
-                type: 'parallel'
+                title: '情绪检测',
+                type: 'parallel',
+                description: '检测新闻中的情绪倾向，识别偏向性言辞'
             },
             {
-                title: '取数',
-                type: 'parallel'
+                title: '事实检测',
+                type: 'parallel',
+                description: '对新闻中的事实进行验证，查找是否有误导性信息'
             },
             {
-                title: '图表选择',
-                type: 'parallel'
+                title: '时间一致性检查',
+                type: 'parallel',
+                description: '检查新闻时间与事件发生时间的合理性'
             }
         ]
     },
@@ -264,13 +262,21 @@ let tasks = ref([
         subTasks: [
             {
                 title: '输出文件类型选择',
-                type: 'parallel'
+                type: 'parallel',
+                description: '用户可以选择报告的输出格式（PDF、HTML等）'
+            },
+            {
+                title: '结果分析与评分',
+                type: 'parallel',
+                description: '对新闻的可信度进行评分，输出检测结论'
             }
         ]
     }
 ])
 const key1 = ref('');
 const key2 = ref('');
+
+let taskType = '';
 
 
 onMounted(() => {
@@ -280,18 +286,23 @@ onMounted(() => {
 })
 
 // 处理添加串行任务事件
-const handleAddSerialTask = (newTask: any) => {
+const addPreprocessTask = (newTask: any) => {
     // 在适当的任务（例如，新闻预处理）中添加新的串行任务
     tasks.value[1].subTasks.push(newTask);
-    console.log('添加串行任务成功', tasks.value[1].subTasks);
+    console.log('添加任务成功', tasks.value[1].subTasks);
     key1.value = Math.random().toString();
 };
 
-const handleAddDataSerialTask = (newTask: any) => {
+const addDataTask = (newTask: any) => {
     // 在适当的任务（例如，新闻预处理）中添加新的串行任务
     tasks.value[0].subTasks.push(newTask);
-    console.log('添加串行任务成功', tasks.value[0].subTasks);
+    console.log('添加任务成功', tasks.value[0].subTasks);
     key2.value = Math.random().toString();
+};
+
+const handleTaskType = (type: string) => {
+    console.log('handleTaskType', type);
+    taskType = type;
 };
 
 const updateStatementVisible = (value: boolean) => {
@@ -324,6 +335,15 @@ const handleTextDetected = (text: string) => {
 const handlePipeline = async () => {
     console.log('handlePipeline');
 
+    // 遍历task ，将tasks.value[1]、tasks.value[2]部分的description作为文本相加，然后放到userContent中
+    userContent += '还原虚假新闻处理要求: ';
+    tasks.value.slice(1, 3).forEach((task) => {
+        task.subTasks.forEach((subTask) => {
+            userContent += subTask.description;
+        });
+    });
+
+    console.log('userContent:', userContent);
     // 在 Stage 1 开始之前启动 restore 请求
     const restorePromise = restore(userContent).then((res) => res.data);
 
@@ -378,6 +398,8 @@ const handlePipeline = async () => {
 
     console.log('All stages completed.');
     statementVisible.value = true;
+
+    
 };
 
 const inputSlider = (value: number) => {

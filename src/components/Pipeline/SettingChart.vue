@@ -103,25 +103,17 @@
 
         </el-scrollbar>
         <div class="w-full flex justify-between items-center absolute bottom-3 border-t pt-3 -mx-5 px-5">
-            <div class="flex flex-1 justify-start items-center gap-3">
-                <p class="text-text-300 text-sm">新数据源会稍后加入您的表格</p>
-            </div>
-            <div class="">
-                <div class="bg-text-100 rounded-xl cursor-pointer py-3 px-8" @click="toggleVisibility">
-                    <p class="text-white font-bold">确认配置</p>
-                </div>
-            </div>
-
-            <div class="flex flex-1 justify-end items-center">
+            <div class="flex flex-1 justify-start items-center">
                 <div
                     class="flex justify-between items-center gap-3 cursor-pointer rounded-xl hover:bg-gray-200 transition p-2">
                     <i class="fa-regular fa-arrow-rotate-right" style="color: #999;"></i>
                     <p class="text-text-300">恢复默认值</p>
                 </div>
-                <div class="">
-                </div>
             </div>
 
+            <div class="bg-black rounded-xl cursor-pointer py-3 px-8" @click="toggleVisibility">
+                <p class="text-white font-bold">确认配置</p>
+            </div>
         </div>
 
     </div>

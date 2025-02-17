@@ -64,19 +64,12 @@
                 </div>
             </div>
 
-
-
             <div class="flex justify-end items-center">
-
                 <div class="bg-[#49CFAD] w-fit rounded-lg px-2 py-3 cursor-pointer" @click="detectText">
                     <p class="text-white font-bold">检测文字</p>
                 </div>
-
-
             </div>
-
         </div>
-
     </div>
 </template>
 
@@ -84,7 +77,7 @@
 import { ref } from 'vue';
 
 const props = defineProps(['ifShow']);
-const emit = defineEmits(['updateIfShow', 'textDetected','addParallelTask']);
+const emit = defineEmits(['updateIfShow', 'textDetected','addTask']);
 
 const text = ref('');
 
@@ -98,13 +91,13 @@ const detectText = () => {
     emit('textDetected', text.value);
     emit('updateIfShow', false);
     console.log('添加串行任务');
-    const newParallelTask = {
+    const newTask = {
         title: '文本数据',  // 这里可以根据需求动态设置标题
         type: 'parallel'
     };
 
     // 触发事件并将新任务传递给父组件
-    emit('addParallelTask', newParallelTask);
+    emit('addTask', newTask);
 };
 </script>
 
