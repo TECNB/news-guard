@@ -23,7 +23,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://101.43.57.153:8000',	//实际请求地址
+        // target: 'http://101.43.57.153:8000',	//实际请求地址
+        target: 'http://localhost:8000',	//实际请求地址
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },
