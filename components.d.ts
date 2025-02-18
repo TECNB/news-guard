@@ -7,6 +7,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AudioWaveform: typeof import('./src/components/AudioWaveform.vue')['default']
     BarContainer: typeof import('./src/components/Container/BarContainer.vue')['default']
     ChatWindow: typeof import('./src/components/Chat/ChatWindow.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']

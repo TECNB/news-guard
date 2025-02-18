@@ -31,7 +31,7 @@ export default defineConfig({
         target: 'http://101.43.57.153:8000/ask_fake_news',	//实际请求地址
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/ask_fake_news/, ""),
-      },
+      }
     }
   },
   css: {

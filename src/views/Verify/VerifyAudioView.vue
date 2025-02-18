@@ -5,9 +5,8 @@
                 <p class="text-xl font-bold">音频上传</p>
             </div>
             <div class="h-[85%] flex justify-center items-center">
-                <el-upload class="w-full " drag action="http://10.248.6.72:81/api/activity/file" multiple
-                    accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx" :file-list="fileList"
-                    :on-success="handleUploadSuccess">
+                <el-upload class="w-full" drag action="http://localhost:8000/upload/" multiple accept=".mp3,.wav"
+                    :file-list="fileList" :on-success="handleUploadSuccess">
                     <el-icon class="el-icon--upload">
                         <upload-filled />
                     </el-icon>
@@ -16,7 +15,7 @@
                     </div>
                     <template #tip>
                         <div class="el-upload__tip">
-                            支持 jpeg, png, webp, gif, tiff, bmp 格式文件
+                            支持 mp3, wav 格式文件
                         </div>
                     </template>
                 </el-upload>
@@ -27,9 +26,24 @@
                 <p class="text-xl font-bold">伪造情况报告</p>
             </div>
             <div class="h-[85%] flex justify-between items-center gap-5 mt-10">
-                <div class="h-full flex-1 flex justify-between items-center border rounded-xl  bg-green-50">
-                    <img class="" src="/Users/tec/Desktop/Pic/news-guard/dingzhen 3.png" alt="">
+                <div class="h-full flex flex-col justify-between items-center gap-5 ">
+                    <div
+                        class="flex-1 w-full h-1/2 flex flex-col justify-between items-center border border-green-200 rounded-xl bg-green-50 p-3 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                        <p class="w-full text-lg text-gray-600 font-bold text-left">音频内容</p>
+                        <p class="text-gray-800 text-sm text-left indent-5 leading-relaxed">
+                            大家好，我是雷军。今天我非常激动地和大家分享小米16的最新消息！这款手机将搭载我们自主研发的超快5G芯片，速度比市面上所有5G手机都要快，下载10GB的文件只需几秒钟，简直是颠覆性的体验。同时，还配备了240Hz刷新率的AMOLED显示屏，带来前所未有的流畅游戏和视频体验。我们相信，这款手机将会成为首款同时支持超快5G和超高刷新率显示的设备，必将引领市场的潮流
+                        </p>
+                    </div>
+                    <div
+                        class="flex-1 w-full h-1/2 flex flex-col justify-center items-center border border-green-200 rounded-xl bg-green-50 p-3 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                        <!-- 将音频文件传递给子组件 -->
+                        <p class="w-full text-lg text-gray-600 font-bold text-left">音频播放</p>
+                        <AudioWaveform :audioFile="audioFile" v-if="audioFile" />
+                        <p v-else>暂无上传音频</p>
+                    </div>
                 </div>
+
+
                 <div class="h-full flex-1">
                     <div class="h-[15%] border rounded-xl bg-green-50 flex justify-center items-center">
                         <p class="text-green-400 text-3xl font-bold">存在部分伪造</p>
@@ -65,8 +79,7 @@
                             </el-progress>
                         </div>
                         <div class="flex-1 h-full flex justify-center items-center border rounded-xl  bg-green-50">
-                            <RadarContainer :width="160" :height="160" :data="radarData"
-                                :chartOption="radarOptions" />
+                            <RadarContainer :width="160" :height="160" :data="radarData" :chartOption="radarOptions" />
                         </div>
                     </div>
 
@@ -77,7 +90,7 @@
                     <div class="flex justify-between items-center p-2">
                         <div class="flex justify-start items-center">
                             <div class="w-3 h-3 bg-pink-500 rounded-sm mr-2" />
-                            <p class="font-bold">内容篡改</p>
+                            <p class="font-bold">事实错误</p>
                         </div>
                         <p>60%</p>
                     </div>
@@ -110,10 +123,7 @@
                         <p>5%</p>
                     </div>
                 </div>
-
-
             </div>
-
         </div>
     </div>
 </template>
@@ -124,8 +134,12 @@ import type { UploadFile } from 'element-plus';
 import { radarData } from '../../constants/radarData'
 import radarOptions from '../../utils/radarOptions'
 
+import AudioWaveform from '../../components/AudioWaveform.vue';
+
+
 // 定义上传文件列表
 const fileList = ref<UploadFile[]>([]) // 上传文件列表
+const audioFile = ref<string | null>(null);
 
 // 成功上传后的处理方法
 const handleUploadSuccess = (response: any, file: UploadFile) => {
@@ -137,6 +151,9 @@ const handleUploadSuccess = (response: any, file: UploadFile) => {
             status: 'success' // 添加status属性
         })
     }
+    // 假设返回的 response 中包含了音频文件的 URL
+    audioFile.value = "http://localhost:8000" + response.data;
+    console.log('audioFile.value:', audioFile.value)
     console.log('handleUploadSuccess fileList:', fileList.value.map((file) => file.url))
 };
 </script>
