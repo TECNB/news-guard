@@ -48,39 +48,58 @@
 
                 <div class="h-full flex-1">
                     <div class="h-[15%] border rounded-xl bg-green-50 flex justify-center items-center">
-                        <p class="text-green-400 text-3xl font-bold">存在部分伪造</p>
+                        <p class="text-green-400 text-3xl font-bold">{{ audioResult.summary }}</p>
                     </div>
                     <div class="mt-2 h-[15%] flex justify-between items-center gap-2">
-                        <div class="flex-1 h-full border rounded-xl  bg-green-50">
-                            <el-progress type="dashboard" :percentage="80" :striped-flow="true" :width="90"
-                                :stroke-width="10" color="#4ade80">
+                        <div class="flex-1 h-full border rounded-xl bg-green-50">
+                            <el-progress type="dashboard" :percentage="audioResult.ai_probability" :striped-flow="true"
+                                :width="90" :stroke-width="10" :color="getProgressColor(audioResult.ai_probability)">
                                 <template #default="{ percentage }">
-                                    <span class="block text-gray-500">质量</span>
-                                    <span class="block text-lg font-bold text-green-400">{{ percentage }}%</span>
+                                    <span class="block text-gray-500">AI</span>
+                                    <span v-if="percentage > 0"
+                                        :class="['block', 'text-lg', 'font-bold', getProgressColorClass(audioResult.ai_probability)]">
+                                        {{ percentage }}%
+                                    </span>
+                                    <span v-else class="block text-lg font-bold text-green-400">
+                                        暂无
+                                    </span>
                                 </template>
                             </el-progress>
                         </div>
-                        <div class="flex-1 h-full border rounded-xl  bg-green-50">
-                            <el-progress type="dashboard" :percentage="60" :striped-flow="true" :width="90"
-                                :stroke-width="10" color="#4ade80">
+                        <div class="flex-1 h-full border rounded-xl bg-green-50">
+                            <el-progress type="dashboard" :percentage="audioResult.safety_level" :striped-flow="true"
+                                :width="90" :stroke-width="10" :color="getProgressColor(audioResult.safety_level)">
                                 <template #default="{ percentage }">
                                     <span class="block text-gray-500">健康度</span>
-                                    <span class="block text-lg font-bold text-green-400">{{ percentage }}%</span>
+                                    <span v-if="percentage > 0"
+                                        :class="['block', 'text-lg', 'font-bold', getProgressColorClass(audioResult.safety_level)]">
+                                        {{ percentage }}%
+                                    </span>
+                                    <span v-else class="block text-lg font-bold text-green-400">
+                                        暂无
+                                    </span>
                                 </template>
                             </el-progress>
                         </div>
                     </div>
+
                     <div class="mt-2 h-[25%] flex justify-between items-center gap-2">
-                        <div class="flex-1 h-full flex justify-center items-center border rounded-xl  bg-green-50">
-                            <el-progress type="circle" :percentage="60" :striped-flow="true" :width="130"
-                                :stroke-width="10" color="#4ade80">
+                        <div class="flex-1 h-full flex justify-center items-center border rounded-xl bg-green-50">
+                            <el-progress type="circle" :percentage="audioResult.authenticity" :striped-flow="true"
+                                :width="130" :stroke-width="10" :color="getProgressColor(audioResult.authenticity)">
                                 <template #default="{ percentage }">
-                                    <span class="block text-lg font-bold text-gray-500">AI</span>
-                                    <span class="block text-lg font-bold text-green-400">{{ percentage }}%</span>
+                                    <span class="block text-lg font-bold text-gray-500">真实度</span>
+                                    <span v-if="percentage > 0"
+                                        :class="['block', 'text-lg', 'font-bold', getProgressColorClass(audioResult.authenticity)]">
+                                        {{ percentage }}%
+                                    </span>
+                                    <span v-else class="block text-lg font-bold text-green-400">
+                                        暂无
+                                    </span>
                                 </template>
                             </el-progress>
                         </div>
-                        <div class="flex-1 h-full flex justify-center items-center border rounded-xl  bg-green-50">
+                        <div class="flex-1 h-full flex justify-center items-center border rounded-xl bg-green-50">
                             <RadarContainer :width="160" :height="160" :data="radarData" :chartOption="radarOptions" />
                         </div>
                     </div>
@@ -135,7 +154,7 @@ import { ref } from "vue"
 import type { UploadFile } from 'element-plus';
 import { radarData } from '../../constants/radarData'
 import radarOptions from '../../utils/radarOptions'
-import { toText } from '../../api/verifyAudio'
+import { toText, verifyAudio } from '../../api/verifyAudio'
 
 import AudioWaveform from '../../components/AudioWaveform.vue';
 
@@ -144,9 +163,42 @@ import AudioWaveform from '../../components/AudioWaveform.vue';
 const fileList = ref<UploadFile[]>([]) // 上传文件列表
 const audioFile = ref<string | null>(null);
 const audioContent = ref<string>('')
+type AudioResult = {
+    authenticity: number;
+    ai_probability: number;
+    safety_level: number;
+    summary: string;
+};
+
+const audioResult = ref<AudioResult>({
+    authenticity: 0,
+    ai_probability: 0,
+    safety_level: 0,
+    summary: '暂无上传音频'
+});
+
+const getProgressColor = (percentage: number) => {
+    if (percentage >= 70) {
+        return '#4ade80' // green
+    } else if (percentage >= 40) {
+        return '#facc15' // yellow
+    } else {
+        return '#f87171' // red
+    }
+}
+
+const getProgressColorClass = (percentage: number) => {
+    if (percentage >= 70) {
+        return 'text-green-400'  // green
+    } else if (percentage >= 40) {
+        return 'text-yellow-400'  // yellow
+    } else {
+        return 'text-red-400'  // red
+    }
+}
 
 // 成功上传后的处理方法
-const handleUploadSuccess = async(response: any, file: UploadFile) => {
+const handleUploadSuccess = async (response: any, file: UploadFile) => {
     if (!fileList.value.find(f => f.uid === file.uid)) {
         fileList.value.push({
             name: file.name,
@@ -163,6 +215,12 @@ const handleUploadSuccess = async(response: any, file: UploadFile) => {
     const newFile = new File([fileBlob], file.name, { type: fileBlob.type });
     await toText(newFile).then((res) => {
         audioContent.value = res.data.text;
+    });
+
+    await verifyAudio(audioContent.value).then((res) => {
+        const jsonResult = res.data.replace(/^```json\s*|\s*```$/g, '').trim();
+        console.log('verifyAudio:', jsonResult)
+        audioResult.value = JSON.parse(jsonResult);
     });
 
 

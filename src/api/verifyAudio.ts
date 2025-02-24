@@ -11,3 +11,13 @@ export const toText = (file: File): Promise<any> => {
         }
     });
 };
+
+// 鉴别音频
+export const verifyAudio = (userContent: string): Promise<any> => {
+    const data = {
+        user_content: userContent
+    };
+
+    return axios.post('api/verify_audio', data);
+};
+
