@@ -52,14 +52,14 @@
         <el-scrollbar height="90%" v-else>
             <div class="w-full flex justify-start items-center gap-1 cursor-pointer px-3" @click="handleReviewClick">
                 <el-icon class="">
-                    <ArrowLeftBold/>
+                    <ArrowLeftBold />
                 </el-icon>
                 <p class="font-bold">返回</p>
             </div>
             <ul>
                 <!-- 遍历菜单项 -->
                 <li v-for="(menu, index) in chat" :key="index">
-                    <div class="menu-item relative" @click="selectMenu(index, menu.children, menu.path!)"
+                    <div class="menu-item w-52 relative" @click="getSessionId(index, menu.sessionId)"
                         :class="{ 'active-menu': selectedMenu === index }">
                         <el-icon color="#000000" v-if="selectedMenu === index">
                             <component :is="menu.icon"></component>
@@ -67,34 +67,8 @@
                         <el-icon v-else>
                             <component :is="menu.icon"></component>
                         </el-icon>
-                        <p>{{ menu.label }}</p>
-
-                        <!-- 在这里插入图标和点击事件 -->
-                        <span v-if="menu.label === '虚假新闻盘点'"
-                            class="absolute right-4 top-1/2 transform -translate-y-1/2 cursor-pointer"
-                            @click="handleReviewClick">
-                            <el-icon>
-                                <ArrowRightBold />
-                            </el-icon>
-                        </span>
-
-                        <!-- 如果有子菜单，显示箭头 -->
-                        <el-icon v-if="menu.children" class="ml-7">
-                            <ArrowDownBold v-if="!ifShowSubMenu" />
-                            <ArrowUpBold v-else />
-                        </el-icon>
-
+                        <p class="text-nowrap text-ellipsis overflow-hidden">{{ menu.label }}</p>
                     </div>
-                    <!-- 如果有子菜单，渲染子菜单 -->
-                    <ul v-if="menu.children && ifShowSubMenu">
-                        <li v-for="(child, childIndex) in menu.children" :key="childIndex">
-                            <div class="menu-item child-menu"
-                                @click="selectSubMenu(index, childIndex, menu.children[childIndex].path!)"
-                                :class="{ 'active-menu': selectedSubMenu === childIndex }">
-                                <p class="ml-6">{{ child.label }}</p>
-                            </div>
-                        </li>
-                    </ul>
                 </li>
             </ul>
         </el-scrollbar>
@@ -104,6 +78,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { getSession } from '../api/fakeNewsReview';
+
+import { useChatStore } from '../stores/ChatStore.ts';
+
+//获取对话的stpre
+const chatStore = useChatStore()
 
 // 实例化router
 const router = useRouter();
@@ -163,45 +143,9 @@ const menus = [
 ];
 
 
-const chat = [
-    {
-        label: '聊天1',
-        icon: 'ChatDotRound',
-        path: '/',
-
-    },
-    {
-        label: '聊天2',
-        icon: 'ChatDotRound',
-        path: '/verify-text',
-    },
-
-    {
-        label: '聊天3',
-        icon: 'ChatDotRound',
-        path: '/',
-    },
-    {
-        label: '聊天4',
-        icon: 'ChatDotRound',
-        path: '/'
-    },
-    {
-        label: '聊天5',
-        icon: 'ChatDotRound',
-        path: '/review'
-    },
-    {
-        label: '聊天6',
-        icon: 'ChatDotRound',
-        path: '/prediction'
-    },
-    {
-        label: '聊天7',
-        icon: 'ChatDotRound',
-        path: '/restore'
-    },
-];
+let chat = ref<any[]>([]);
+const displayedMessages = ref<{ type: string; content: string }[]>([]); // 展示的消息列表
+let Session = ref<any[]>([]);
 
 
 onMounted(async () => {
@@ -211,10 +155,53 @@ onMounted(async () => {
         selectedMenu.value = index;
     }
     console.log("selectedMenu:" + selectedMenu.value)
+
+    Session.value = (await getSession()).data.data;
+
+    // 使用 map 函数遍历 res.data.data 数组并构建 chat 数组
+    chat.value = Session.value.map((item: any, index: any) => ({
+        label: item.name, // 根据索引生成 label
+        icon: 'ChatDotRound', // 图标
+        sessionId: item.id, // 会话 id
+    }));
+
+    console.log(chat); // 输出构建好的 chat 数组
 });
 
-const handleReviewClick = () => {
-    console.log("handleReviewClick")
+const getSessionId = (index: number, sessionId: string) => {
+    selectedMenu.value = index;
+    selectedSubMenu.value = null; // 清除子菜单的选中状态
+
+    // 从响应数据中提取 messages 数组，并构建 displayedMessages
+    const session = Session.value.find((item: any) => item.id === sessionId);
+
+    if (session) {
+        // 提取该会话中的消息，并构建 displayedMessages
+        displayedMessages.value = session.messages.map((message: any) => ({
+            type: message.role === 'assistant' ? 'ai' : 'user',
+            content: message.content
+        }));
+
+        // 确保 currentConversationId 设置为该会话的 ID
+        const existingConversation = chatStore.conversations.find(conv => conv.id === session.id);
+        if (!existingConversation) {
+            // 如果没有找到会话，创建一个新会话
+            chatStore.startNewConversation();
+        } else {
+            // 如果找到了会话，设置为当前会话
+            chatStore.switchConversation(session.id);
+        }
+
+        // 保存消息到当前会话
+        chatStore.saveMessages(displayedMessages.value);
+
+        console.log("displayedMessages.value:", displayedMessages.value); // 输出构建好的 displayedMessages
+        console.log("chatStore:", chatStore.getCurrentMessages().length); // 输出构建好的 displayedMessages
+    }
+};
+
+const handleReviewClick = async () => {
+    console.log("handleReviewClick");
     ifReviewClick.value = !ifReviewClick.value;
 };
 
@@ -233,15 +220,17 @@ const selectMenu = (index: number, ifChildren: any, path: string) => {
         selectedMenu.value = index;
         selectedSubMenu.value = null; // 清除子菜单的选中状态
         router.push(path)
+        // 当 index 为 4 时，创建新的 chatStore 会话
+        if (index === 4) {
+            chatStore.startNewConversation();
+        }
 
     } else {
         selectedMenu.value = null;
         selectedSubMenu.value = 0; // 清除子菜单的选中状态
         router.push(menus[index].children![0].path!);
         toggleSubMenu();
-
     }
-
 };
 
 const selectSubMenu = (parentIndex: number, childIndex: number, path: string) => {

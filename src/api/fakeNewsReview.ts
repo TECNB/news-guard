@@ -18,3 +18,8 @@ export const generateChart = (userContent: string, chartType: string): Promise<a
 
     return axios.post('api/generate_chart', data);
 };
+
+// 获取聊天记录
+export const getSession = (): Promise<any> => {
+    return axios.get('api/get_session');
+};

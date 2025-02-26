@@ -1,7 +1,7 @@
 <template>
   <el-scrollbar height="100%" wrap-style="width:100%;" class="flex justify-center -mx-5">
     <div id="chat-window" class="flex-1 px-24 py-10">
-      <div v-for="(msg, index) in props.displayedMessages" :key="index" class="mb-4 flex items-start">
+      <div v-for="(msg, index) in safeMessages" :key="index" class="mb-4 flex items-start">
 
         <div v-if="msg.type === 'image'" class="w-full flex justify-end items-center rounded-lg ">
           <img class="w-40 h-56 rounded-lg bg-gray-200 bg-opacity-50 p-2" :src="msg.content" />
@@ -63,8 +63,8 @@
             </div>
 
             <!-- Dynamic Content -->
-            <div class="flex items-start">
-              <p class="text-start">{{ msg.content }}</p>
+            <div class="markdown-body text-start">
+              <div v-html="msg.safeContent" class="prose max-w-none" />
             </div>
 
             <!-- Actin Icons -->
@@ -100,6 +100,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
+import { computed } from 'vue';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 import lineOptions from '../../utils/lineOptions';
 import LineContainer from '../../components/Container/LineContainer.vue';
@@ -109,6 +112,25 @@ import BarContainer from '../../components/Container/BarContainer.vue';
 
 import pieOption from '../../utils/pieOption';
 import PieContainer from '../../components/Container/PieContainer.vue';
+
+
+// 增强的预处理函数（同时处理非法标记和空内容）
+const preprocessContent = (content: string) => {
+  // 步骤1：删除所有##...$$标记
+  const cleanContent = content.replace(/##.*?\$\$/g, '');
+  
+  // 步骤2：处理空内容情况
+  return cleanContent.trim() || '[空内容]';
+};
+
+
+// 配置基础Markdown解析规则（网页1的最佳实践）
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+  smartypants: true
+});
+
 
 // 控制是否展开 PDF 展示框
 const isExpanded = ref(false);
@@ -135,6 +157,18 @@ let lineYAxisLabel = "";
 
 let pieData = { seriesData: [] };
 let pieSeriesName = "";
+
+
+// 安全渲染管道（网页4的安全方案）
+const safeMessages = computed(() => {
+  return props.displayedMessages.map(msg => ({
+    ...msg,
+    safeContent: DOMPurify.sanitize(marked.parse(preprocessContent(msg.content)), {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'code', 'pre'],
+      FORBID_ATTR: ['style', 'onerror']
+    })
+  }));
+});
 
 
 

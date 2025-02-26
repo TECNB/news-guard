@@ -33,6 +33,7 @@ export const useChatStore = defineStore('chatStore', () => {
     // 保存消息到当前活跃的对话
     const saveMessages = (messages: any[]) => {
         const conversation = conversations.value.find(conv => conv.id === currentConversationId.value);
+        console.log('conversation', conversation);
         if (conversation) {
             conversation.messages = messages;
         }

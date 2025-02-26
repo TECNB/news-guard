@@ -68,6 +68,8 @@ import { suggestions } from '../constants/suggestions'; // 导入建议列表
 import { Chat } from '../utils/AIChat'; // 导入AIChat
 import { generateChart } from '../api/fakeNewsReview.ts';
 
+import { getSession } from '../api/fakeNewsReview';
+
 
 import { useChatStore } from '../stores/ChatStore.ts';
 //获取对话的stpre
@@ -129,7 +131,7 @@ const typeEffect = (text: string, speed: number) => {
 };
 
 
-onMounted(() => {
+onMounted(async() => {
   // 从当前活跃的对话中获取消息
   if (chatStore.getCurrentMessages().length > 0) {
     displayedMessages.value = chatStore.getCurrentMessages(); // 使用 getCurrentMessages 方法获取消息
@@ -140,6 +142,12 @@ onMounted(() => {
   // 监听聊天消息的变化，自动更新 displayedMessages
   watch(() => chatStore.getCurrentMessages(), (newValue) => {
     console.log('Messages updated:', newValue);
+    if (newValue.length !== 0){
+      showSuggestions.value = false;
+    }else{
+      showSuggestions.value = true;
+    }
+    
     displayedMessages.value = newValue;
   });
 
