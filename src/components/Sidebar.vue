@@ -4,11 +4,11 @@
             <img class="w-9 h-9 rounded-full object-cover aspect-square" src="../assets/images/logo.png">
             <p>NEWS-GUARD</p>
         </div>
-        <el-scrollbar height="90%">
+        <el-scrollbar height="90%" v-if="!ifReviewClick">
             <ul>
                 <!-- 遍历菜单项 -->
                 <li v-for="(menu, index) in menus" :key="index">
-                    <div class="menu-item" @click="selectMenu(index, menu.children, menu.path!)"
+                    <div class="menu-item relative" @click="selectMenu(index, menu.children, menu.path!)"
                         :class="{ 'active-menu': selectedMenu === index }">
                         <el-icon color="#000000" v-if="selectedMenu === index">
                             <component :is="menu.icon"></component>
@@ -17,6 +17,67 @@
                             <component :is="menu.icon"></component>
                         </el-icon>
                         <p>{{ menu.label }}</p>
+
+                        <!-- 在这里插入图标和点击事件 -->
+                        <span v-if="menu.label === '虚假新闻盘点'"
+                            class="absolute right-4 top-[29px] transform -translate-y-1/2 cursor-pointer"
+                            @click="handleReviewClick">
+                            <el-icon>
+                                <ArrowRightBold />
+                            </el-icon>
+                        </span>
+
+                        <!-- 如果有子菜单，显示箭头 -->
+                        <el-icon v-if="menu.children" class="ml-7">
+                            <ArrowDownBold v-if="!ifShowSubMenu" />
+                            <ArrowUpBold v-else />
+                        </el-icon>
+
+                    </div>
+                    <!-- 如果有子菜单，渲染子菜单 -->
+                    <ul v-if="menu.children && ifShowSubMenu">
+                        <li v-for="(child, childIndex) in menu.children" :key="childIndex">
+                            <div class="menu-item child-menu"
+                                @click="selectSubMenu(index, childIndex, menu.children[childIndex].path!)"
+                                :class="{ 'active-menu': selectedSubMenu === childIndex }">
+                                <p class="ml-6">{{ child.label }}</p>
+                            </div>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </el-scrollbar>
+
+
+        <el-scrollbar height="90%" v-else>
+            <div class="w-full flex justify-start items-center gap-1 cursor-pointer px-3" @click="handleReviewClick">
+                <el-icon class="">
+                    <ArrowLeftBold/>
+                </el-icon>
+                <p class="font-bold">返回</p>
+            </div>
+            <ul>
+                <!-- 遍历菜单项 -->
+                <li v-for="(menu, index) in chat" :key="index">
+                    <div class="menu-item relative" @click="selectMenu(index, menu.children, menu.path!)"
+                        :class="{ 'active-menu': selectedMenu === index }">
+                        <el-icon color="#000000" v-if="selectedMenu === index">
+                            <component :is="menu.icon"></component>
+                        </el-icon>
+                        <el-icon v-else>
+                            <component :is="menu.icon"></component>
+                        </el-icon>
+                        <p>{{ menu.label }}</p>
+
+                        <!-- 在这里插入图标和点击事件 -->
+                        <span v-if="menu.label === '虚假新闻盘点'"
+                            class="absolute right-4 top-1/2 transform -translate-y-1/2 cursor-pointer"
+                            @click="handleReviewClick">
+                            <el-icon>
+                                <ArrowRightBold />
+                            </el-icon>
+                        </span>
+
                         <!-- 如果有子菜单，显示箭头 -->
                         <el-icon v-if="menu.children" class="ml-7">
                             <ArrowDownBold v-if="!ifShowSubMenu" />
@@ -52,6 +113,7 @@ const selectedMenu = ref<number | null>(0);
 const selectedSubMenu = ref<number | null>(null);
 // ifShowSubMenu
 const ifShowSubMenu = ref<boolean>(false);
+const ifReviewClick = ref<boolean>(false);
 
 const menus = [
     {
@@ -101,6 +163,47 @@ const menus = [
 ];
 
 
+const chat = [
+    {
+        label: '聊天1',
+        icon: 'ChatDotRound',
+        path: '/',
+
+    },
+    {
+        label: '聊天2',
+        icon: 'ChatDotRound',
+        path: '/verify-text',
+    },
+
+    {
+        label: '聊天3',
+        icon: 'ChatDotRound',
+        path: '/',
+    },
+    {
+        label: '聊天4',
+        icon: 'ChatDotRound',
+        path: '/'
+    },
+    {
+        label: '聊天5',
+        icon: 'ChatDotRound',
+        path: '/review'
+    },
+    {
+        label: '聊天6',
+        icon: 'ChatDotRound',
+        path: '/prediction'
+    },
+    {
+        label: '聊天7',
+        icon: 'ChatDotRound',
+        path: '/restore'
+    },
+];
+
+
 onMounted(async () => {
     // 初始化选中的菜单
     const index = menus.findIndex((menu: any) => menu.path === route.path);
@@ -109,6 +212,11 @@ onMounted(async () => {
     }
     console.log("selectedMenu:" + selectedMenu.value)
 });
+
+const handleReviewClick = () => {
+    console.log("handleReviewClick")
+    ifReviewClick.value = !ifReviewClick.value;
+};
 
 
 const toggleSubMenu = () => {

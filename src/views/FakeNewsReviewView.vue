@@ -323,6 +323,8 @@ const handleEnter = async () => {
         throw new Error('Network response was not ok');
       }
 
+      console.log("response", response);
+
       const reader = response.body?.getReader();
       if (!reader) throw new Error('Failed to get reader from response body');
 
