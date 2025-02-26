@@ -37,6 +37,10 @@ const routes: Array<RouteRecordRaw> = [
             {
                 path: '/restore',
                 component: () => import("../views/FakeNewsRestoreView.vue"),
+            },
+            {
+                path: '/knowledge',
+                component: () => import("../views/KnowledgeView.vue"),
             }
         ],
     },

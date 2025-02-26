@@ -121,9 +121,9 @@ const menus = [
         path: '/',
     },
     {
-        label: '模型定制',
+        label: '个人知识库',
         icon: 'PieChart',
-        path: '/'
+        path: '/knowledge'
     },
     {
         label: '虚假新闻盘点',
