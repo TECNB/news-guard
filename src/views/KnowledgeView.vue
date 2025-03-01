@@ -22,22 +22,22 @@
             </div>
         </div>
         <div class="w-full flex flex-wrap gap-5 mt-10">
-            <div v-for="(knowledge, index) in knowledgeList" :key="index" class="w-[280px] h-[280px] flex flex-col justify-between items-center border border-gray-400 rounded-xl cursor-pointer p-5">
+            <div v-for="(knowledge, index) in knowledgeList" :key="index" class="w-[280px] h-[280px] flex flex-col justify-between items-center border border-gray-400 rounded-xl cursor-pointer p-5" @click="toDetail(knowledge.id)">
             <div class="w-full flex justify-between items-center">
                 <img class="w-8 h-8 rounded-full object-cover aspect-square" src="../assets/images/avatar.png" alt="">
                 <i class="fa-xl fa-solid fa-ellipsis"></i>
             </div>
             <div class="w-full">
-                <p class="text-left text-2xl font-bold">{{ knowledge.title }}</p>
+                <p class="text-left text-2xl font-bold">{{ knowledge.name }}</p>
             </div>
             <div class="w-full">
                 <div class="flex justify-start items-center gap-3">
                 <i class="fa-regular fa-file-lines"></i>
-                <p class="text-sm font-bold">{{ knowledge.documents }} 文档</p>
+                <p class="text-sm font-bold">{{ knowledge.document_count }} 文档</p>
                 </div>
                 <div class="flex justify-start items-center gap-3">
                 <i class="fa-regular fa-calendar"></i>
-                <p class="text-sm font-bold">{{ knowledge.date }}</p>
+                <p class="text-sm font-bold">{{ formatDate(knowledge.create_date) }}</p>
                 </div>
             </div>
             </div>
@@ -46,61 +46,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue"
+import { ref,onMounted } from "vue"
+import router from "../router";
+
+import { getKnowledge } from "../api/knowledge";
 let knowledgeName = ref()
-let knowledgeList = ref([
-    {
-        title: "虚假新闻 11月份",
-        avatar: "https://cdn.jsdelivr.net/gh/tecmz/tecmz-images/images/2021/09/15/1631690131.png",
-        documents: 10,
-        date: "2024-11-15"
-    },
-    {
-        title: "虚假新闻 12月份",
-        avatar: "../assets/images/avatar.png",
-        documents: 20,
-        date: "2024-12-15"
-    },
-    {
-        title: "虚假新闻 1月份",
-        avatar: "../assets/images/avatar.png",
-        documents: 30,
-        date: "2025-01-12"
-    },
-    {
-        title: "虚假新闻 2月份",
-        avatar: "../assets/images/avatar.png",
-        documents: 40,
-        date: "2021-02-15"
-    },
-    {
-        title: "热点新闻 11月份",
-        avatar: "../assets/images/avatar.png",
-        documents: 50,
-        date: "2024-11-15"
-    },
-    {
-        title: "热点新闻 12月份",
-        avatar: "../assets/images/avatar.png",
-        documents: 60,
-        date: "2024-12-15"
-    },
-    {
-        title: "热点新闻 1月份",
-        avatar: "../assets/images/avatar.png",
-        documents: 70,
-        date: "2025-01-15"
-    },
-    {
-        title: "热点新闻 2月份",
-        avatar: "../assets/images/avatar.png",
-        documents: 80,
-        date: "2025-02-15"
-    }
-])
+let knowledgeList = ref()
+
+onMounted(async () => {
+    const res = await getKnowledge()
+    knowledgeList.value = res.data.data
+})
 
 const createKnowledge = () => {
     console.log("创建知识库")
+    router.push("/create-knowledge/new")
+}
+
+const formatDate = (date: string) => {
+    // 返回日期以及时间
+    return new Date(date).toLocaleString()
+}
+
+const toDetail = (id: number) => {
+    console.log("查看知识库详情", id)
+    router.push(`/create-knowledge/${id}`)
 }
 </script>
 

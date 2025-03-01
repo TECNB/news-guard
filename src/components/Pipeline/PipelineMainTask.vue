@@ -10,7 +10,39 @@
         <div class="text-left">
           <p class="font-bold">{{ task.title }}</p>
         </div>
+        <!-- 串行任务连线 -->
+        <div class="h-5 absolute left-5 -bottom-6 border border-gray-400 border-l-[3px]"
+          v-if="taskIndex !== serialTasks.length - 1">
+        </div>
       </div>
+
+      <!-- 串行任务到并行任务的连线 -->
+      <template v-if="parallelTasks.length > 0">
+        <div
+          class="h-14 w-4 absolute -right-[29px] top-7 border-gray-400 border-l-[3px] border-t-[3px] rounded-tl-2xl -z-10">
+        </div>
+        <div
+          class="h-14 w-4 absolute -left-[29px] top-7 border-gray-400 border-r-[3px] border-t-[3px] rounded-tr-2xl -z-10">
+        </div>
+        <!-- 并行任务右侧连线 -->
+        <div :class="[
+          'w-4 absolute -right-4 border-gray-400 border-r-[3px] border-b-[3px] rounded-br-2xl -z-10',
+
+        ]" :style="{
+          top: `${56 + (serialTasks.length - 1) * 14}px`,
+          height: `${68 + (serialTasks.length - 1) * 60}px`
+        }">
+        </div>
+
+        <!-- 并行任务左侧连线 -->
+        <div :class="[
+          'w-4 absolute -left-4 border-gray-400 border-l-[3px] border-b-[3px] rounded-bl-2xl -z-10'
+        ]" :style="{
+          top: `${56 + (serialTasks.length - 1) * 14}px`,
+          height: `${68 + (serialTasks.length - 1) * 60}px`
+        }">
+        </div>
+      </template>
 
       <!-- 添加串行任务按钮（位于最后一个串行任务下方） -->
       <div v-if="serialTasks.length > 0"
@@ -21,20 +53,65 @@
     </div>
 
     <!-- 并行任务部分 -->
-    <div v-if="parallelTasks.length > 0">
+    <div v-if="parallelTasks.length > 0" class="relative" :class="{ 'mt-10': serialTasks.length > 0 }">
+      <!-- 并行任务圆角连接线 - 只有在没有串行任务且并行任务大于1个时才显示 -->
+      <template v-if="parallelTasks.length >= 2 && serialTasks.length === 0">
+        <div
+          class="h-14 w-4 absolute -right-[29px] top-7 border-gray-400 border-l-[3px] border-t-[3px] rounded-tl-2xl -z-10">
+        </div>
+        <div
+          class="h-14 w-4 absolute -left-[29px] top-7 border-gray-400 border-r-[3px] border-t-[3px] rounded-tr-2xl -z-10">
+        </div>
+      </template>
+
       <div v-for="(task, taskIndex) in parallelTasks" :key="taskIndex"
         class="relative flex flex-col bg-white p-3 border-4 border-transparent cursor-pointer rounded-xl shadow-lg mb-5">
         <div class="text-left">
           <p class="font-bold">{{ task.title }}</p>
         </div>
+
+        <!-- 并行任务右侧连线 -->
+        <div v-if="taskIndex !== parallelTasks.length - 1 && serialTasks==0" :class="[
+          'w-4 absolute -right-5 border-gray-400 border-r-[3px] border-b-[3px] rounded-br-2xl -z-10',
+          taskIndex === 0 ? 'h-[68px] top-10' : `h-[85px] bottom-${24 + (parallelTasks.length - taskIndex - 2) * 85}px`
+        ]">
+        </div>
+        <!-- 并行任务左侧连线 -->
+        <div v-if="taskIndex !== parallelTasks.length - 1 && serialTasks!=0" :class="[
+          'w-4 absolute -right-5 border-gray-400 border-r-[3px] border-b-[3px] rounded-br-2xl -z-10',
+          taskIndex === 0 ? 'h-[95px] top-[5px]' : `h-[85px] bottom-${24 + (parallelTasks.length - taskIndex - 2) * 85}px`
+        ]">
+        </div>
+
+        <!-- 并行任务左侧连线 -->
+        <div v-if="taskIndex !== parallelTasks.length - 1 && serialTasks==0" :class="[
+          'w-4 absolute -left-5 border-gray-400 border-l-[3px] border-b-[3px] rounded-bl-2xl -z-10',
+          taskIndex === 0 ? 'h-[68px] top-10' : `h-[85px] bottom-${24 + (parallelTasks.length - taskIndex - 2) * 85}px`
+        ]">
+        </div>
+        <!-- 并行任务左侧连线 -->
+        <div v-if="taskIndex !== parallelTasks.length - 1 && serialTasks!=0" :class="[
+          'w-4 absolute -left-5 border-gray-400 border-l-[3px] border-b-[3px] rounded-bl-2xl -z-10',
+          taskIndex === 0 ? 'h-[95px] top-[5px]' : `h-[85px] bottom-${24 + (parallelTasks.length - taskIndex - 2) * 85}px`
+        ]">
+        </div>
+        
       </div>
-
-
     </div>
+
     <!-- 并行任务添加按钮（始终位于最后） -->
     <div
-      class="flex flex-col bg-white p-2 border-4 border-transparent cursor-pointer rounded-xl shadow-md mt-5 hover:shadow-lg"
+      class="relative flex flex-col bg-white p-2 border-4 border-transparent cursor-pointer rounded-xl shadow-md mt-5 hover:shadow-lg"
       @click="handleParallelTaskAdd">
+      <!-- 并行任务的左并行连线 -->
+      <div
+        class="h-[120px] w-6 absolute -left-5 bottom-5 border-gray-400 border-l-[3px] border-b-[3px] border-dashed rounded-bl-2xl -z-10">
+      </div>
+      <!-- 并行任务的右并行连线 -->
+      <div
+        class="h-[120px] w-6 absolute -right-5 bottom-5 border-gray-400 border-r-[3px] border-b-[3px] border-dashed rounded-br-2xl -z-10">
+      </div>
+
       <div class="flex justify-center items-center gap-2">
         <i class="fa-regular fa-plus"></i>
         <p class="font-bold opacity-100">并行任务</p>
@@ -42,10 +119,8 @@
     </div>
 
     <!-- 过程连线 -->
-    <div class="w-11 absolute -left-11 top-6 border border-gray-400 border-b-[3px]">
-    </div>
-    <div class="w-11 absolute -right-11 top-6 border border-gray-400 border-b-[3px]">
-    </div>
+    <div class="w-11 absolute -left-11 top-6 border border-gray-400 border-b-[3px]"></div>
+    <div class="w-11 absolute -right-11 top-6 border border-gray-400 border-b-[3px]"></div>
   </div>
 </template>
 

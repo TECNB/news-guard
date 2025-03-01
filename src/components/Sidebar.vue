@@ -155,17 +155,6 @@ onMounted(async () => {
         selectedMenu.value = index;
     }
     console.log("selectedMenu:" + selectedMenu.value)
-
-    Session.value = (await getSession()).data.data;
-
-    // 使用 map 函数遍历 res.data.data 数组并构建 chat 数组
-    chat.value = Session.value.map((item: any, index: any) => ({
-        label: item.name, // 根据索引生成 label
-        icon: 'ChatDotRound', // 图标
-        sessionId: item.id, // 会话 id
-    }));
-
-    console.log(chat); // 输出构建好的 chat 数组
 });
 
 const getSessionId = (index: number, sessionId: string) => {
@@ -215,13 +204,23 @@ const toggleSubMenu = () => {
 };
 
 
-const selectMenu = (index: number, ifChildren: any, path: string) => {
+const selectMenu = async(index: number, ifChildren: any, path: string) => {
     if (!ifChildren) {
         selectedMenu.value = index;
         selectedSubMenu.value = null; // 清除子菜单的选中状态
         router.push(path)
         // 当 index 为 4 时，创建新的 chatStore 会话
         if (index === 4) {
+            Session.value = (await getSession()).data.data;
+
+            // 使用 map 函数遍历 res.data.data 数组并构建 chat 数组
+            chat.value = Session.value.map((item: any, index: any) => ({
+                label: item.name, // 根据索引生成 label
+                icon: 'ChatDotRound', // 图标
+                sessionId: item.id, // 会话 id
+            }));
+
+            console.log(chat); // 输出构建好的 chat 数组
             chatStore.startNewConversation();
         }
 
