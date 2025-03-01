@@ -68,7 +68,7 @@ import { suggestions } from '../constants/suggestions'; // 导入建议列表
 import { Chat } from '../utils/AIChat'; // 导入AIChat
 import { generateChart } from '../api/fakeNewsReview.ts';
 
-import { getSession } from '../api/fakeNewsReview';
+import { getSession, chat } from '../api/fakeNewsReview';
 
 
 import { useChatStore } from '../stores/ChatStore.ts';
@@ -131,7 +131,7 @@ const typeEffect = (text: string, speed: number) => {
 };
 
 
-onMounted(async() => {
+onMounted(async () => {
   // 从当前活跃的对话中获取消息
   if (chatStore.getCurrentMessages().length > 0) {
     displayedMessages.value = chatStore.getCurrentMessages(); // 使用 getCurrentMessages 方法获取消息
@@ -142,12 +142,12 @@ onMounted(async() => {
   // 监听聊天消息的变化，自动更新 displayedMessages
   watch(() => chatStore.getCurrentMessages(), (newValue) => {
     console.log('Messages updated:', newValue);
-    if (newValue.length !== 0){
+    if (newValue.length !== 0) {
       showSuggestions.value = false;
-    }else{
+    } else {
       showSuggestions.value = true;
     }
-    
+
     displayedMessages.value = newValue;
   });
 
@@ -325,55 +325,86 @@ const handleEnter = async () => {
     // Add a loading placeholder
     displayedMessages.value.push({ type: 'loading', content: '' });
 
+    // try {
+    //   const response = await chat(userContent).then((res) => res.data.answer);
+    //   if (!response.ok) {
+    //     throw new Error('Network response was not ok');
+    //   }
+
+    //   console.log("ChatResponse", response);
+
+    //   const reader = response.body?.getReader();
+    //   if (!reader) throw new Error('Failed to get reader from response body');
+
+    //   const textDecoder = new TextDecoder();
+    //   let completeMessage = ''; // 用于累积AI的回复内容
+
+    //   while (true) {
+    //     const { done, value } = await reader.read();
+    //     if (done) break;
+
+    //     const chunkText = textDecoder.decode(value);
+    //     const results = chunkText.split('\n\n').filter(Boolean).map((item) => item.replace(/^data: /, ''));
+
+    //     for (let i = 0; i < results.length; i++) {
+    //       const chunk = results[i];
+
+    //       completeMessage += chunk; // 直接将非JSON数据拼接到文本中
+    //       // 更新显示的消息
+    //       if (displayedMessages.value[displayedMessages.value.length - 1].type === 'loading') {
+    //         displayedMessages.value[displayedMessages.value.length - 1].content = completeMessage;
+    //       } else {
+    //         displayedMessages.value.push({ type: 'ai', content: completeMessage });
+    //       }
+    //     }
+    //   }
+
+    //   // 移除加载占位符
+    //   displayedMessages.value.pop();
+
+    //   // 添加最终的AI消息并应用打字效果
+    //   displayedMessages.value.push({ type: 'ai', content: '' });
+    //   typeEffect(completeMessage, 50);
+
+    // } catch (error) {
+    //   console.log("message.value", message.value);
+    //   console.error('请求失败:', error);
+    //   displayedMessages.value.pop(); // 移除加载占位符
+    //   displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
+    // }
     try {
-      const response = await Chat(userContent);
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
+      // 使用普通的POST请求直接获取完整响应，而不是流式传输
+      const response = await chat(userContent);
 
-      console.log("response", response);
+      // 假设response.data.answer包含完整的回复内容
+      const completeMessage = response.data.answer;
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('Failed to get reader from response body');
-
-      const textDecoder = new TextDecoder();
-      let completeMessage = ''; // 用于累积AI的回复内容
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunkText = textDecoder.decode(value);
-        const results = chunkText.split('\n\n').filter(Boolean).map((item) => item.replace(/^data: /, ''));
-
-        for (let i = 0; i < results.length; i++) {
-          const chunk = results[i];
-
-          completeMessage += chunk; // 直接将非JSON数据拼接到文本中
-          // 更新显示的消息
-          if (displayedMessages.value[displayedMessages.value.length - 1].type === 'loading') {
-            displayedMessages.value[displayedMessages.value.length - 1].content = completeMessage;
-          } else {
-            displayedMessages.value.push({ type: 'ai', content: completeMessage });
-          }
-        }
-      }
+      console.log("ChatResponse", completeMessage);
 
       // 移除加载占位符
-      displayedMessages.value.pop();
+      if (displayedMessages.value[displayedMessages.value.length - 1].type === 'loading') {
+        displayedMessages.value.pop();
+      }
 
-      // 添加最终的AI消息并应用打字效果
+      // 添加AI消息并应用打字效果（初始为空字符串）
       displayedMessages.value.push({ type: 'ai', content: '' });
+
+      // 应用打字机效果 - 这里假设typeEffect函数负责逐字显示文本
+      // 第二个参数50是打字速度（毫秒/字符）
       typeEffect(completeMessage, 50);
 
     } catch (error) {
       console.log("message.value", message.value);
       console.error('请求失败:', error);
-      displayedMessages.value.pop(); // 移除加载占位符
+
+      // 移除加载占位符
+      if (displayedMessages.value[displayedMessages.value.length - 1].type === 'loading') {
+        displayedMessages.value.pop();
+      }
+
+      // 显示错误消息
       displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
     }
-
-
   }
 };
 </script>
