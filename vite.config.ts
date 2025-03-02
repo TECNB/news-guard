@@ -3,6 +3,9 @@ import vue from '@vitejs/plugin-vue'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import electron from 'vite-plugin-electron'
+import renderer from 'vite-plugin-electron-renderer'
+import path from 'path'
 import tailwindcss from 'tailwindcss'
 import autoprefixer from 'autoprefixer'
 
@@ -16,20 +19,39 @@ export default defineConfig({
     Components({
       resolvers: [ElementPlusResolver()],
     }),
-
+    electron({
+      entry: 'electron/main.ts',
+    }),
+    renderer(),
   ],
+  base: './',
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        format: 'cjs',
+        chunkFileNames: '[name].[hash].js',
+        assetFileNames: '[name].[hash].[ext]',
+        entryFileNames: '[name].js',
+        inlineDynamicImports: true
+      }
+    },
+    target: 'esnext',
+    minify: true,
+    sourcemap: true
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,
     proxy: {
       '/api': {
-        // target: 'http://101.43.57.153:8000',	//实际请求地址
-        target: 'http://localhost:8000',	//实际请求地址
+        target: 'http://localhost:8000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },
       '/ask_fake_news': {
-        target: 'http://localhost:8000/ask_fake_news',	//实际请求地址
+        target: 'http://localhost:8000/ask_fake_news',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/ask_fake_news/, ""),
       }
@@ -37,8 +59,18 @@ export default defineConfig({
   },
   css: {
     postcss: {
-      plugins: [tailwindcss, autoprefixer]
-    }
+      plugins: [
+        tailwindcss,
+        autoprefixer,
+      ],
+    },
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  optimizeDeps: {
+    exclude: ['electron']
   }
-
 })

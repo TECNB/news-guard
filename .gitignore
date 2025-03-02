@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 
 fontawesome-pro-6.6.0-web.tgz
+
+# Electron
+dist-electron
+release
+*-debug.log

@@ -1,11 +1,10 @@
 import { createApp } from 'vue'
+import './assets/styles/global.css'  // Move global CSS first
 import './style.css'
 import App from './App.vue'
 import router from "./router/index"
 import ElementPlus from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
-// 自定义全局css
-import './assets/styles/global.css'
 import * as ElIcons from '@element-plus/icons-vue'
 
 // ① 引入createPinia方法从pinia
@@ -16,7 +15,6 @@ const pinia = createPinia()
 // import * as echarts from "echarts";            // 全局引入echarts
 
 import '@fortawesome/fontawesome-free/css/all.min.css';
-import "tailwindcss/tailwind.css"
 
 
 // 1 引入数据持久化插件
@@ -42,4 +40,3 @@ app
     .use(pinia) // 启用 Pinia
 
     .mount('#app')
-
