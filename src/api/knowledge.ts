@@ -5,6 +5,20 @@ export const getKnowledge = (): Promise<any> => {
     return axios.get('api/get_knowledge');
 };
 
+// 创建知识库
+export const createKnowledge = (datasetsName:any): Promise<any> => {
+    return axios.post('api/create_knowledge',datasetsName);
+};
+
+// 删除知识库
+export const deleteKnowledge = (datasetsId:any): Promise<any> => {
+    return axios.delete('api/delete_knowledge', { 
+        data: {
+            datasetsId,
+        }
+    });
+};
+
 // 获取知识库内的文档
 export const getDocuments = (id:any): Promise<any> => {
     return axios.get('api/get_documents',{ params: { id } });
