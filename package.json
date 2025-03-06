@@ -4,12 +4,13 @@
   "version": "0.0.0",
   "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && electron-builder",
+    "dev": "ELECTRON_DISABLE=true vite dev",
     "preview": "vite preview",
     "electron:dev": "vite dev & electron .",
-    "electron:build": "vue-tsc && vite build && electron-builder",
-    "electron:mac": "npm run build && electron-builder --mac"
+    "build": "vue-tsc && vite build",
+    "build:mac": "npm run build && electron-builder --mac --config.mac.identity=null",
+    "build:win": "npm run build && electron-builder --win --config.win.artifactName=${productName}-win.${ext}",
+    "build:all": "npm run build && electron-builder -mw"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "file:./fontawesome-pro-6.6.0-web.tgz",
@@ -62,7 +63,25 @@
       "target": ["dmg"],
       "category": "public.app-category.productivity",
       "identity": null,
-      "hardenedRuntime": false
+      "hardenedRuntime": false,
+      "icon": "public/logo.ico"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/logo.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "News Guard"
     },
     "asar": true,
     "electronVersion": "29.1.0"

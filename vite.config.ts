@@ -19,10 +19,13 @@ export default defineConfig({
     Components({
       resolvers: [ElementPlusResolver()],
     }),
-    electron({
-      entry: 'electron/main.ts',
-    }),
-    renderer(),
+    // 下面的命令是防止npm run dev时一并把electron:win启动了
+    ...(!process.env.ELECTRON_DISABLE ? [
+      electron({
+        entry: 'electron/main.ts',
+      }),
+      renderer(),
+    ] : []),
   ],
   base: './',
   build: {

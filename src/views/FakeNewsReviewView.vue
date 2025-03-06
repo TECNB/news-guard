@@ -1,5 +1,6 @@
 <template>
   <div class="Chat">
+    <KnowledgeSelector @update="handleKnowledgeUpdate" />
     <div v-if="showSuggestions" class="flex flex-1 flex-col justify-center items-start max-w-6xl p-20">
       <div class="flex flex-col justify-center items-start gap-2">
         <img class="w-11 h-11 rounded-full border border-gray-300 object-cover aspect-square"
@@ -50,7 +51,6 @@
             class="bg-transparent outline-none flex-1 placeholder:text-text-200 placeholder:font-bold text-black ml-2 resize-none overflow-hidden"
             rows="1"></textarea>
 
-
           <el-icon size="18" class="ml-2">
             <Microphone />
           </el-icon>
@@ -64,26 +64,33 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from "vue";
 import { ElMessage } from 'element-plus';
-import { suggestions } from '../constants/suggestions'; // 导入建议列表
-import { Chat } from '../utils/AIChat'; // 导入AIChat
-import { generateChart } from '../api/fakeNewsReview.ts';
-
+import { suggestions } from '../constants/suggestions';
+import { Chat } from '../utils/AIChat';
+import { generateChart } from '../api/fakeNewsReview';
 import { getSession, chat } from '../api/fakeNewsReview';
+import { useChatStore } from '../stores/ChatStore';
+import defaultImageUrl from '../assets/images/CloudPic.jpg';
+import defaultPdfUrl from '../assets/pdf/2023中国生态环境状况公报.pdf';
 
-
-import { useChatStore } from '../stores/ChatStore.ts';
-//获取对话的stpre
-const chatStore = useChatStore();
-
+// Base variables
+const message = ref('');
 const imageUrl = ref(''); // 存储上传的图片 URL
 const pdfUrl = ref('');
-
-const message = ref('');
-
 const showSuggestions = ref(true); // 控制建议列表显示
 const displayedMessages = ref<{ type: string; content: string }[]>([]); // 展示的消息列表
-import defaultImageUrl from '../assets/images/CloudPic.jpg'; // 导入本地图片作为上传失败后的默认图
-import defaultPdfUrl from '../assets/pdf/2023中国生态环境状况公报.pdf';
+
+//获取对话的store
+const chatStore = useChatStore();
+
+import KnowledgeSelector from '../components/KnowledgeSelector.vue';
+
+// Knowledge base state
+const selectedKnowledges = ref<string[]>([]);
+
+// Handle knowledge update
+const handleKnowledgeUpdate = (values: string[]) => {
+  selectedKnowledges.value = values;
+};
 
 // 上传失败处理函数
 const handleUploadSuccess = (response: any) => {
@@ -114,7 +121,6 @@ const handleUploadError = (error: any, uploadedFile: File) => {
   }
 };
 
-
 // 打字机效果函数
 const typeEffect = (text: string, speed: number) => {
   return new Promise<void>((resolve) => {
@@ -124,17 +130,16 @@ const typeEffect = (text: string, speed: number) => {
         displayedMessages.value[displayedMessages.value.length - 1].content += text[index++];
       } else {
         clearInterval(interval);
-        resolve(); // 在打字完成后，resolve 这个 Promise
+        resolve();
       }
-    }, speed); // 控制字符出现速度
+    }, speed);
   });
 };
-
 
 onMounted(async () => {
   // 从当前活跃的对话中获取消息
   if (chatStore.getCurrentMessages().length > 0) {
-    displayedMessages.value = chatStore.getCurrentMessages(); // 使用 getCurrentMessages 方法获取消息
+    displayedMessages.value = chatStore.getCurrentMessages();
     showSuggestions.value = false;
     console.log("message", displayedMessages.value);
   }
@@ -162,17 +167,13 @@ onMounted(async () => {
   });
 });
 
-
 const autoResize = (event: any) => {
   const textarea = event.target;
-
-  textarea.style.height = `${textarea.scrollHeight}px`;  // 根据内容设置新的高度
+  textarea.style.height = `${textarea.scrollHeight}px`;
   if (textarea.value.trim() === '') {
-    textarea.style.height = 'auto';  // Or set it to a fixed initial height like '20px'
+    textarea.style.height = 'auto';
   }
-
 };
-
 
 // 回车事件处理函数
 const handleEnter = async () => {
@@ -181,27 +182,22 @@ const handleEnter = async () => {
   // 如果message.value包含折线图
   if (message.value.includes('折线图')) {
     displayedMessages.value.push({ type: 'user', content: userContent });
-    chatStore.saveMessages(displayedMessages.value); // 保存消息到当前对话
+    chatStore.saveMessages(displayedMessages.value);
     message.value = '';
     let aiContent = '';
 
-    showSuggestions.value = false; // 隐藏建议列表
+    showSuggestions.value = false;
 
-    // Add a loading placeholder
-    displayedMessages.value.push({ type: 'loading', content: '' })
-    // 请求generateChart函数，无需流式传输
+    displayedMessages.value.push({ type: 'loading', content: '' });
     try {
-      const data = await generateChart(userContent, 'line').then((res) => res.data);
+      const data = await generateChart(userContent, 'line').then((res: any) => res.data);
       console.log("data", data);
-
-      // 去掉外层的```json```部分
       const jsonResult = data.replace(/^```json\s*|\s*```$/g, '').trim();
       aiContent = jsonResult;
-
     } catch (error) {
       console.log("message.value", message.value);
       console.error('请求失败:', error);
-      displayedMessages.value.pop(); // 移除加载占位符
+      displayedMessages.value.pop();
       displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
     }
 
@@ -209,45 +205,35 @@ const handleEnter = async () => {
       chatStore.startNewConversation();
     }
 
-    ;
-    // 移除加载占位符
     displayedMessages.value.pop();
     displayedMessages.value.push({ type: 'ai', content: '' });
-    chatStore.saveMessages(displayedMessages.value); // 保存消息到当前对话
+    chatStore.saveMessages(displayedMessages.value);
 
-
-    // 添加最终的AI消息并应用打字效果
     await typeEffect("以下是根据新闻内容分析平台输出的结果。", 50);
 
     displayedMessages.value.push({ type: 'LineContainer', content: aiContent });
-    chatStore.saveMessages(displayedMessages.value); // 保存消息到当前对话
+    chatStore.saveMessages(displayedMessages.value);
     return;
   }
 
   if (message.value.includes('柱状图')) {
     displayedMessages.value.push({ type: 'user', content: userContent });
-    chatStore.saveMessages(displayedMessages.value); // 保存消息到当前对话
+    chatStore.saveMessages(displayedMessages.value);
     message.value = '';
     let aiContent = '';
 
-    showSuggestions.value = false; // 隐藏建议列表
+    showSuggestions.value = false;
 
-    // Add a loading placeholder
-    displayedMessages.value.push({ type: 'loading', content: '' })
-    // 请求generateChart函数，无需流式传输
+    displayedMessages.value.push({ type: 'loading', content: '' });
     try {
-      const data = await generateChart(userContent, 'bar').then((res) => res.data);
+      const data = await generateChart(userContent, 'bar').then((res: any) => res.data);
       console.log("data", data);
-
-      // 去掉外层的```json```部分
       const jsonResult = data.replace(/^```json\s*|\s*```$/g, '').trim();
       aiContent = jsonResult;
-
-
     } catch (error) {
       console.log("message.value", message.value);
       console.error('请求失败:', error);
-      displayedMessages.value.pop(); // 移除加载占位符
+      displayedMessages.value.pop();
       displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
     }
 
@@ -255,44 +241,35 @@ const handleEnter = async () => {
       chatStore.startNewConversation();
     }
 
-    ;
-    // 移除加载占位符
     displayedMessages.value.pop();
     displayedMessages.value.push({ type: 'ai', content: '' });
-    chatStore.saveMessages(displayedMessages.value); // 保存消息到当前对话
+    chatStore.saveMessages(displayedMessages.value);
 
-
-    // 添加最终的AI消息并应用打字效果
     await typeEffect("以下是根据新闻内容分析平台输出的结果。", 50);
 
     displayedMessages.value.push({ type: 'BarContainer', content: aiContent });
-    chatStore.saveMessages(displayedMessages.value); // 保存消息到当前对话
+    chatStore.saveMessages(displayedMessages.value);
     return;
   }
 
   if (message.value.includes('饼图')) {
     displayedMessages.value.push({ type: 'user', content: userContent });
-    chatStore.saveMessages(displayedMessages.value); // 保存消息到当前对话
+    chatStore.saveMessages(displayedMessages.value);
     message.value = '';
     let aiContent = '';
 
-    showSuggestions.value = false; // 隐藏建议列表
+    showSuggestions.value = false;
 
-    // Add a loading placeholder
-    displayedMessages.value.push({ type: 'loading', content: '' })
-    // 请求generateChart函数，无需流式传输
+    displayedMessages.value.push({ type: 'loading', content: '' });
     try {
-      const data = await generateChart(userContent, 'pie').then((res) => res.data);
+      const data = await generateChart(userContent, 'pie').then((res: any) => res.data);
       console.log("data", data);
-
-      // 去掉外层的```json```部分
       const jsonResult = data.replace(/^```json\s*|\s*```$/g, '').trim();
       aiContent = jsonResult;
-
     } catch (error) {
       console.log("message.value", message.value);
       console.error('请求失败:', error);
-      displayedMessages.value.pop(); // 移除加载占位符
+      displayedMessages.value.pop();
       displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
     }
 
@@ -300,109 +277,46 @@ const handleEnter = async () => {
       chatStore.startNewConversation();
     }
 
-    ;
-    // 移除加载占位符
     displayedMessages.value.pop();
     displayedMessages.value.push({ type: 'ai', content: '' });
-    chatStore.saveMessages(displayedMessages.value); // 保存消息到当前对话
+    chatStore.saveMessages(displayedMessages.value);
 
-
-    // 添加最终的AI消息并应用打字效果
     await typeEffect("以下是根据新闻内容分析平台输出的结果。", 50);
 
     displayedMessages.value.push({ type: 'PieContainer', content: aiContent });
-    chatStore.saveMessages(displayedMessages.value); // 保存消息到当前对话
+    chatStore.saveMessages(displayedMessages.value);
     return;
   }
-
 
   if (message.value.trim()) {
     displayedMessages.value.push({ type: 'user', content: userContent });
     message.value = '';
 
-    showSuggestions.value = false; // 隐藏建议列表
+    showSuggestions.value = false;
 
-    // Add a loading placeholder
     displayedMessages.value.push({ type: 'loading', content: '' });
 
-    // try {
-    //   const response = await chat(userContent).then((res) => res.data.answer);
-    //   if (!response.ok) {
-    //     throw new Error('Network response was not ok');
-    //   }
-
-    //   console.log("ChatResponse", response);
-
-    //   const reader = response.body?.getReader();
-    //   if (!reader) throw new Error('Failed to get reader from response body');
-
-    //   const textDecoder = new TextDecoder();
-    //   let completeMessage = ''; // 用于累积AI的回复内容
-
-    //   while (true) {
-    //     const { done, value } = await reader.read();
-    //     if (done) break;
-
-    //     const chunkText = textDecoder.decode(value);
-    //     const results = chunkText.split('\n\n').filter(Boolean).map((item) => item.replace(/^data: /, ''));
-
-    //     for (let i = 0; i < results.length; i++) {
-    //       const chunk = results[i];
-
-    //       completeMessage += chunk; // 直接将非JSON数据拼接到文本中
-    //       // 更新显示的消息
-    //       if (displayedMessages.value[displayedMessages.value.length - 1].type === 'loading') {
-    //         displayedMessages.value[displayedMessages.value.length - 1].content = completeMessage;
-    //       } else {
-    //         displayedMessages.value.push({ type: 'ai', content: completeMessage });
-    //       }
-    //     }
-    //   }
-
-    //   // 移除加载占位符
-    //   displayedMessages.value.pop();
-
-    //   // 添加最终的AI消息并应用打字效果
-    //   displayedMessages.value.push({ type: 'ai', content: '' });
-    //   typeEffect(completeMessage, 50);
-
-    // } catch (error) {
-    //   console.log("message.value", message.value);
-    //   console.error('请求失败:', error);
-    //   displayedMessages.value.pop(); // 移除加载占位符
-    //   displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
-    // }
     try {
-      // 使用普通的POST请求直接获取完整响应，而不是流式传输
       const response = await chat(userContent);
-
-      // 假设response.data.answer包含完整的回复内容
       const completeMessage = response.data.answer;
 
       console.log("ChatResponse", completeMessage);
 
-      // 移除加载占位符
       if (displayedMessages.value[displayedMessages.value.length - 1].type === 'loading') {
         displayedMessages.value.pop();
       }
 
-      // 添加AI消息并应用打字效果（初始为空字符串）
       displayedMessages.value.push({ type: 'ai', content: '' });
-
-      // 应用打字机效果 - 这里假设typeEffect函数负责逐字显示文本
-      // 第二个参数50是打字速度（毫秒/字符）
       typeEffect(completeMessage, 50);
 
     } catch (error) {
       console.log("message.value", message.value);
       console.error('请求失败:', error);
 
-      // 移除加载占位符
       if (displayedMessages.value[displayedMessages.value.length - 1].type === 'loading') {
         displayedMessages.value.pop();
       }
 
-      // 显示错误消息
       displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
     }
   }
@@ -428,22 +342,17 @@ const handleEnter = async () => {
 
   .el-input {
     height: 50px;
-
     border-radius: 12px;
     border: 0.5px solid var(--text-200);
     border: 0;
     background-color: var(--bg-200);
-
     font-size: 18px;
     font-weight: bold;
-
 
     :deep(.el-input__wrapper) {
       border-radius: 12px;
       background-color: var(--bg-200);
-
     }
-
 
     :deep(.is-focus) {
       box-shadow: 0 0 0 1px var(--accent-200)

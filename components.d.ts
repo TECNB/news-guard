@@ -27,6 +27,7 @@ declare module 'vue' {
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
     ElTag: typeof import('element-plus/es')['ElTag']
     ElUpload: typeof import('element-plus/es')['ElUpload']
+    KnowledgeSelector: typeof import('./src/components/KnowledgeSelector.vue')['default']
     LineContainer: typeof import('./src/components/Container/LineContainer.vue')['default']
     MaskLayer: typeof import('./src/components/MaskLayer.vue')['default']
     PieContainer: typeof import('./src/components/Container/PieContainer.vue')['default']
