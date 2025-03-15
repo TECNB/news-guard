@@ -7,9 +7,11 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AnalysisOverview: typeof import('./src/components/Analysis/AnalysisOverview.vue')['default']
     AudioWaveform: typeof import('./src/components/AudioWaveform.vue')['default']
     BarContainer: typeof import('./src/components/Container/BarContainer.vue')['default']
     ChatWindow: typeof import('./src/components/Chat/ChatWindow.vue')['default']
+    DetailedAnalysis: typeof import('./src/components/Analysis/DetailedAnalysis.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
     ElDialog: typeof import('element-plus/es')['ElDialog']
@@ -29,6 +31,7 @@ declare module 'vue' {
     ElUpload: typeof import('element-plus/es')['ElUpload']
     KnowledgeSelector: typeof import('./src/components/KnowledgeSelector.vue')['default']
     LineContainer: typeof import('./src/components/Container/LineContainer.vue')['default']
+    MainPointsSection: typeof import('./src/components/Analysis/MainPointsSection.vue')['default']
     MaskLayer: typeof import('./src/components/MaskLayer.vue')['default']
     PieContainer: typeof import('./src/components/Container/PieContainer.vue')['default']
     PipelineAccessSettings: typeof import('./src/components/Pipeline/PipelineAccessSettings.vue')['default']
@@ -38,11 +41,13 @@ declare module 'vue' {
     RadarContainer: typeof import('./src/components/Container/RadarContainer.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SentenceAnalysis: typeof import('./src/components/Analysis/SentenceAnalysis.vue')['default']
     SettingChart: typeof import('./src/components/Pipeline/SettingChart.vue')['default']
     SettingDataSource: typeof import('./src/components/Pipeline/SettingDataSource.vue')['default']
     SettingPreprocess: typeof import('./src/components/Pipeline/SettingPreprocess.vue')['default']
     SettingStatement: typeof import('./src/components/Pipeline/SettingStatement.vue')['default']
     Sidebar: typeof import('./src/components/Sidebar.vue')['default']
+    SourceAnalysis: typeof import('./src/components/Analysis/SourceAnalysis.vue')['default']
     Statement: typeof import('./src/components/Pipeline/Statement.vue')['default']
   }
   export interface ComponentCustomProperties {
