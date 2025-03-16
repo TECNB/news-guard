@@ -38,25 +38,27 @@
               <!-- PDF 文件名称 -->
               <p class="text-sm">2023中国生态环境状况公报-保留大气环境版.pdf</p>
             </div>
-
-
           </div>
         </div>
 
         <div v-if="msg.type === 'user'" class="bg-gray-50 rounded-3xl px-5 py-2 ml-auto max-w-md">
           <p class="text-left">{{ msg.content }}</p>
         </div>
+
         <div v-if="msg.type === 'loading'" class="skeleton-loader w-full">
           <div class="skeleton-line"></div>
           <div class="skeleton-line"></div>
           <div class="skeleton-line"></div>
         </div>
 
+        <div v-if="msg.type === 'webSearch'" class="w-full mx-auto">
+          <WebSearchResult :searchResults="JSON.parse(msg.content)" />
+        </div>
+
         <div v-if="msg.type === 'ai'" class="flex gap-3 items-start">
           <img src="../../assets/images/logo.png" alt="AI Avatar"
             class="w-6 h-6 rounded-full border border-gray-300 object-cover" />
           <div class="flex flex-col">
-
             <!-- Static Title -->
             <div class="flex items-center">
               <p class="font-bold mb-0.5">虚假新闻鉴别助手</p>
@@ -67,18 +69,13 @@
               <div v-html="msg.safeContent" class="prose max-w-none" />
             </div>
 
-            <!-- Actin Icons -->
+            <!-- Action Icons -->
             <div class="action-icons flex gap-3 mt-2 text-sm text-gray-500">
               <i class="fas fa-pen"></i>
-              <!-- 复制文档图标 -->
               <i class="fas fa-clipboard"></i>
-              <!-- 刷新图标 -->
               <i class="fas fa-sync-alt"></i>
-              <!-- 添加图标 -->
               <i class="fas fa-headphones"></i>
-              <!-- 编辑图标 -->
               <i class="fas fa-circle-info"></i>
-              <!-- 消息图标 -->
               <i class="fas fa-star"></i>
             </div>
           </div>
@@ -94,8 +91,6 @@
       </div>
     </div>
   </el-scrollbar>
-
-
 </template>
 
 <script setup lang="ts">
@@ -103,6 +98,7 @@ import { ref, onMounted, watch } from 'vue';
 import { computed } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import WebSearchResult from '../WebSearchResult.vue';
 
 import lineOptions from '../../utils/lineOptions';
 import LineContainer from '../../components/Container/LineContainer.vue';
@@ -113,7 +109,6 @@ import BarContainer from '../../components/Container/BarContainer.vue';
 import pieOption from '../../utils/pieOption';
 import PieContainer from '../../components/Container/PieContainer.vue';
 
-
 // 增强的预处理函数（同时处理非法标记和空内容）
 const preprocessContent = (content: string) => {
   // 步骤1：删除所有##...$$标记
@@ -123,26 +118,23 @@ const preprocessContent = (content: string) => {
   return cleanContent.trim() || '[空内容]';
 };
 
-
-// 配置基础Markdown解析规则（网页1的最佳实践）
+// 配置基础Markdown解析规则
 marked.setOptions({
   breaks: true,
-  gfm: true,
-  smartypants: true
+  gfm: true
 });
-
 
 // 控制是否展开 PDF 展示框
 const isExpanded = ref(false);
 
 // 点击后展开 PDF 展示框
 const expandPdf = () => {
-  isExpanded.value = true; // 点击后切换为展示模式
+  isExpanded.value = true;
 };
 
 // 点击删除按钮后折叠 PDF 展示框，回到默认图标状态
 const collapsePdf = () => {
-  isExpanded.value = false; // 恢复到 PDF 文件图标状态
+  isExpanded.value = false;
 };
 
 const props = defineProps<{
@@ -158,19 +150,16 @@ let lineYAxisLabel = "";
 let pieData = { seriesData: [] };
 let pieSeriesName = "";
 
-
 // 安全渲染管道（网页4的安全方案）
 const safeMessages = computed(() => {
   return props.displayedMessages.map(msg => ({
     ...msg,
-    safeContent: DOMPurify.sanitize(marked.parse(preprocessContent(msg.content)), {
+    safeContent: DOMPurify.sanitize(String(marked.parse(preprocessContent(msg.content))), {
       ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'code', 'pre'],
       FORBID_ATTR: ['style', 'onerror']
     })
   }));
 });
-
-
 
 watch(
   () => props.displayedMessages,
@@ -199,8 +188,8 @@ watch(
   },
   { deep: true }
 );
-onMounted(() => {
 
+onMounted(() => {
 });
 </script>
 
@@ -231,34 +220,27 @@ onMounted(() => {
 
 .typing-effect {
   font-family: monospace;
-  /* 设置为打字机风格的字体 */
   white-space: nowrap;
   overflow: hidden;
   border-right: 2px solid black;
-  /* 模拟打字光标 */
   animation: typing 3s steps(40, end), blink-caret 0.75s step-end infinite;
-  /* 逐字显示动画 */
   text-align: left;
-  /* 确保文本左对齐 */
 }
 
 @keyframes typing {
   from {
     width: 0;
   }
-
   to {
     width: 100%;
   }
 }
 
 @keyframes blink-caret {
-
   from,
   to {
     border-color: transparent;
   }
-
   50% {
     border-color: black;
   }

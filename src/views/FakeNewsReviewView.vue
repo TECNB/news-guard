@@ -9,9 +9,7 @@
         <p class="text-3xl font-bold text-text-400">有什么我能帮您的吗？</p>
       </div>
       <div class="flex justify-center items-center gap-2 mt-3">
-        <el-icon color="#B4B4B4">
-          <Link />
-        </el-icon>
+        <i class="fa-solid fa-link text-[#B4B4B4]"></i>
         <p class="font-bold text-text-400">建议</p>
       </div>
       <div class="flex justify-center items-center gap-2 mt-1">
@@ -24,9 +22,7 @@
 
           <div class="flex justify-between items-center">
             <p class="text-text-200 text-sm">提示词</p>
-            <el-icon color="#B4B4B4">
-              <Top />
-            </el-icon>
+            <i class="fa-solid fa-arrow-up text-[#B4B4B4]"></i>
           </div>
         </div>
       </div>
@@ -42,20 +38,32 @@
         <div class="flex items-center bg-gray-50 rounded-3xl p-1 relative z-10">
           <el-upload class="upload-demo z-10" :on-success="handleUploadSuccess" :on-error="handleUploadError"
             :show-file-list="false" accept="image/*,application/pdf">
-            <el-icon>
-              <Document />
-            </el-icon>
+            <i class="fa-regular fa-file text-gray-500"></i>
           </el-upload>
 
           <textarea v-model="message" @input="autoResize" @keydown.enter.prevent="handleEnter" placeholder="输入消息"
             class="bg-transparent outline-none flex-1 placeholder:text-text-200 placeholder:font-bold text-black ml-2 resize-none overflow-hidden"
             rows="1"></textarea>
 
-          <el-icon size="18" class="ml-2">
-            <Microphone />
-          </el-icon>
+          <i class="fa-solid fa-microphone text-gray-500 ml-2 text-lg"></i>
         </div>
 
+        <!-- Web Search Toggle -->
+        <div 
+          class="flex items-center gap-2 mt-2 px-3 py-1 cursor-pointer hover:opacity-80 transition-opacity border rounded-lg w-fit"
+          :class="{'border-green-400': enableWebSearch, 'border-gray-300': !enableWebSearch}"
+          @click="enableWebSearch = !enableWebSearch"
+        >
+          <i class="fa-solid fa-globe"
+            :class="{'text-green-400': enableWebSearch, 'text-gray-500': !enableWebSearch}"
+          ></i>
+          <span 
+            class="text-sm"
+            :class="{'text-green-400': enableWebSearch, 'text-gray-600': !enableWebSearch}"
+          >
+            联网搜索
+          </span>
+        </div>
       </div>
     </div>
   </div>
@@ -63,26 +71,23 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from "vue";
-import { ElMessage } from 'element-plus';
 import { suggestions } from '../constants/suggestions';
 import { Chat } from '../utils/AIChat';
-import { generateChart } from '../api/fakeNewsReview';
-import { getSession, chat } from '../api/fakeNewsReview';
+import { chat } from '../api/fakeNewsReview';
 import { useChatStore } from '../stores/ChatStore';
 import defaultImageUrl from '../assets/images/CloudPic.jpg';
 import defaultPdfUrl from '../assets/pdf/2023中国生态环境状况公报.pdf';
+import { handleChartGeneration, handleFileUpload, typeEffect, autoResizeTextarea, DisplayMessage } from '../utils/chatViewUtils';
+import KnowledgeSelector from '../components/KnowledgeSelector.vue';
 
 // Base variables
 const message = ref('');
+const enableWebSearch = ref(false);
 const imageUrl = ref(''); // 存储上传的图片 URL
 const pdfUrl = ref('');
 const showSuggestions = ref(true); // 控制建议列表显示
-const displayedMessages = ref<{ type: string; content: string }[]>([]); // 展示的消息列表
-
-//获取对话的store
+const displayedMessages = ref<DisplayMessage[]>([]); // 展示的消息列表
 const chatStore = useChatStore();
-
-import KnowledgeSelector from '../components/KnowledgeSelector.vue';
 
 // Knowledge base state
 const selectedKnowledges = ref<string[]>([]);
@@ -92,48 +97,14 @@ const handleKnowledgeUpdate = (values: string[]) => {
   selectedKnowledges.value = values;
 };
 
-// 上传失败处理函数
+// 上传处理函数
 const handleUploadSuccess = (response: any) => {
-  const uploadedFile = response.raw; // 获取上传的文件
-  imageUrl.value = URL.createObjectURL(uploadedFile); // 创建本地 URL
-  ElMessage.success('图片上传成功！');
+  const uploadedFile = response.raw;
+  imageUrl.value = URL.createObjectURL(uploadedFile);
 };
 
-const handleUploadError = (error: any, uploadedFile: File) => {
-  console.error('Upload Error:', error);
-
-  const fileName = uploadedFile.name;
-
-  // 判断文件名后缀
-  if (fileName.endsWith('.pdf')) {
-    // 上传失败时展示默认 PDF
-    pdfUrl.value = defaultPdfUrl;
-
-    ElMessage.success('PDF 上传成功！');
-  } else if (fileName.endsWith('.jpg') || fileName.endsWith('.png') || fileName.endsWith('.jpeg')) {
-    // 上传失败时展示默认图片
-    imageUrl.value = defaultImageUrl;
-
-    ElMessage.success('图片上传成功！');
-  } else {
-    // 其他类型的文件
-    ElMessage.error('上传失败！不支持的文件类型');
-  }
-};
-
-// 打字机效果函数
-const typeEffect = (text: string, speed: number) => {
-  return new Promise<void>((resolve) => {
-    let index = 0;
-    const interval = setInterval(() => {
-      if (index < text.length) {
-        displayedMessages.value[displayedMessages.value.length - 1].content += text[index++];
-      } else {
-        clearInterval(interval);
-        resolve();
-      }
-    }, speed);
-  });
+const handleUploadError = (_: any, uploadedFile: File) => {
+  handleFileUpload(uploadedFile, imageUrl, pdfUrl, defaultImageUrl, defaultPdfUrl);
 };
 
 onMounted(async () => {
@@ -141,18 +112,11 @@ onMounted(async () => {
   if (chatStore.getCurrentMessages().length > 0) {
     displayedMessages.value = chatStore.getCurrentMessages();
     showSuggestions.value = false;
-    console.log("message", displayedMessages.value);
   }
 
   // 监听聊天消息的变化，自动更新 displayedMessages
   watch(() => chatStore.getCurrentMessages(), (newValue) => {
-    console.log('Messages updated:', newValue);
-    if (newValue.length !== 0) {
-      showSuggestions.value = false;
-    } else {
-      showSuggestions.value = true;
-    }
-
+    showSuggestions.value = newValue.length === 0;
     displayedMessages.value = newValue;
   });
 
@@ -161,164 +125,86 @@ onMounted(async () => {
     if (!newValue.trim()) {
       const textarea = document.querySelector('textarea');
       if (textarea) {
-        textarea.style.height = 'auto'; // 恢复到初始状态
+        textarea.style.height = 'auto';
       }
     }
   });
 });
 
 const autoResize = (event: any) => {
-  const textarea = event.target;
-  textarea.style.height = `${textarea.scrollHeight}px`;
-  if (textarea.value.trim() === '') {
-    textarea.style.height = 'auto';
+  autoResizeTextarea(event.target);
+};
+
+// Mock web search function
+const performWebSearch = async (query: string) => {
+  // 模拟搜索结果
+  if (query.includes("阿里巴巴") && query.includes("京东") && query.includes("1500亿美元")) {
+    return [{
+      title: "辟谣：阿里巴巴收购京东传闻不实",
+      url: "https://example.com/news/1",
+      snippet: "记者向阿里巴巴和京东双方求证，均表示该消息不实。相关收购传闻纯属谣言。"
+    }, {
+      title: "专家分析：阿里巴巴与京东合作可能性探讨",
+      url: "https://example.com/analysis/2", 
+      snippet: "业内专家表示，虽然两家公司存在合作空间，但收购的可能性较小。"
+    }];
   }
+  return [];
 };
 
 // 回车事件处理函数
 const handleEnter = async () => {
-  const userContent = message.value;
+  const userContent = message.value.trim();
+  if (!userContent) return;
 
-  // 如果message.value包含折线图
+  // Chart handling
   if (message.value.includes('折线图')) {
-    displayedMessages.value.push({ type: 'user', content: userContent });
-    chatStore.saveMessages(displayedMessages.value);
     message.value = '';
-    let aiContent = '';
-
     showSuggestions.value = false;
-
-    displayedMessages.value.push({ type: 'loading', content: '' });
-    try {
-      const data = await generateChart(userContent, 'line').then((res: any) => res.data);
-      console.log("data", data);
-      const jsonResult = data.replace(/^```json\s*|\s*```$/g, '').trim();
-      aiContent = jsonResult;
-    } catch (error) {
-      console.log("message.value", message.value);
-      console.error('请求失败:', error);
-      displayedMessages.value.pop();
-      displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
-    }
-
-    if (chatStore.currentConversationId === null) {
-      chatStore.startNewConversation();
-    }
-
-    displayedMessages.value.pop();
-    displayedMessages.value.push({ type: 'ai', content: '' });
-    chatStore.saveMessages(displayedMessages.value);
-
-    await typeEffect("以下是根据新闻内容分析平台输出的结果。", 50);
-
-    displayedMessages.value.push({ type: 'LineContainer', content: aiContent });
-    chatStore.saveMessages(displayedMessages.value);
+    await handleChartGeneration('line', userContent, displayedMessages, chatStore);
     return;
   }
 
   if (message.value.includes('柱状图')) {
-    displayedMessages.value.push({ type: 'user', content: userContent });
-    chatStore.saveMessages(displayedMessages.value);
     message.value = '';
-    let aiContent = '';
-
     showSuggestions.value = false;
-
-    displayedMessages.value.push({ type: 'loading', content: '' });
-    try {
-      const data = await generateChart(userContent, 'bar').then((res: any) => res.data);
-      console.log("data", data);
-      const jsonResult = data.replace(/^```json\s*|\s*```$/g, '').trim();
-      aiContent = jsonResult;
-    } catch (error) {
-      console.log("message.value", message.value);
-      console.error('请求失败:', error);
-      displayedMessages.value.pop();
-      displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
-    }
-
-    if (chatStore.currentConversationId === null) {
-      chatStore.startNewConversation();
-    }
-
-    displayedMessages.value.pop();
-    displayedMessages.value.push({ type: 'ai', content: '' });
-    chatStore.saveMessages(displayedMessages.value);
-
-    await typeEffect("以下是根据新闻内容分析平台输出的结果。", 50);
-
-    displayedMessages.value.push({ type: 'BarContainer', content: aiContent });
-    chatStore.saveMessages(displayedMessages.value);
+    await handleChartGeneration('bar', userContent, displayedMessages, chatStore);
     return;
   }
 
   if (message.value.includes('饼图')) {
-    displayedMessages.value.push({ type: 'user', content: userContent });
-    chatStore.saveMessages(displayedMessages.value);
     message.value = '';
-    let aiContent = '';
-
     showSuggestions.value = false;
-
-    displayedMessages.value.push({ type: 'loading', content: '' });
-    try {
-      const data = await generateChart(userContent, 'pie').then((res: any) => res.data);
-      console.log("data", data);
-      const jsonResult = data.replace(/^```json\s*|\s*```$/g, '').trim();
-      aiContent = jsonResult;
-    } catch (error) {
-      console.log("message.value", message.value);
-      console.error('请求失败:', error);
-      displayedMessages.value.pop();
-      displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
-    }
-
-    if (chatStore.currentConversationId === null) {
-      chatStore.startNewConversation();
-    }
-
-    displayedMessages.value.pop();
-    displayedMessages.value.push({ type: 'ai', content: '' });
-    chatStore.saveMessages(displayedMessages.value);
-
-    await typeEffect("以下是根据新闻内容分析平台输出的结果。", 50);
-
-    displayedMessages.value.push({ type: 'PieContainer', content: aiContent });
-    chatStore.saveMessages(displayedMessages.value);
+    await handleChartGeneration('pie', userContent, displayedMessages, chatStore);
     return;
   }
 
-  if (message.value.trim()) {
-    displayedMessages.value.push({ type: 'user', content: userContent });
-    message.value = '';
-
-    showSuggestions.value = false;
-
-    displayedMessages.value.push({ type: 'loading', content: '' });
-
-    try {
-      const response = await chat(userContent);
-      const completeMessage = response.data.answer;
-
-      console.log("ChatResponse", completeMessage);
-
-      if (displayedMessages.value[displayedMessages.value.length - 1].type === 'loading') {
-        displayedMessages.value.pop();
-      }
-
-      displayedMessages.value.push({ type: 'ai', content: '' });
-      typeEffect(completeMessage, 50);
-
-    } catch (error) {
-      console.log("message.value", message.value);
-      console.error('请求失败:', error);
-
-      if (displayedMessages.value[displayedMessages.value.length - 1].type === 'loading') {
-        displayedMessages.value.pop();
-      }
-
-      displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
+  // Normal chat handling
+  displayedMessages.value.push({ type: 'user', content: userContent });
+  message.value = '';
+  showSuggestions.value = false;
+  
+  // Web search handling
+  if (enableWebSearch.value) {
+    const searchResults = await performWebSearch(userContent);
+    if (searchResults.length > 0) {
+      displayedMessages.value.push({ type: 'webSearch', content: JSON.stringify(searchResults) });
     }
+  }
+  
+  displayedMessages.value.push({ type: 'loading', content: '' });
+
+  try {
+    const response = await chat(userContent);
+    const completeMessage = response.data.answer;
+
+    displayedMessages.value.pop(); // Remove loading
+    displayedMessages.value.push({ type: 'ai', content: '' });
+    await typeEffect(displayedMessages, completeMessage, 50);
+  } catch (error) {
+    console.error('Chat request failed:', error);
+    displayedMessages.value.pop();
+    displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
   }
 };
 </script>

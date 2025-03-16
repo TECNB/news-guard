@@ -49,6 +49,7 @@ declare module 'vue' {
     Sidebar: typeof import('./src/components/Sidebar.vue')['default']
     SourceAnalysis: typeof import('./src/components/Analysis/SourceAnalysis.vue')['default']
     Statement: typeof import('./src/components/Pipeline/Statement.vue')['default']
+    WebSearchResult: typeof import('./src/components/WebSearchResult.vue')['default']
   }
   export interface ComponentCustomProperties {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']
