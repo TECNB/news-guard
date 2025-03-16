@@ -45,6 +45,10 @@ const routes: Array<RouteRecordRaw> = [
             {
                 path: '/create-knowledge/:id',
                 component: () => import("../views/CreateKnowledgeView.vue"),
+            },
+            {
+                path: '/agent',
+                component: () => import("../views/FakeNewsAgentView.vue"),
             }
         ],
     },

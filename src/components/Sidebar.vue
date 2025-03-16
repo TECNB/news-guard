@@ -8,7 +8,7 @@
             <ul>
                 <!-- 遍历菜单项 -->
                 <li v-for="(menu, index) in menus" :key="index">
-                    <div class="menu-item relative" @click="selectMenu(index, menu.children, menu.path!)"
+                    <div class="menu-item relative" @click="selectMenu(index, menu.children, menu.path)"
                         :class="{ 'active-menu': selectedMenu === index }">
                         <el-icon color="#000000" v-if="selectedMenu === index">
                             <component :is="menu.icon"></component>
@@ -38,7 +38,7 @@
                     <ul v-if="menu.children && ifShowSubMenu">
                         <li v-for="(child, childIndex) in menu.children" :key="childIndex">
                             <div class="menu-item child-menu"
-                                @click="selectSubMenu(index, childIndex, menu.children[childIndex].path!)"
+                                @click="selectSubMenu(index, childIndex, menu.children[childIndex].path)"
                                 :class="{ 'active-menu': selectedSubMenu === childIndex }">
                                 <p class="ml-6">{{ child.label }}</p>
                             </div>
@@ -139,6 +139,11 @@ const menus = [
         label: '虚假新闻还原',
         icon: 'MagicStick',
         path: '/restore'
+    },
+    {
+        label: '虚假新闻智能体',
+        icon: 'Odometer',
+        path: '/agent'
     },
 ];
 
