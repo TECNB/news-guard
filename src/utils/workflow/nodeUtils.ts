@@ -41,13 +41,14 @@ export function calculatePath(edge: Edge, nodes: Node[]) {
   
   if (!sourceNode || !targetNode) return '';
   
-  const startX = sourceNode.x + 150;  // 假设节点宽度为150
-  const startY = sourceNode.y + 35;   // 节点高度一半，连接点位置
+  const startX = sourceNode.x + 240;  // 使用新的节点宽度
+  const startY = sourceNode.y + 34;   // 连接点垂直位置
   const endX = targetNode.x;
-  const endY = targetNode.y + 35;
+  const endY = targetNode.y + 34;
   
   // 计算控制点，确保曲线平滑
-  const offsetX = Math.max(80, Math.abs(endX - startX) * 0.5);
+  const dx = Math.abs(endX - startX);
+  const offsetX = Math.max(100, dx * 0.4);  // 根据距离调整控制点，但最小保持100px
   
   // 贝塞尔曲线
   return `M ${startX} ${startY} C ${startX + offsetX} ${startY}, ${endX - offsetX} ${endY}, ${endX} ${endY}`;

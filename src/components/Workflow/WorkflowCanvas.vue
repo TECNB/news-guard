@@ -28,9 +28,14 @@
         :key="node.id"
         :node="node"
         :is-selected="selectedNodeId === node.id"
+        :canvas-ref="canvasRef"
+        :scale="scale"
+        :translate-x="translateX"
+        :translate-y="translateY"
         @drag-start="onNodeDragStart"
         @click="onNodeClick"
         @connection-start="onConnectionStart"
+        @delete="onDeleteNode"
       />
       
       <!-- 连线 -->
@@ -79,7 +84,7 @@
           :key="`hitbox-out-${node.id}`"
           :style="{ 
             position: 'absolute', 
-            left: `${node.x + 150 - 12}px`, 
+            left: `${node.x + 240 - 12}px`, 
             top: `${node.y + 28}px`,
             width: '24px',
             height: '24px',
@@ -193,8 +198,8 @@ const temporaryConnectionPath = computed(() => {
   
   if (connectionStartType.value === 'output') {
     // 输出连接点在节点右侧中心
-    startX = startNode.x + 150; // 假设节点宽度为150px
-    startY = startNode.y + 34; // 假设连接点在节点垂直中心(大约34px)
+    startX = startNode.x + 240; // 修改为新的节点宽度
+    startY = startNode.y + 34; // 保持原有的垂直位置
   } else {
     // 输入连接点在节点左侧中心
     startX = startNode.x;
@@ -469,6 +474,33 @@ const removeEdge = (edgeId: string) => {
   const index = edges.findIndex(edge => edge.id === edgeId);
   if (index !== -1) {
     edges.splice(index, 1);
+  }
+};
+
+// 删除节点
+const onDeleteNode = (nodeId: string) => {
+  // 找到要删除的节点索引
+  const nodeIndex = nodes.findIndex(n => n.id === nodeId);
+  if (nodeIndex !== -1) {
+    // 删除与该节点相关的所有边
+    const relatedEdges = edges.filter(edge => 
+      edge.source === nodeId || edge.target === nodeId
+    );
+    
+    relatedEdges.forEach(edge => {
+      const edgeIndex = edges.findIndex(e => e.id === edge.id);
+      if (edgeIndex !== -1) {
+        edges.splice(edgeIndex, 1);
+      }
+    });
+    
+    // 删除节点
+    nodes.splice(nodeIndex, 1);
+    
+    // 如果删除的是当前选中的节点，清除选中状态
+    if (selectedNodeId.value === nodeId) {
+      selectedNodeId.value = null;
+    }
   }
 };
 

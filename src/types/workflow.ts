@@ -80,7 +80,7 @@ export const NODE_TYPES = [
     name: 'LLM节点', 
     colorClass: 'bg-blue-500',
     defaultConfig: {
-      model: 'gpt-3.5-turbo',
+      model: 'deepseek-chat',
       temperature: 0.7,
       systemPrompt: ''
     }
