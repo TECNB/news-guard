@@ -34,163 +34,32 @@
       
       <!-- 节点特定属性 -->
       <div class="mb-6">
-        <div v-if="selectedNode.type === 'llm'" class="space-y-4">
-          <h4 class="text-md font-medium text-gray-700">LLM 配置</h4>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">模型</label>
-            <select 
-              v-model="selectedNode.config.model" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="gpt-4">GPT-4</option>
-              <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-              <option value="claude-3-opus">Claude 3 Opus</option>
-              <option value="claude-3-sonnet">Claude 3 Sonnet</option>
-            </select>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">温度</label>
-            <div class="flex items-center gap-2">
-              <input 
-                type="range" 
-                v-model.number="selectedNode.config.temperature" 
-                min="0" 
-                max="1" 
-                step="0.1"
-                class="w-full"
-              />
-              <span class="text-sm text-gray-600 w-10 text-right">{{ selectedNode.config.temperature }}</span>
-            </div>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">系统提示词</label>
-            <textarea 
-              v-model="selectedNode.config.systemPrompt" 
-              rows="4"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            ></textarea>
-          </div>
-        </div>
-        
-        <div v-else-if="selectedNode.type === 'knowledge'" class="space-y-4">
-          <h4 class="text-md font-medium text-gray-700">知识库配置</h4>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">知识库选择</label>
-            <select 
-              v-model="selectedNode.config.knowledgeBase" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="news">新闻数据库</option>
-              <option value="facts">事实库</option>
-              <option value="custom">自定义知识库</option>
-            </select>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">检索结果数量</label>
-            <input 
-              type="number" 
-              v-model.number="selectedNode.config.topK" 
-              min="1" 
-              max="10"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-        </div>
-        
-        <div v-else-if="selectedNode.type === 'conditional'" class="space-y-4">
-          <h4 class="text-md font-medium text-gray-700">条件配置</h4>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">条件类型</label>
-            <select 
-              v-model="selectedNode.config.conditionType" 
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="content">内容匹配</option>
-              <option value="sentiment">情感分析</option>
-              <option value="category">分类结果</option>
-            </select>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">条件表达式</label>
-            <textarea 
-              v-model="selectedNode.config.expression" 
-              rows="2"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            ></textarea>
-          </div>
-        </div>
+        <start-properties
+          v-if="selectedNode.type === 'start'"
+          v-model="startConfig"
+        />
+        <LLMProperties
+          v-else-if="selectedNode.type === 'llm'"
+          v-model="llmConfig"
+          :variables="startNodeVariables"
+          :variable-values="selectedNode.config.variableValues"
+        />
+        <knowledge-properties
+          v-else-if="selectedNode.type === 'knowledge'"
+          v-model="knowledgeConfig"
+        />
+        <conditional-properties
+          v-else-if="selectedNode.type === 'conditional'"
+          v-model="conditionalConfig"
+        />
       </div>
       
       <!-- 输入/输出配置 -->
-      <div class="mb-6">
-        <h4 class="text-md font-medium text-gray-700 mb-2">输入/输出</h4>
-        
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">输入变量</label>
-          <div class="space-y-2">
-            <div 
-              v-for="(input, index) in selectedNode.inputs" 
-              :key="`input-${index}`"
-              class="flex items-center gap-2"
-            >
-              <input 
-                type="text" 
-                v-model="selectedNode.inputs[index]" 
-                class="flex-1 px-3 py-1 border border-gray-300 rounded-md shadow-sm text-sm"
-                placeholder="变量名称"
-              />
-              <button 
-                @click="removeInput(index)" 
-                class="text-red-500 hover:text-red-700"
-              >
-                <span class="text-xl">×</span>
-              </button>
-            </div>
-            <button 
-              @click="addInput" 
-              class="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-            >
-              <span class="mr-1">+</span> 添加输入变量
-            </button>
-          </div>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">输出变量</label>
-          <div class="space-y-2">
-            <div 
-              v-for="(output, index) in selectedNode.outputs" 
-              :key="`output-${index}`"
-              class="flex items-center gap-2"
-            >
-              <input 
-                type="text" 
-                v-model="selectedNode.outputs[index]" 
-                class="flex-1 px-3 py-1 border border-gray-300 rounded-md shadow-sm text-sm"
-                placeholder="变量名称"
-              />
-              <button 
-                @click="removeOutput(index)" 
-                class="text-red-500 hover:text-red-700"
-              >
-                <span class="text-xl">×</span>
-              </button>
-            </div>
-            <button 
-              @click="addOutput" 
-              class="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-            >
-              <span class="mr-1">+</span> 添加输出变量
-            </button>
-          </div>
-        </div>
+      <div class="mb-6" v-if="selectedNode.type !== 'start'">
+        <IOEditor
+          :model-value="ioValue"
+          @update:model-value="updateIO"
+        />
       </div>
       
       <!-- 保存按钮 -->
@@ -214,64 +83,146 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref, watch } from 'vue';
-import { Node, NodeConfig, NODE_TYPES } from '../../types/workflow';
+import { computed, watch, ref } from 'vue';
+import { Node, NODE_TYPES, LLMConfig, KnowledgeConfig, ConditionalConfig, StartConfig } from '../../types/workflow';
+import IOEditor from './NodeProperties/IOEditor.vue';
+import LLMProperties from './NodeProperties/LLMProperties.vue';
+import KnowledgeProperties from './NodeProperties/KnowledgeProperties.vue';
+import ConditionalProperties from './NodeProperties/ConditionalProperties.vue';
+
+import StartProperties from './NodeProperties/StartProperties.vue';
 
 // 接收选中的节点
 const props = defineProps<{
   node: Node | null;
+  workflow?: {nodes: Node[], edges: any[]};
 }>();
+
+// 计算属性：开始节点配置
+const startConfig = computed<StartConfig>({
+  get: () => {
+    if (!selectedNode.value || selectedNode.value.type !== 'start') {
+      return { variables: [] };
+    }
+    return {
+      variables: selectedNode.value.inputs || []
+    };
+  },
+  set: (value) => {
+    if (!selectedNode.value || selectedNode.value.type !== 'start') return;
+    selectedNode.value.inputs = value.variables;
+  }
+});
 
 // 定义事件
 const emit = defineEmits(['update:node', 'save', 'close']);
 
-// 计算属性：节点类型对应的颜色
-const nodeTypeColor = computed(() => {
-  if (!props.node) return '';
-  
-  const nodeType = NODE_TYPES.find(nt => nt.type === props.node?.type);
-  return nodeType ? nodeType.colorClass : 'bg-gray-500';
-});
-
 // 本地状态，用于编辑
 const selectedNode = ref<Node | null>(null);
 
-// 当传入的节点变化时，更新本地状态
+// 当传入的节点变化时，更新本地状态，同时初始化配置
 watch(() => props.node, (newNode) => {
   if (newNode) {
-    // 深拷贝节点对象，避免直接修改props
-    selectedNode.value = JSON.parse(JSON.stringify(newNode));
+    const copy = JSON.parse(JSON.stringify(newNode));
+    selectedNode.value = copy;
   } else {
     selectedNode.value = null;
   }
 }, { immediate: true });
 
-// 添加输入变量
-const addInput = () => {
-  if (selectedNode.value) {
-    selectedNode.value.inputs.push('');
-  }
-};
+// 计算属性：节点类型对应的颜色
+const nodeTypeColor = computed(() => {
+  if (!selectedNode.value) return '';
+  
+  const nodeType = NODE_TYPES.find(nt => nt.type === selectedNode.value?.type);
+  return nodeType ? nodeType.colorClass : 'bg-gray-500';
+});
 
-// 移除输入变量
-const removeInput = (index: number) => {
-  if (selectedNode.value) {
-    selectedNode.value.inputs.splice(index, 1);
-  }
-};
+// 计算属性：获取开始节点的变量
+const startNodeVariables = computed(() => {
+  if (!props.workflow?.nodes) return [];
+  
+  const startNode = props.workflow.nodes.find(
+    node => node.type === 'start' || node.type === '开始'
+  );
+  
+  if (!startNode) return [];
+  return startNode.inputs.filter(input => input.trim() !== '');
+});
 
-// 添加输出变量
-const addOutput = () => {
-  if (selectedNode.value) {
-    selectedNode.value.outputs.push('');
+// 计算属性：LLM配置
+const llmConfig = computed<LLMConfig>({
+  get: () => {
+    if (!selectedNode.value || selectedNode.value.type !== 'llm') {
+      return { model: 'gpt-3.5-turbo', temperature: 0.7, systemPrompt: '' };
+    }
+    return {
+      model: selectedNode.value.config.model || 'gpt-3.5-turbo',
+      temperature: selectedNode.value.config.temperature || 0.7,
+      systemPrompt: selectedNode.value.config.systemPrompt || '',
+      trueSystemPrompt: selectedNode.value.config.trueSystemPrompt
+    };
+  },
+  set: (value) => {
+    if (!selectedNode.value || selectedNode.value.type !== 'llm') return;
+    // 保留原始的variableValues
+    const variableValues = selectedNode.value.config.variableValues;
+    selectedNode.value.config = { 
+      ...value,
+      variableValues
+    };
   }
-};
+});
 
-// 移除输出变量
-const removeOutput = (index: number) => {
-  if (selectedNode.value) {
-    selectedNode.value.outputs.splice(index, 1);
+// 计算属性：知识库配置
+const knowledgeConfig = computed<KnowledgeConfig>({
+  get: () => {
+    if (!selectedNode.value || selectedNode.value.type !== 'knowledge') {
+      return { knowledgeBase: 'news', topK: 3 };
+    }
+    return {
+      knowledgeBase: selectedNode.value.config.knowledgeBase || 'news',
+      topK: selectedNode.value.config.topK || 3
+    };
+  },
+  set: (value) => {
+    if (!selectedNode.value || selectedNode.value.type !== 'knowledge') return;
+    selectedNode.value.config = value;
   }
+});
+
+// 计算属性：条件配置
+const conditionalConfig = computed<ConditionalConfig>({
+  get: () => {
+    if (!selectedNode.value || selectedNode.value.type !== 'conditional') {
+      return { conditionType: 'content', expression: '' };
+    }
+    return {
+      conditionType: selectedNode.value.config.conditionType || 'content',
+      expression: selectedNode.value.config.expression || ''
+    };
+  },
+  set: (value) => {
+    if (!selectedNode.value || selectedNode.value.type !== 'conditional') return;
+    selectedNode.value.config = value;
+  }
+});
+
+// 计算属性：IO值
+const ioValue = computed(() => {
+  if (!selectedNode.value) return { inputs: [], outputs: [] };
+  return {
+    inputs: selectedNode.value.inputs,
+    outputs: selectedNode.value.outputs
+  };
+});
+
+
+// 更新输入输出变量
+const updateIO = (value: { inputs: string[]; outputs: string[]; }) => {
+  if (!selectedNode.value) return;
+  selectedNode.value.inputs = value.inputs;
+  selectedNode.value.outputs = value.outputs;
 };
 
 // 保存更改
@@ -306,4 +257,4 @@ const closeEditor = () => {
   background-color: rgba(156, 163, 175, 0.5);
   border-radius: 3px;
 }
-</style> 
+</style>

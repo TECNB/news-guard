@@ -28,6 +28,7 @@
             <div class="w-80 h-full" v-if="selectedNode">
                 <PropertyEditor 
                     :node="selectedNode"
+                    :workflow="workflow"
                     @update:node="updateNode"
                     @save="handlePropertySave"
                     @close="handleNodeDeselected"
@@ -38,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import WorkflowToolbar from '../components/Workflow/WorkflowToolbar.vue';
 import WorkflowCanvas from '../components/Workflow/WorkflowCanvas.vue';
 import PropertyEditor from '../components/Workflow/PropertyEditor.vue';
@@ -51,6 +52,7 @@ interface CanvasRef {
   getScale: () => number;
   updateNode: (node: Node) => void;
   getWorkflow: () => {nodes: Node[], edges: Edge[]};
+  runTest: () => void;
 }
 
 // 画布引用
@@ -59,6 +61,15 @@ const canvasRef = ref<CanvasRef | null>(null);
 // 状态
 const scale = ref(1);
 const selectedNode = ref<Node | null>(null);
+
+// 计算属性：获取当前工作流
+const workflow = computed(() => {
+    if (canvasRef.value) {
+        console.log(canvasRef.value.getWorkflow())
+        return canvasRef.value.getWorkflow();
+    }
+    return { nodes: [], edges: [] };
+});
 
 // 缩放处理
 const handleZoomIn = () => {
@@ -123,7 +134,10 @@ const saveWorkflow = () => {
 
 const runWorkflow = () => {
     console.log('运行工作流');
-    // TODO: 实现运行工作流的逻辑
+    // 调用Canvas组件的runTest方法显示测试面板
+    if (canvasRef.value) {
+        canvasRef.value.runTest();
+    }
 };
 
 const debugWorkflow = () => {

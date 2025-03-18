@@ -125,6 +125,18 @@
       :node-types="nodeTypes"
       @select-node-type="onAddNode"
     />
+
+    <!-- 测试运行面板 -->
+    <TestRunPanel
+      v-if="showTestPanel"
+      :input-variables="testInputVariables"
+      :is-running="testRunning"
+      :result="testResult"
+      :details="testDetails"
+      :traces="testTraces"
+      @close="closeTestPanel"
+      @run="executeTestRun"
+    />
   </div>
 </template>
 
@@ -135,6 +147,7 @@ import WorkflowNode from './WorkflowNode.vue';
 import ContextMenu from './ContextMenu.vue';
 import NodeLibrary from './NodeLibrary.vue';
 import PathsRenderer from './PathsRenderer.vue';
+import TestRunPanel from './TestRunPanel.vue';
 
 // 导入工具函数
 import { startCanvasDrag, dragCanvas, stopCanvasDrag, startNodeDrag, dragNode, stopNodeDrag } from '../../utils/workflow/dragUtils';
@@ -178,6 +191,16 @@ const connectionStartNodeId = ref<string | null>(null);
 const connectionStartType = ref<'input' | 'output' | null>(null);
 const connectionEndX = ref(0);
 const connectionEndY = ref(0);
+
+// 测试运行相关
+const showTestPanel = ref(false);
+const testInputVariables = reactive<Record<string, any>>({
+  'news': '' // 默认输入变量，这可以根据开始节点获取
+});
+const testRunning = ref(false);
+const testResult = ref('');
+const testDetails = ref<Array<{name: string, description: string, value: any}>>([]);
+const testTraces = ref<Array<{node: string, timestamp: string, message: string}>>([]);
 
 // DOM引用
 const canvasRef = ref<HTMLElement | null>(null);
@@ -504,6 +527,115 @@ const onDeleteNode = (nodeId: string) => {
   }
 };
 
+// 运行测试
+const runTest = () => {
+  showTestPanel.value = true;
+  
+  // 清空之前的测试数据
+  testRunning.value = false;
+  testResult.value = '';
+  testDetails.value = [];
+  testTraces.value = [];
+  
+  // 从开始节点获取所有必要的变量
+  const startNode = nodes.find(node => node.type === 'start');
+  
+  // 清空并重新设置输入变量
+  Object.keys(testInputVariables).forEach(key => {
+    delete testInputVariables[key];
+  });
+  
+  if (startNode && startNode.inputs && startNode.inputs.length > 0) {
+    console.log('从开始节点获取的变量:', startNode.inputs);
+    
+    // 为每个开始节点定义的输入变量创建一个输入字段
+    startNode.inputs.forEach(variable => {
+      if (variable.trim() !== '') {
+        testInputVariables[variable] = '';
+      }
+    });
+  } else {
+    // 如果没有找到开始节点或没有定义变量，提供一些默认变量
+    console.log('未找到开始节点或变量定义，使用默认变量');
+    testInputVariables['news'] = '';
+    testInputVariables['query'] = '';
+  }
+  
+  console.log('设置测试输入变量:', testInputVariables);
+};
+
+// 关闭测试面板
+const closeTestPanel = () => {
+  showTestPanel.value = false;
+};
+
+// 执行测试运行
+const executeTestRun = (inputValues: Record<string, any>) => {
+  testRunning.value = true;
+  testResult.value = '';
+  testDetails.value = [];
+  testTraces.value = [];
+  
+  console.log('WorkflowCanvas: 执行测试运行，接收到的变量值:', inputValues);
+  
+  // 将输入的变量值应用到所有 LLM 节点
+  nodes.forEach(node => {
+    if (node.type === 'llm') {
+      console.log(`处理 LLM 节点 ${node.id}`);
+      
+      // 确保节点配置中有系统提示词
+      if (node.config && node.config.systemPrompt) {
+        // 获取原始系统提示词
+        const systemPrompt = node.config.systemPrompt;
+        console.log('原始提示词:', systemPrompt);
+        
+        // 创建带有变量替换的真实提示词
+        const trueSystemPrompt = systemPrompt.replace(/\{([^}]+)\}/g, (match, varName) => {
+          if (inputValues[varName] !== undefined) {
+            return inputValues[varName];
+          }
+          return match; // 如果没有找到对应变量值，保留原始占位符
+        });
+        
+        console.log('替换后的提示词 (trueSystemPrompt):', trueSystemPrompt);
+        
+        // 将变量值保存到节点配置，用于属性面板显示
+        node.config.variableValues = { ...inputValues };
+        
+        // 保存真实提示词到节点配置
+        node.config.trueSystemPrompt = trueSystemPrompt;
+        
+        console.log(`已为节点 ${node.id} 设置变量值和真实提示词`);
+      }
+    }
+  });
+  
+  // 更新选中节点的属性面板（如果当前选中的是 LLM 节点）
+  if (selectedNodeId.value) {
+    const selectedNode = nodes.find(node => node.id === selectedNodeId.value);
+    if (selectedNode && selectedNode.type === 'llm') {
+      console.log('更新选中的 LLM 节点的属性面板');
+      // 这里会触发 LLMProperties.vue 中的 watch
+      updateNode(selectedNode);
+    }
+  }
+  
+  // 这里模拟运行过程，实际应该调用后端API
+  setTimeout(() => {
+    testRunning.value = false;
+    testResult.value = `运行完成，处理了输入: ${JSON.stringify(inputValues)}`;
+    testDetails.value = [
+      { name: '处理时间', description: '工作流执行耗时', value: '1.2秒' },
+      { name: '处理节点', description: '参与处理的节点数', value: '3个' }
+    ];
+    testTraces.value = [
+      { node: '开始节点', timestamp: new Date().toLocaleTimeString(), message: '开始执行' },
+      { node: '处理节点1', timestamp: new Date().toLocaleTimeString(), message: '数据处理中' },
+      { node: '结束节点', timestamp: new Date().toLocaleTimeString(), message: '执行完成' }
+    ];
+  }, 2000);
+};
+
 // 生命周期钩子
 onMounted(() => {
   // 初始化操作，可能包括加载保存的工作流
@@ -515,7 +647,8 @@ defineExpose({
   getScale,
   updateNode,
   getWorkflow,
-  removeEdge
+  removeEdge,
+  runTest
 });
 </script>
 

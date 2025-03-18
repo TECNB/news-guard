@@ -4,22 +4,47 @@
  */
 
 /**
+ * 开始节点配置接口
+ */
+export interface StartConfig {
+  variables: string[];
+}
+
+/**
+ * LLM节点配置接口
+ */
+export interface LLMConfig {
+  model: string;
+  temperature: number;
+  systemPrompt: string;
+  trueSystemPrompt?: string;
+}
+
+/**
+ * 知识库节点配置接口
+ */
+export interface KnowledgeConfig {
+  knowledgeBase: string;
+  topK: number;
+}
+
+/**
+ * 条件节点配置接口
+ */
+export interface ConditionalConfig {
+  conditionType: string;
+  expression: string;
+}
+
+/**
  * 节点配置接口
  * 包含不同类型节点的所有可能配置项
  */
-export interface NodeConfig {
-  // LLM节点配置
-  model?: string;
-  temperature?: number;
-  systemPrompt?: string;
-  
-  // 知识检索节点配置
-  knowledgeBase?: string;
-  topK?: number;
-  
-  // 条件节点配置
-  conditionType?: string;
-  expression?: string;
+export interface NodeConfig extends Partial<LLMConfig>, 
+  Partial<KnowledgeConfig>, 
+  Partial<ConditionalConfig> {
+  variableValues?: Record<string, any>;
+  trueSystemPrompt?: string;
 }
 
 /**
@@ -144,4 +169,4 @@ export function createEdge(source: string, target: string): Edge {
     source,
     target
   };
-} 
+}

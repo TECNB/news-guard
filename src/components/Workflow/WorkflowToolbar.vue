@@ -45,7 +45,7 @@
       </button>
       
       <button 
-        @click="$emit('run')" 
+        @click="onRunClick" 
         class="px-3 py-1.5 bg-blue-600 rounded-md text-sm font-medium text-white hover:bg-blue-700 flex items-center"
       >
         <i class="fa-solid fa-play mr-1"></i>
@@ -93,6 +93,15 @@ const zoomOut = () => {
 
 const resetZoom = () => {
   emit('reset-zoom');
+};
+
+// 运行按钮点击处理
+const onRunClick = () => {
+  console.log('工作流工具栏：点击运行按钮');
+  emit('run', {
+    timestamp: new Date().toISOString(),
+    source: 'toolbar'
+  });
 };
 </script>
 
