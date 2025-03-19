@@ -605,6 +605,14 @@ const executeTestRun = (inputValues: Record<string, any>) => {
         // 保存真实提示词到节点配置
         node.config.trueSystemPrompt = trueSystemPrompt;
         
+        // 保存真实提示词到测试结果中，供TestRunPanel使用
+        if (!inputValues['content']) {
+          inputValues['content'] = trueSystemPrompt;
+          
+          // 记录content字段设置情况，便于调试
+          console.log(`已设置content值为trueSystemPrompt: ${trueSystemPrompt.substring(0, 100)}...`);
+        }
+        
         console.log(`已为节点 ${node.id} 设置变量值和真实提示词`);
       }
     }
@@ -620,21 +628,9 @@ const executeTestRun = (inputValues: Record<string, any>) => {
     }
   }
   
-  // 这里模拟运行过程，实际应该调用后端API
-  setTimeout(() => {
-    testRunning.value = false;
-    testResult.value = `运行完成，处理了输入: ${JSON.stringify(inputValues)}`;
-    testDetails.value = [
-      { name: '处理时间', description: '工作流执行耗时', value: '1.2秒' },
-      { name: '处理节点', description: '参与处理的节点数', value: '3个' }
-    ];
-    testTraces.value = [
-      { node: '开始节点', timestamp: new Date().toLocaleTimeString(), message: '开始执行' },
-      { node: '处理节点1', timestamp: new Date().toLocaleTimeString(), message: '数据处理中' },
-      { node: '结束节点', timestamp: new Date().toLocaleTimeString(), message: '执行完成' }
-    ];
-  }, 2000);
-};
+  // 不再使用setTimeout模拟运行，而是由TestRunPanel直接调用DeepSeek API
+  // TestRunPanel将处理所有的API调用和结果展示
+}
 
 // 生命周期钩子
 onMounted(() => {
