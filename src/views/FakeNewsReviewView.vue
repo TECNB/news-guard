@@ -135,29 +135,149 @@ const autoResize = (event: any) => {
   autoResizeTextarea(event.target);
 };
 
-// Mock web search function
-const performWebSearch = async (query: string) => {
-  // 模拟搜索结果
-  if (query.includes("阿里巴巴") && query.includes("京东") && query.includes("1500亿美元")) {
-    return [{
-      title: "辟谣：阿里巴巴收购京东传闻不实",
-      url: "https://example.com/news/1",
-      snippet: "记者向阿里巴巴和京东双方求证，均表示该消息不实。相关收购传闻纯属谣言。"
-    }, {
-      title: "专家分析：阿里巴巴与京东合作可能性探讨",
-      url: "https://example.com/analysis/2", 
-      snippet: "业内专家表示，虽然两家公司存在合作空间，但收购的可能性较小。"
-    }];
+// 将web搜索函数修改为流式处理
+const performWebSearch = async (query: string, updateUI: (type: string, content: string) => void) => {
+  console.log('开始执行网络搜索:', query);
+  
+  try {
+    const response = await fetch('/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        search: true,
+        query: query
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`搜索请求失败: ${response.status}`);
+    }
+    
+    // 处理SSE流式响应
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('无法获取响应流');
+    }
+    
+    let decoder = new TextDecoder();
+    let buffer = '';
+    let searchResult = '';
+    let llmResponse = '';
+    let inSearchOutput = false;
+    let inLLM = false;
+    let searchResultSent = false;
+    
+    // 流式处理SSE数据
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      const chunk = decoder.decode(value, { stream: true });
+      buffer += chunk;
+      
+      // 按行处理缓冲区
+      let lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // 保留最后一行（可能不完整）到下次处理
+      
+      for (const line of lines) {
+        // 处理每一行
+        let content = line.trim();
+        if (content.startsWith('data: ')) {
+          content = content.substring(6).trim();
+        }
+        
+        if (content === '<search_output>') {
+          inSearchOutput = true;
+          inLLM = false;
+          continue;
+        }
+        
+        if (content === '</search_output>') {
+          inSearchOutput = false;
+          // 搜索结果收集完毕，发送给UI
+          if (searchResult && !searchResultSent) {
+            console.log('原始搜索结果字符串:', searchResult);
+            
+            try {
+              // 尝试解析JSON格式的搜索结果
+              let jsonStr = searchResult.trim();
+              // 确保字符串是有效的JSON格式
+              if (jsonStr.startsWith("'") || jsonStr.startsWith('"')) {
+                // 有时后端可能会返回带单引号的字符串，需要替换成双引号
+                jsonStr = jsonStr.replace(/'/g, '"');
+              }
+              
+              // 解析JSON
+              const searchData = JSON.parse(jsonStr);
+              
+              // 提取搜索结果数组
+              if (searchData && searchData.output && Array.isArray(searchData.output)) {
+                // 格式化搜索结果为更易读的格式
+                const formattedResults = searchData.output.map(item => ({
+                  title: item.title || '无标题',
+                  url: item.link || '#',
+                  snippet: item.snippet || '无摘要'
+                }));
+                
+                console.log('格式化后的搜索结果:', formattedResults);
+                
+                // 将格式化的搜索结果发送到UI
+                updateUI('searchResult', JSON.stringify(formattedResults));
+              } else {
+                // 如果无法提取结构化数据，直接发送原始文本
+                updateUI('searchResult', searchResult);
+              }
+            } catch (e) {
+              console.error('解析搜索结果时出错:', e);
+              // 解析失败时，直接发送原始文本
+              updateUI('searchResult', searchResult);
+            }
+            
+            searchResultSent = true;
+          }
+          continue;
+        }
+        
+        if (content === '<llm>') {
+          inLLM = true;
+          inSearchOutput = false;
+          continue;
+        }
+        
+        if (content === '</llm>') {
+          inLLM = false;
+          continue;
+        }
+        
+        if (inSearchOutput && content) {
+          searchResult += ' ' + content;
+        }
+        
+        if (inLLM && content) {
+          // LLM内容直接流式发送
+          llmResponse += ' ' + content;
+          updateUI('llm', content);
+          console.log('发送LLM片段到UI:', content);
+        }
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('网络搜索失败:', error);
+    updateUI('error', '发生错误，请稍后再试。');
+    return false;
   }
-  return [];
 };
 
-// 回车事件处理函数
+// 修改handleEnter函数来支持流式UI更新
 const handleEnter = async () => {
   const userContent = message.value.trim();
   if (!userContent) return;
 
-  // Chart handling
+  // 图表处理逻辑保持不变
   if (message.value.includes('折线图')) {
     message.value = '';
     showSuggestions.value = false;
@@ -179,19 +299,76 @@ const handleEnter = async () => {
     return;
   }
 
-  // Normal chat handling
+  // 常规聊天处理
   displayedMessages.value.push({ type: 'user', content: userContent });
   message.value = '';
   showSuggestions.value = false;
   
-  // Web search handling
+  // 网络搜索处理
   if (enableWebSearch.value) {
-    const searchResults = await performWebSearch(userContent);
-    if (searchResults.length > 0) {
-      displayedMessages.value.push({ type: 'webSearch', content: JSON.stringify(searchResults) });
+    displayedMessages.value.push({ type: 'loading', content: '' });
+    
+    // 创建一个临时变量来保存LLM回答的内容
+    let llmContent = '';
+    let searchResults: any[] = [];
+    
+    // 定义UI更新函数
+    const updateUI = (type: string, content: string) => {
+      // 移除loading消息（如果还存在）
+      if (displayedMessages.value[displayedMessages.value.length - 1]?.type === 'loading') {
+        displayedMessages.value.pop();
+      }
+      
+      if (type === 'searchResult') {
+        // 检查内容是否已经是JSON字符串
+        try {
+          // 尝试解析内容，如果成功则表示它已经是JSON格式
+          searchResults = JSON.parse(content);
+        } catch (e) {
+          // 如果解析失败，则把它作为普通文本处理
+          searchResults = [{
+            title: "搜索结果",
+            url: "https://example.com/search",
+            snippet: content.trim()
+          }];
+        }
+        
+        displayedMessages.value.push({ 
+          type: 'webSearch', 
+          content: JSON.stringify(searchResults)
+        });
+      } else if (type === 'llm') {
+        // LLM回答
+        if (llmContent === '') {
+          // 第一次添加AI消息
+          displayedMessages.value.push({ type: 'ai', content: content });
+          llmContent = content;
+        } else {
+          // 更新现有AI消息
+          llmContent += content;
+          const lastMessage = displayedMessages.value[displayedMessages.value.length - 1];
+          if (lastMessage && lastMessage.type === 'ai') {
+            lastMessage.content = llmContent;
+          }
+        }
+      } else if (type === 'error') {
+        // 错误消息
+        displayedMessages.value.push({ type: 'ai', content: content });
+      }
+    };
+    
+    // 执行网络搜索，传入UI更新回调
+    await performWebSearch(userContent, updateUI);
+    
+    // 确保loading状态已被移除
+    if (displayedMessages.value[displayedMessages.value.length - 1]?.type === 'loading') {
+      displayedMessages.value.pop();
     }
+    
+    return; // 搜索处理完毕，不再调用常规聊天API
   }
   
+  // 常规聊天API调用逻辑保持不变
   displayedMessages.value.push({ type: 'loading', content: '' });
 
   try {

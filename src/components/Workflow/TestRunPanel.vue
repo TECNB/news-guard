@@ -162,9 +162,6 @@ watch(() => activeTab.value, (newTab) => {
   }
 });
 
-// DeepSeek API密钥
-const DEEPSEEK_API_KEY = 'sk-637a4acf97fd47b8bace308f0542cdee';
-
 // 计算属性：检查是否有空的输入值
 const hasEmptyInputs = computed(() => {
   return Object.values(inputValues).some(value => value === '');
@@ -227,7 +224,6 @@ const callDeepSeekApi = async () => {
     
     // 向DeepSeek API发送流式请求
     await streamDeepSeekResponse(
-      DEEPSEEK_API_KEY,
       apiParams,
       // 每收到一个块就更新结果并强制刷新视图
       async (chunk: string) => {
@@ -316,4 +312,4 @@ const callDeepSeekApi = async () => {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
-</style> 
+</style>

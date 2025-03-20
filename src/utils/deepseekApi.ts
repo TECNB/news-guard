@@ -3,6 +3,11 @@
  * 处理与DeepSeek API的交互，包括流式响应处理
  */
 
+const DEEPSEEK_API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY;
+if (!DEEPSEEK_API_KEY) {
+  throw new Error('VITE_DEEPSEEK_API_KEY environment variable is not set');
+}
+
 // 定义DeepSeek API请求参数接口
 export interface DeepSeekRequestParams {
   model: string;
@@ -24,7 +29,6 @@ export interface DeepSeekRequestParams {
  * @param onError 错误时的回调函数
  */
 export async function streamDeepSeekResponse(
-  apiKey: string,
   params: DeepSeekRequestParams,
   onChunk: (text: string) => Promise<void> | void,
   onFinish?: (fullText: string) => void,
@@ -42,7 +46,7 @@ export async function streamDeepSeekResponse(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
       },
       body: JSON.stringify(requestParams)
     });
@@ -133,7 +137,6 @@ export async function streamDeepSeekResponse(
  * @returns 请求结果Promise
  */
 export async function callDeepSeekApi(
-  apiKey: string,
   params: DeepSeekRequestParams
 ): Promise<any> {
   try {
@@ -147,7 +150,7 @@ export async function callDeepSeekApi(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
       },
       body: JSON.stringify(requestParams)
     });
@@ -162,4 +165,4 @@ export async function callDeepSeekApi(
     console.error('DeepSeek API请求错误:', error);
     throw error;
   }
-} 
+}

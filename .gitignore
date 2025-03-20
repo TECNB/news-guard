@@ -29,3 +29,6 @@ fontawesome-pro-6.6.0-web.tgz
 dist-electron
 release
 *-debug.log
+
+# Environment Variables
+.env
