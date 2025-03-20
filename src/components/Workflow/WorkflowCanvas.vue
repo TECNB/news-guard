@@ -127,7 +127,7 @@
     />
 
     <!-- 测试运行面板 -->
-    <TestRunPanel
+    <RunPanel
       v-if="showTestPanel"
       :input-variables="testInputVariables"
       :is-running="testRunning"
@@ -147,7 +147,7 @@ import WorkflowNode from './WorkflowNode.vue';
 import ContextMenu from './ContextMenu.vue';
 import NodeLibrary from './NodeLibrary.vue';
 import PathsRenderer from './PathsRenderer.vue';
-import TestRunPanel from './TestRunPanel.vue';
+import RunPanel from './RunPanel.vue';
 
 // 导入工具函数
 import { startCanvasDrag, dragCanvas, stopCanvasDrag, startNodeDrag, dragNode, stopNodeDrag } from '../../utils/workflow/dragUtils';
@@ -605,7 +605,7 @@ const executeTestRun = (inputValues: Record<string, any>) => {
         // 保存真实提示词到节点配置
         node.config.trueSystemPrompt = trueSystemPrompt;
         
-        // 保存真实提示词到测试结果中，供TestRunPanel使用
+        // 保存真实提示词到测试结果中，供RunPanel使用
         if (!inputValues['content']) {
           inputValues['content'] = trueSystemPrompt;
           
@@ -628,8 +628,8 @@ const executeTestRun = (inputValues: Record<string, any>) => {
     }
   }
   
-  // 不再使用setTimeout模拟运行，而是由TestRunPanel直接调用DeepSeek API
-  // TestRunPanel将处理所有的API调用和结果展示
+  // 不再使用setTimeout模拟运行，而是由RunPanel直接调用DeepSeek API
+  // RunPanel将处理所有的API调用和结果展示
 }
 
 // 生命周期钩子
