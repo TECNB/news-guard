@@ -36,7 +36,7 @@
       </div>
     </div>
 
-    <div class="flex-1 overflow-auto p-4">
+    <div class="flex-1 p-4 overflow-hidden">
       <!-- 输入选项卡 -->
       <div v-if="activeTab === 'input'" class="h-full flex flex-col">
         <div v-for="(value, key) in inputVariables" :key="key" class="mb-4">
@@ -65,22 +65,34 @@
 
       <!-- 结果选项卡 -->
       <div v-else-if="activeTab === 'result'" class="h-full">
-        <div v-if="isApiLoading" class="flex justify-center items-center h-full">
+        <div v-if="isApiLoading" class="h-full flex justify-center items-center">
           <div class="text-center">
             <div class="spinner mb-4"></div>
             <p class="text-gray-600">正在运行...</p>
           </div>
         </div>
-        <div v-else-if="resultText" class="whitespace-pre-wrap result-container h-full overflow-auto">
-          {{ resultText }}
-        </div>
-        <div v-else class="text-gray-500 flex justify-center items-center h-full">
+        <el-scrollbar v-else-if="resultText" height="100%">
+          <div class="result-container text-left py-1">
+            <div v-if="isJsonMode" class="json-wrapper">
+              <div class="json-header">
+                <span class="json-label">JSON</span>
+                <button @click="copyJson" class="copy-button">
+                  <span v-if="copied">已复制</span>
+                  <span v-else>复制</span>
+                </button>
+              </div>
+              <pre class="json-block"><code class="hljs language-json" v-html="currentFormatted"></code></pre>
+            </div>
+            <pre v-else class="text-block">{{ currentContent }}</pre>
+          </div>
+        </el-scrollbar>
+        <div v-else class="h-full flex justify-center items-center text-gray-500">
           暂无运行结果
         </div>
       </div>
 
       <!-- 详情选项卡 -->
-      <div v-else-if="activeTab === 'detail'" class="h-full">
+      <div v-else-if="activeTab === 'detail'" class="h-full overflow-auto">
         <div v-if="details.length" class="space-y-4">
           <div v-for="(detail, index) in details" :key="index" class="border rounded-md p-3">
             <div class="font-medium">{{ detail.name }}</div>
@@ -88,13 +100,13 @@
             <div class="mt-2 text-xs bg-gray-50 p-2 rounded">{{ detail.value }}</div>
           </div>
         </div>
-        <div v-else class="text-gray-500 flex justify-center items-center h-full">
+        <div v-else class="h-full flex justify-center items-center text-gray-500">
           暂无详细信息
         </div>
       </div>
 
       <!-- 追踪选项卡 -->
-      <div v-else-if="activeTab === 'trace'" class="h-full">
+      <div v-else-if="activeTab === 'trace'" class="h-full overflow-auto">
         <div v-if="traces.length" class="space-y-3">
           <div v-for="(trace, index) in traces" :key="index" class="border-l-2 border-blue-500 pl-3 py-1">
             <div class="font-medium">{{ trace.node }}</div>
@@ -102,7 +114,7 @@
             <div class="text-sm mt-1">{{ trace.message }}</div>
           </div>
         </div>
-        <div v-else class="text-gray-500 flex justify-center items-center h-full">
+        <div v-else class="h-full flex justify-center items-center text-gray-500">
           暂无追踪信息
         </div>
       </div>
@@ -113,6 +125,54 @@
 <script setup lang="ts">
 import { ref, reactive, computed, defineEmits, defineProps, watch, nextTick } from 'vue';
 import { streamDeepSeekResponse, type DeepSeekRequestParams } from '../../utils/deepseekApi';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github.css';
+
+// 复制状态
+const copied = ref(false);
+
+// 复制JSON内容
+const copyJson = async () => {
+  try {
+    const jsonContent = currentContent.value;
+    await navigator.clipboard.writeText(jsonContent);
+    copied.value = true;
+    setTimeout(() => {
+      copied.value = false;
+    }, 2000);
+  } catch (err) {
+    console.error('Failed to copy text: ', err);
+  }
+};
+
+// 检查是否处于JSON模式
+const isJsonMode = computed(() => {
+  return resultText.value.startsWith('```json');
+});
+
+// 提取当前内容
+const currentContent = computed(() => {
+  if (isJsonMode.value) {
+    // 去除 ```json 和 ``` 标记
+    const match = resultText.value.match(/```json\n?([\s\S]*?)(\n?```)?$/);
+    return match ? match[1] : '';
+  }
+  return resultText.value;
+});
+
+// 格式化和高亮处理后的内容
+const currentFormatted = computed(() => {
+  if (!isJsonMode.value) return currentContent.value;
+  try {
+    // 尝试格式化和高亮JSON
+    const jsonObj = JSON.parse(currentContent.value);
+    const formatted = JSON.stringify(jsonObj, null, 2);
+    return hljs.highlight(formatted, { language: 'json' }).value;
+  } catch (e) {
+    // 如果解析失败，返回原始内容
+    return currentContent.value;
+  }
+});
 
 const props = defineProps<{
   inputVariables: Record<string, any>;
@@ -236,11 +296,6 @@ const callDeepSeekApi = async () => {
         resultText.value += chunk;
         // 使用nextTick确保DOM更新
         await nextTick();
-        // 自动滚动到底部（如果在容器内）
-        const resultContainer = document.querySelector('.result-container');
-        if (resultContainer) {
-          resultContainer.scrollTop = resultContainer.scrollHeight;
-        }
       },
       // 完成处理
       (fullText: string) => {
@@ -311,5 +366,77 @@ const callDeepSeekApi = async () => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.json-wrapper {
+  background-color: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  margin: 0;
+}
+
+.json-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.json-label {
+  color: #57606a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.copy-button {
+  background-color: transparent;
+  border: none;
+  color: #0969da;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.copy-button:hover {
+  background-color: #f0f4f8;
+}
+
+.json-block {
+  margin: 0;
+  padding: 16px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.json-block code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.text-block {
+  background-color: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  margin: 0;
+  padding: 16px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+:deep(.el-scrollbar__wrap) {
+  overflow-x: hidden;
+}
+
+.result-container {
+  width: 100%;
 }
 </style>
