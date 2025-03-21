@@ -147,7 +147,8 @@ export function createNode(type: string, x: number, y: number): Node {
     throw new Error(`不支持的节点类型: ${type}`);
   }
   
-  return {
+  // 创建基本节点
+  const node: Node = {
     id: `node-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     name: nodeType.name,
     type,
@@ -157,6 +158,13 @@ export function createNode(type: string, x: number, y: number): Node {
     outputs: [],
     config: { ...nodeType.defaultConfig }
   };
+  
+  // 为LLM节点设置固定输出
+  if (type === 'llm') {
+    node.outputs = ['text'];
+  }
+  
+  return node;
 }
 
 /**

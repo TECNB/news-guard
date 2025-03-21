@@ -34,7 +34,22 @@
       </div>
     </div>
     
-    <div>
+    <!-- LLM节点显示固定输出格式 -->
+    <div v-if="isLLMNode">
+      <label class="block text-sm font-medium text-gray-700 mb-1">输出变量</label>
+      <div class="p-3 bg-gray-50 border border-gray-200 rounded-md">
+        <div class="flex items-center">
+          <span class="text-blue-500 w-5 text-center mr-2">
+            <i class="fa-solid fa-bracket-curly text-xs"></i>
+          </span>
+          <span class="text-sm font-medium">text</span>
+          <span class="text-xs text-gray-500 ml-2">(String) 生成内容</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 非LLM节点允许自定义输出变量 -->
+    <div v-else>
       <label class="block text-sm font-medium text-gray-700 mb-1">输出变量</label>
       <div class="space-y-2">
         <div 
@@ -69,11 +84,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 
 interface IOConfig {
   inputs: string[];
   outputs: string[];
+  nodeType?: string;
 }
 
 const props = defineProps<{
@@ -87,17 +103,28 @@ const io = ref<IOConfig>({
   outputs: []
 });
 
+// 判断是否为LLM节点
+const isLLMNode = computed(() => props.modelValue.nodeType === 'llm');
+
 watch(() => props.modelValue, (newValue) => {
   io.value = {
     inputs: [...newValue.inputs],
-    outputs: [...newValue.outputs]
+    outputs: [...newValue.outputs],
+    nodeType: newValue.nodeType
   };
+  
+  // 如果是LLM节点，确保其输出为["text"]
+  if (isLLMNode.value && (!io.value.outputs.includes('text') || io.value.outputs.length !== 1)) {
+    io.value.outputs = ['text'];
+    emitUpdate();
+  }
 }, { immediate: true });
 
 const emitUpdate = () => {
   emit('update:modelValue', {
     inputs: [...io.value.inputs],
-    outputs: [...io.value.outputs]
+    outputs: [...io.value.outputs],
+    nodeType: io.value.nodeType
   });
 };
 
@@ -112,11 +139,17 @@ const removeInput = (index: number) => {
 };
 
 const addOutput = () => {
+  // 如果是LLM节点，不允许添加输出
+  if (isLLMNode.value) return;
+  
   io.value.outputs.push('');
   emitUpdate();
 };
 
 const removeOutput = (index: number) => {
+  // 如果是LLM节点，不允许删除输出
+  if (isLLMNode.value) return;
+  
   io.value.outputs.splice(index, 1);
   emitUpdate();
 };

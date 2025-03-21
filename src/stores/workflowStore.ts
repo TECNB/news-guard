@@ -13,7 +13,6 @@ export const useWorkflowStore = defineStore('workflow', {
     name: '新工作流',
     description: '',
     // 工作流运行相关
-    inputVariables: {} as Record<string, any>,
     isRunning: false,
     result: '',
     details: [] as Array<{name: string, description: string, value: any}>,
@@ -37,6 +36,22 @@ export const useWorkflowStore = defineStore('workflow', {
     // 获取开始节点
     startNode(): Node | undefined {
       return this.nodes.find(node => node.type === 'start');
+    },
+    
+    // 获取开始节点的输入变量
+    inputVariables(): Record<string, any> {
+      const startNode = this.startNode;
+      const variables: Record<string, any> = {};
+      
+      if (startNode && startNode.inputs && startNode.inputs.length > 0) {
+        startNode.inputs.forEach(variable => {
+          if (variable.trim() !== '') {
+            variables[variable] = '';
+          }
+        });
+      }
+      
+      return variables;
     }
   },
   
@@ -163,29 +178,6 @@ export const useWorkflowStore = defineStore('workflow', {
       }
     },
     
-    // 初始化运行变量
-    initializeInputVariables(): void {
-      console.log(`[WorkflowStore] 初始化输入变量`);
-      
-      // 清空并重新设置输入变量
-      this.inputVariables = {};
-      
-      const startNode = this.startNode;
-      
-      if (startNode && startNode.inputs && startNode.inputs.length > 0) {
-        // 为每个开始节点定义的输入变量创建一个输入字段
-        startNode.inputs.forEach(variable => {
-          if (variable.trim() !== '') {
-            this.inputVariables[variable] = '';
-          }
-        });
-        console.log(`[WorkflowStore] 已从开始节点初始化变量:`, this.inputVariables);
-      } else {
-        // 如果没有找到开始节点或没有定义变量，保持输入变量为空对象
-        console.log(`[WorkflowStore] 未找到开始节点或变量定义，输入变量为空`);
-      }
-    },
-    
     // 设置工作流位置 - 完全禁用移动节点时的日志输出
     updateNodePosition(nodeId: string, x: number, y: number): void {
       const node = this.nodes.find(n => n.id === nodeId);
@@ -203,13 +195,10 @@ export const useWorkflowStore = defineStore('workflow', {
       this.result = '';
       this.details = [];
       this.traces = [];
-      this.initializeInputVariables();
     },
     
     // 执行工作流
     executeRun(inputValues: Record<string, any>): void {
-      // 保存输入变量值
-      this.inputVariables = inputValues;
       this.isRunning = true;
       
       console.log(`[WorkflowStore] 开始运行工作流，输入变量:`, inputValues);

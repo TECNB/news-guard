@@ -8,7 +8,6 @@
         class="w-full p-3 border border-gray-300 rounded-md bg-gray-50 text-gray-700 placeholder-gray-400"
         placeholder="请输入"
         rows="4"
-        @input="updateInputValue(key, localInputValues[key])"
       ></textarea>
     </div>
     
@@ -29,30 +28,52 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, reactive, computed } from 'vue';
+import { defineEmits, reactive, computed, onMounted, watch } from 'vue';
 import { useWorkflowStore } from '../../stores/workflowStore';
 
 const workflowStore = useWorkflowStore();
+const emit = defineEmits(['startRun']);
 
-const props = defineProps<{
-  inputVariables: Record<string, any>;
-  hasEmptyInputs?: boolean;
-}>();
-
-const emit = defineEmits(['updateValue', 'startRun']);
-
-// 创建本地响应式对象，用于双向绑定
-const localInputValues = reactive({...props.inputVariables});
-
-// 检查是否有空输入
-const checkEmptyInputs = computed(() => {
-  return Object.values(localInputValues).some(value => !value || value.trim() === '');
+// 直接从workflowStore获取输入变量
+const inputVariables = computed(() => {
+  // 从开始节点获取输入变量
+  const startNode = workflowStore.nodes.find(node => node.type === 'start');
+  const variables: Record<string, any> = {};
+  
+  if (startNode && startNode.inputs && startNode.inputs.length > 0) {
+    startNode.inputs.forEach(variable => {
+      if (variable.trim() !== '') {
+        variables[variable] = '';
+      }
+    });
+  }
+  
+  return variables;
 });
 
-// 更新输入值
-const updateInputValue = (key: string, value: any) => {
-  emit('updateValue', key, value);
-};
+// 创建本地响应式对象，用于双向绑定
+const localInputValues = reactive<Record<string, any>>({});
+
+// 当inputVariables变化时更新本地值
+watch(inputVariables, (newVars) => {
+  Object.keys(newVars).forEach(key => {
+    if (localInputValues[key] === undefined) {
+      localInputValues[key] = '';
+    }
+  });
+}, { immediate: true });
+
+// 组件挂载时初始化本地输入值
+onMounted(() => {
+  Object.keys(inputVariables.value).forEach(key => {
+    localInputValues[key] = '';
+  });
+});
+
+// 检查是否有空输入
+const hasEmptyInputs = computed(() => {
+  return Object.values(localInputValues).some(value => !value || value.trim() === '');
+});
 
 // 开始运行
 const onStartRun = () => {

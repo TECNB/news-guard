@@ -41,7 +41,7 @@
         <LLMProperties
           v-else-if="selectedNode.type === 'llm'"
           v-model="llmConfig"
-          :variables="startNodeVariables"
+          :variables="availableVariables"
           :variable-values="selectedNode.config.variableValues"
         />
         <knowledge-properties
@@ -137,6 +137,67 @@ const startNodeVariables = computed(() => {
   return startNode.inputs.filter(input => input.trim() !== '');
 });
 
+// 计算属性：获取当前节点可用的所有变量（包括前置节点的输出）
+const availableVariables = computed(() => {
+  if (!selectedNode.value) return [];
+  
+  const nodeId = selectedNode.value.id;
+  const result = [];
+  
+  // 添加开始节点变量
+  const startNode = workflowStore.nodes.find(node => node.type === 'start');
+  if (startNode) {
+    const variables = startNode.inputs
+      .filter(input => input.trim() !== '')
+      .map(name => ({ name }));
+    
+    if (variables.length > 0) {
+      result.push({
+        nodeId: startNode.id,
+        nodeName: '开始节点',
+        variables: variables.map(v => ({ 
+          ...v, 
+          color: 'green' 
+        }))
+      });
+    }
+  }
+  
+  // 找到当前节点的所有前置节点
+  const incomingEdges = workflowStore.edges.filter(edge => edge.target === nodeId);
+  const predecessorIds = incomingEdges.map(edge => edge.source);
+  
+  // 获取前置节点的输出变量
+  predecessorIds.forEach(predecessorId => {
+    const node = workflowStore.nodes.find(n => n.id === predecessorId);
+    if (!node || !node.outputs || node.outputs.length === 0) return;
+    
+    // 根据节点类型设置不同的颜色
+    let color = 'blue';
+    if (node.type === 'knowledge') color = 'purple';
+    else if (node.type === 'llm') color = 'blue';
+    else if (node.type === 'conditional') color = 'yellow';
+    
+    // 为LLM节点添加类型信息
+    const variables = node.outputs.map(output => {
+      if (node.type === 'llm' && output === 'text') {
+        return { name: output, type: 'String', color };
+      }
+      return { name: output, color };
+    });
+    
+    if (variables.length > 0) {
+      result.push({
+        nodeId: node.id,
+        nodeName: `${node.name} (${node.type})`,
+        variables
+      });
+    }
+  });
+  
+  return result;
+});
+
 // 计算属性：LLM配置
 const llmConfig = computed<LLMConfig>({
   get: () => {
@@ -216,15 +277,16 @@ const conditionalConfig = computed<ConditionalConfig>({
 
 // 计算属性：IO值
 const ioValue = computed(() => {
-  if (!selectedNode.value) return { inputs: [], outputs: [] };
+  if (!selectedNode.value) return { inputs: [], outputs: [], nodeType: '' };
   return {
     inputs: selectedNode.value.inputs,
-    outputs: selectedNode.value.outputs
+    outputs: selectedNode.value.outputs,
+    nodeType: selectedNode.value.type
   };
 });
 
 // 更新输入输出变量
-const updateIO = (value: { inputs: string[]; outputs: string[]; }) => {
+const updateIO = (value: { inputs: string[]; outputs: string[]; nodeType?: string }) => {
   if (!selectedNode.value) return;
   // 保存到本地变更
   localNodeChanges.value.inputs = value.inputs;

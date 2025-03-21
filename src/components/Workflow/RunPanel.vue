@@ -27,9 +27,6 @@
       <!-- 使用动态组件切换不同的面板 -->
       <component 
         :is="currentPanel" 
-        :inputVariables="inputVariables"
-        :hasEmptyInputs="hasEmptyInputs"
-        @updateValue="updateInputValue"
         @startRun="startRun"
       />
     </div>
@@ -53,7 +50,6 @@ const emit = defineEmits(['close']);
 const workflowStore = useWorkflowStore();
 
 // 使用computed获取store中的数据
-const inputVariables = computed(() => workflowStore.inputVariables);
 const isRunning = computed(() => workflowStore.isRunning);
 const result = computed(() => workflowStore.result);
 const details = computed(() => workflowStore.details);
@@ -63,12 +59,6 @@ const traces = computed(() => workflowStore.traces);
 const activeTab = ref('input');
 const isApiLoading = ref(false);
 const resultText = ref('');
-const inputValues = reactive({...inputVariables.value});
-
-// 计算属性：检查是否有空输入
-const hasEmptyInputs = computed(() => {
-  return Object.values(inputValues).some(value => !value || value.trim() === '');
-});
 
 // 标签定义
 const tabs = [
@@ -90,12 +80,6 @@ const panelComponents = {
 const currentPanel = computed(() => {
   return panelComponents[activeTab.value as keyof typeof panelComponents];
 });
-
-// 更新输入值
-const updateInputValue = (key: string, value: any) => {
-  inputValues[key] = value;
-  console.log(`[RunPanel] 更新输入值 ${key}=${value}`);
-};
 
 // 开始运行
 const startRun = (values: Record<string, any>) => {

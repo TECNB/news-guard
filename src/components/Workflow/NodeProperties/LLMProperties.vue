@@ -51,26 +51,6 @@
         @select="insertVariable"
       />
     </div>
-
-    <div v-if="variableValues && Object.keys(variableValues).length > 0" class="border p-3 rounded-md bg-gray-50">
-      <h5 class="text-sm font-medium text-gray-700 mb-2">变量预览</h5>
-      <div class="space-y-2 text-sm">
-        <div v-for="(value, key) in variableValues" :key="key" class="flex justify-between">
-          <span class="text-gray-600">{{ key }}:</span>
-          <span class="text-gray-800 font-medium">{{ value || '(空)' }}</span>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="props.modelValue.trueSystemPrompt" class="border p-3 rounded-md bg-gray-50">
-      <div class="flex justify-between items-center mb-2">
-        <h5 class="text-sm font-medium text-gray-700">替换后的提示词</h5>
-        <span class="text-xs text-gray-500">变量已替换</span>
-      </div>
-      <div class="whitespace-pre-wrap text-sm bg-white p-2 rounded border border-gray-200">
-        {{ props.modelValue.trueSystemPrompt }}
-      </div>
-    </div>
   </div>
 </template>
 
@@ -80,9 +60,21 @@ import VariableSuggestions from '@/components/Workflow/NodeProperties/VariableSu
 import { useCursorPosition } from '@/utils/workflow/cursorUtils';
 import type { LLMConfig } from '@/types/workflow';
 
+interface Variable {
+  name: string;
+  type?: string;
+  color?: string;
+}
+
+interface NodeVariables {
+  nodeId: string;
+  nodeName: string;
+  variables: Variable[];
+}
+
 const props = defineProps<{
   modelValue: LLMConfig & { trueSystemPrompt?: string };
-  variables: string[];
+  variables: string[] | NodeVariables[];
   variableValues?: Record<string, any>;
 }>();
 
