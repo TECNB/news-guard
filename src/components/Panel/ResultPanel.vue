@@ -1,33 +1,32 @@
 <template>
-  <div class="h-full">
-    <!-- 加载状态 -->
-    <div v-if="isLoading" class="h-full flex justify-center items-center">
-      <div class="text-center">
-        <div class="spinner mb-4"></div>
-        <p class="text-gray-600">正在运行...</p>
-      </div>
-    </div>
-    
+  <div 
+    class="h-full"
+    v-loading="isLoading"
+    element-loading-text="正在运行..."
+    element-loading-background="rgba(255, 255, 255, 0.9)"
+  >
     <!-- 结果展示 -->
-    <el-scrollbar v-else-if="resultContent" height="100%">
-      <div class="result-container text-left py-1">
-        <div v-if="isJsonMode" class="json-wrapper">
-          <div class="json-header">
-            <span class="json-label">JSON</span>
-            <button @click="copyJson" class="copy-button">
-              <span v-if="copied">已复制</span>
-              <span v-else>复制</span>
-            </button>
+    <div class="h-full" v-if="!isLoading">
+      <el-scrollbar v-if="resultContent" height="100%">
+        <div class="text-left py-1 w-full">
+          <div v-if="isJsonMode" class="bg-gray-50 border border-gray-200 rounded-md m-0">
+            <div class="flex justify-between items-center px-4 py-2 border-b border-gray-200">
+              <span class="text-gray-500 text-xs font-semibold">JSON</span>
+              <button @click="copyJson" class="bg-transparent border-none text-blue-600 text-xs cursor-pointer px-1.5 py-0.5 rounded transition-colors duration-200 hover:bg-blue-50">
+                <span v-if="copied">已复制</span>
+                <span v-else>复制</span>
+              </button>
+            </div>
+            <pre class="m-0 p-4 break-words break-all whitespace-pre-wrap"><code class="hljs language-json font-mono text-xs leading-relaxed" v-html="currentFormatted"></code></pre>
           </div>
-          <pre class="json-block"><code class="hljs language-json" v-html="currentFormatted"></code></pre>
+          <pre v-else class="bg-gray-50 border border-gray-200 rounded-md m-0 p-4 font-mono text-xs leading-relaxed break-words break-all whitespace-pre-wrap">{{ currentContent }}</pre>
         </div>
-        <pre v-else class="text-block">{{ currentContent }}</pre>
+      </el-scrollbar>
+      
+      <!-- 无结果状态 -->
+      <div v-else class="h-full flex justify-center items-center text-gray-500">
+        暂无运行结果
       </div>
-    </el-scrollbar>
-    
-    <!-- 无结果状态 -->
-    <div v-else class="h-full flex justify-center items-center text-gray-500">
-      暂无运行结果
     </div>
   </div>
 </template>
@@ -102,86 +101,12 @@ isLoading.value = workflowStore.isRunning;
 </script>
 
 <style scoped>
-.spinner {
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top: 3px solid #3498db;
-  width: 30px;
-  height: 30px;
-  animation: spin 1s linear infinite;
-  margin: 0 auto;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.json-wrapper {
-  background-color: #f6f8fa;
-  border: 1px solid #e1e4e8;
-  border-radius: 6px;
-  margin: 0;
-}
-
-.json-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 16px;
-  border-bottom: 1px solid #e1e4e8;
-}
-
-.json-label {
-  color: #57606a;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.copy-button {
-  background-color: transparent;
-  border: none;
-  color: #0969da;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.copy-button:hover {
-  background-color: #f0f4f8;
-}
-
-.json-block {
-  margin: 0;
-  padding: 16px;
+.break-all {
   word-wrap: break-word;
-  white-space: pre-wrap;
   word-break: break-all;
 }
 
-.json-block code {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.text-block {
-  background-color: #f6f8fa;
-  border: 1px solid #e1e4e8;
-  border-radius: 6px;
-  margin: 0;
-  padding: 16px;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-  font-size: 12px;
-  line-height: 1.4;
-  word-wrap: break-word;
+.whitespace-pre-wrap {
   white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.result-container {
-  width: 100%;
 }
 </style> 

@@ -13,7 +13,7 @@
     </div>
     
     <!-- 提交按钮 -->
-    <div class="mt-auto pt-4">
+    <div class="pt-4">
       <button 
         @click="onStartRun"
         class="w-full py-3 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors"

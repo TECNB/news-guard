@@ -181,10 +181,8 @@ export const useWorkflowStore = defineStore('workflow', {
         });
         console.log(`[WorkflowStore] 已从开始节点初始化变量:`, this.inputVariables);
       } else {
-        // 如果没有找到开始节点或没有定义变量，提供一些默认变量
-        this.inputVariables['news'] = '';
-        this.inputVariables['query'] = '';
-        console.log(`[WorkflowStore] 未找到开始节点或变量定义，使用默认变量:`, this.inputVariables);
+        // 如果没有找到开始节点或没有定义变量，保持输入变量为空对象
+        console.log(`[WorkflowStore] 未找到开始节点或变量定义，输入变量为空`);
       }
     },
     

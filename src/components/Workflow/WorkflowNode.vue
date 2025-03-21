@@ -5,7 +5,7 @@
     @contextmenu.prevent="showContextMenu"
   >
     <div 
-      class="node bg-white rounded-lg shadow-md border border-gray-200 p-4 cursor-move relative"
+      class="node bg-white rounded-lg shadow-md border border-gray-200 p-4 cursor-move relative min-w-[240px] transition duration-200"
       :class="{ 'border-blue-500 ring-2 ring-blue-200': isSelected }"
       @mousedown.stop="onNodeDragStart"
       @click.stop="onNodeClick"
@@ -13,7 +13,7 @@
       @mouseleave="showControls = false"
     >
       <!-- 控制栏 -->
-      <div v-if="showControls || isSelected" class="node-controls absolute -top-5 -right-1 bg-white rounded-lg shadow-md">
+      <div v-if="showControls || isSelected" class="node-controls absolute -top-5 -right-1 bg-white rounded-lg shadow-md z-20">
         <div class="inline-block text-blue-500 hover:bg-blue-50 rounded px-2 py-[0.5px]" @click.stop="runNode">
           <i class="fa-solid fa-play fa-2xs"></i>
         </div>
@@ -23,7 +23,7 @@
       </div>
 
       <!-- 右键菜单 -->
-      <div v-if="contextMenuVisible" class="context-menu w-56 fixed bg-white shadow-lg rounded-lg border border-gray-200 z-[100] px-2 py-1"
+      <div v-if="contextMenuVisible" class="context-menu fixed bg-white shadow-lg rounded-lg border border-gray-200 z-[100] px-2 py-1 min-w-[160px]"
         :style="{ 
           left: `${contextMenuX}px`, 
           top: `${contextMenuY}px`,
@@ -92,11 +92,11 @@
       
       <!-- 节点连接点 -->
       <div 
-        class="connector-out absolute -right-2 top-[27px] w-4 h-4 bg-blue-500 rounded-full cursor-pointer"
+        class="connector-out absolute -right-2 top-[27px] w-4 h-4 bg-blue-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
         @mousedown.stop="onStartConnection($event, 'output')"
       ></div>
       <div 
-        class="connector-in absolute -left-2 top-[27px] w-4 h-4 bg-green-500 rounded-full cursor-pointer"
+        class="connector-in absolute -left-2 top-[27px] w-4 h-4 bg-green-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
         @mousedown.stop="onStartConnection($event, 'input')"
       ></div>
     </div>
@@ -270,38 +270,8 @@ const isModelNode = computed(() => {
 </script>
 
 <style lang="scss" scoped>
-.node {
-  min-width: 240px;
-  transition: all 0.2s;
-}
-
-/* 光标样式 */
-.connector-out, .connector-in {
-  transition: transform 0.2s;
-  z-index: 10;
-}
-
-.connector-out:hover, .connector-in:hover {
-  transform: scale(1.2);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-}
-
-.connector-out {
-  cursor: crosshair;
-}
-
-.connector-in {
-  cursor: crosshair;
-}
-
 .context-menu {
-  min-width: 160px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   animation: menuFadeIn 0.15s ease-out;
-}
-
-.node-controls {
-  z-index: 20;
 }
 
 @keyframes menuFadeIn {

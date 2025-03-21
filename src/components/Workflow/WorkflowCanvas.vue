@@ -1,7 +1,7 @@
 <template>
   <div 
     ref="canvasRef" 
-    class="workflow-canvas bg-gray-50 w-full h-full relative overflow-hidden"
+    class="workflow-canvas bg-gray-50 w-full h-full relative overflow-hidden select-none"
     @contextmenu.prevent="onContextMenu"
     @click="hideContextMenu"
     @mousemove="onMouseMove"
@@ -9,7 +9,7 @@
   >
     <!-- 工作流主画布区域 -->
     <div 
-      class="canvas-content w-full h-full" 
+      class="canvas-content w-full h-full origin-top-left transition duration-100" 
       :style="{ transform: `scale(${scale}) translate(${translateX}px, ${translateY}px)` }"
       @wheel.prevent="handleZoom"
       @mousedown="onCanvasDragStart"
@@ -76,7 +76,7 @@
           }"
           @mouseup.stop="onConnectionHitInput(node.id)"
           v-show="node.id !== connectionStartNodeId"
-          class="connection-hitbox-input"
+          class="connection-hitbox-input opacity-0 transition duration-200 border-2 border-dashed border-transparent hover:opacity-70 hover:scale-110"
         ></div>
         <div 
           v-for="node in workflowStore.nodes" 
@@ -93,7 +93,7 @@
           }"
           @mouseup.stop="onConnectionHitOutput(node.id)"
           v-show="node.id !== connectionStartNodeId"
-          class="connection-hitbox-output"
+          class="connection-hitbox-output opacity-0 transition duration-200 border-2 border-dashed border-transparent hover:opacity-70 hover:scale-110"
         ></div>
       </div>
 
@@ -558,12 +558,6 @@ defineExpose({
   background-image: 
     linear-gradient(to right, rgb(243 244 246 / .5) 1px, transparent 1px),
     linear-gradient(to bottom, rgb(243 244 246 / .5) 1px, transparent 1px);
-  user-select: none;
-}
-
-.canvas-content {
-  transform-origin: 0 0;
-  transition: transform 0.1s;
 }
 
 .temporary-connection-path {
@@ -574,19 +568,6 @@ defineExpose({
   to {
     stroke-dashoffset: -20;
   }
-}
-
-.connection-hitbox-input,
-.connection-hitbox-output {
-  opacity: 0;
-  transition: opacity 0.2s, transform 0.2s;
-  border: 2px dashed transparent;
-}
-
-.connection-hitbox-input:hover,
-.connection-hitbox-output:hover {
-  opacity: 0.7;
-  transform: scale(1.1);
 }
 
 .connection-hitbox-input:hover {

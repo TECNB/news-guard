@@ -1,12 +1,12 @@
 <template>
   <div 
-    class="variable-suggestions absolute z-10 mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-2 max-h-60 overflow-y-auto"
+    class="variable-suggestions absolute z-100 mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-2 max-h-60 overflow-y-auto w-[200px] max-h-[200px]"
     :style="position"
   >
     <div 
       v-for="variable in variables" 
       :key="variable"
-      class="suggestion-item p-2 hover:bg-blue-50 cursor-pointer rounded flex items-center gap-2 text-sm"
+      class="suggestion-item p-2 hover:bg-blue-50 cursor-pointer rounded flex items-center gap-2 text-sm transition duration-150 ease-in-out"
       @click="$emit('select', variable)"
     >
       <span class="text-blue-500 w-5 text-center">
@@ -36,20 +36,10 @@ defineEmits<{
 
 <style scoped>
 .variable-suggestions {
-  width: 200px;
-  max-height: 200px;
-  overflow-y: auto;
-  z-index: 100;
   animation: fadeIn 0.2s ease-out;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.suggestion-item {
-  transition: all 0.15s ease;
 }
 
 .suggestion-item:hover {
-  background-color: rgba(59, 130, 246, 0.1);
   transform: translateX(2px);
 }
 
