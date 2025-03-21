@@ -28,12 +28,8 @@
       <component 
         :is="currentPanel" 
         :inputVariables="inputVariables"
-        :inputValues="inputValues"
-        :isApiLoading="isApiLoading"
-        :resultText="resultText"
-        :details="details"
-        :traces="traces"
         :hasEmptyInputs="hasEmptyInputs"
+        @updateValue="updateInputValue"
         @startRun="startRun"
       />
     </div>
@@ -41,8 +37,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, defineEmits, defineProps, watch, markRaw } from 'vue';
-import { streamDeepSeekResponse, type DeepSeekRequestParams } from '../../utils/deepseekApi';
+import { ref, reactive, computed, markRaw } from 'vue';
+import { streamDeepSeekResponse } from '../../utils/deepseekApi';
+import { useWorkflowStore } from '../../stores/workflowStore';
 
 // 导入子组件
 import InputPanel from '../Panel/InputPanel.vue';
@@ -50,15 +47,28 @@ import ResultPanel from '../Panel/ResultPanel.vue';
 import DetailPanel from '../Panel/DetailPanel.vue';
 import TracePanel from '../Panel/TracePanel.vue';
 
-const props = defineProps<{
-  inputVariables: Record<string, any>;
-  isRunning?: boolean;
-  result?: string;
-  details?: Array<{name: string, description: string, value: any}>;
-  traces?: Array<{node: string, timestamp: string, message: string}>;
-}>();
+const emit = defineEmits(['close']);
 
-const emit = defineEmits(['close', 'run']);
+// 获取工作流 store
+const workflowStore = useWorkflowStore();
+
+// 使用computed获取store中的数据
+const inputVariables = computed(() => workflowStore.inputVariables);
+const isRunning = computed(() => workflowStore.isRunning);
+const result = computed(() => workflowStore.result);
+const details = computed(() => workflowStore.details);
+const traces = computed(() => workflowStore.traces);
+
+// 本地状态
+const activeTab = ref('input');
+const isApiLoading = ref(false);
+const resultText = ref('');
+const inputValues = reactive({...inputVariables.value});
+
+// 计算属性：检查是否有空输入
+const hasEmptyInputs = computed(() => {
+  return Object.values(inputValues).some(value => !value || value.trim() === '');
+});
 
 // 标签定义
 const tabs = [
@@ -68,10 +78,7 @@ const tabs = [
   { label: '追踪', value: 'trace' }
 ];
 
-// 默认激活输入选项卡
-const activeTab = ref('input');
-
-// 标签页对应的组件映射
+// 面板组件
 const panelComponents = {
   'input': markRaw(InputPanel),
   'result': markRaw(ResultPanel),
@@ -81,123 +88,86 @@ const panelComponents = {
 
 // 当前应显示的面板组件
 const currentPanel = computed(() => {
-  return panelComponents[activeTab.value];
+  return panelComponents[activeTab.value as keyof typeof panelComponents];
 });
 
-// 提供默认值
-const details = ref(props.details || []);
-const traces = ref(props.traces || []);
-
-// 用户输入的值
-const inputValues = reactive<Record<string, any>>({...props.inputVariables});
-
-// 内部状态：是否正在向DeepSeek API发送请求
-const isApiLoading = ref(false);
-// 存储从DeepSeek API返回的结果
-const resultText = ref(props.result || '');
-
-// 监听props.result的变化，更新resultText
-watch(() => props.result, (newResult) => {
-  if (newResult) {
-    resultText.value = newResult;
-  }
-}, { immediate: true });
-
-// 监听props.isRunning的变化，同步isApiLoading状态
-watch(() => props.isRunning, (newIsRunning) => {
-  if (newIsRunning !== undefined) {
-    isApiLoading.value = !!newIsRunning;
-    console.log('isApiLoading状态更新为:', isApiLoading.value);
-  }
-}, { immediate: true });
-
-// 当activeTab为result时，但尚未有结果且没有开始请求，则自动开始请求
-watch(() => activeTab.value, (newTab) => {
-  if (newTab === 'result' && !resultText.value && !isApiLoading.value && !hasEmptyInputs.value) {
-    console.log('自动开始API请求，当切换到结果选项卡时');
-    callDeepSeekApi();
-  }
-});
-
-// 计算属性：检查是否有空的输入值
-const hasEmptyInputs = computed(() => {
-  return Object.values(inputValues).some(value => value === '');
-});
-
-// 开始运行工作流
-const startRun = async () => {
-  console.log('运行面板：开始运行工作流，变量值:', inputValues);
-  
-  // 检查所有变量是否都有输入
-  if (hasEmptyInputs.value) {
-    console.log('存在未填写的输入变量，无法开始运行');
-    return;
-  }
-  
-  // 触发run事件，并将所有输入变量的值传递给父组件
-  emit('run', inputValues);
-  
-  // 切换到结果选项卡
-  activeTab.value = 'result';
-  
-  // 开始调用DeepSeek API
-  await callDeepSeekApi();
+// 更新输入值
+const updateInputValue = (key: string, value: any) => {
+  inputValues[key] = value;
+  console.log(`[RunPanel] 更新输入值 ${key}=${value}`);
 };
 
-// 调用DeepSeek API
-const callDeepSeekApi = async () => {
+// 开始运行
+const startRun = (values: Record<string, any>) => {
+  console.log('[RunPanel] 开始运行工作流，输入值:', values);
+  
+  // 更新store中的状态
+  workflowStore.isRunning = true; // 明确设置运行状态
+  workflowStore.executeRun(values);
+  
+  // 切换到结果标签
+  activeTab.value = 'result';
+  
+  // 调用API示例
+  callDeepSeekAPI(values);
+};
+
+// 调用DeepSeek API示例
+const callDeepSeekAPI = async (values: Record<string, any>) => {
+  isApiLoading.value = true;
+  resultText.value = '';
+  workflowStore.result = ''; // 清空store中的结果
+  
+  console.log('[RunPanel] 调用DeepSeek API，输入参数:', values);
+  
   try {
-    console.log('========== 开始调用DeepSeek API ==========');
+    // 查找第一个LLM节点，获取其替换变量后的提示词
+    const llmNode = workflowStore.nodes.find(node => node.type === 'llm');
+    let prompt = '分析以下内容并回复';
     
-    // 重置结果
-    resultText.value = '';
-    // 设置加载状态
-    isApiLoading.value = true;
+    if (llmNode && llmNode.config && llmNode.config.trueSystemPrompt) {
+      prompt = llmNode.config.trueSystemPrompt;
+      console.log('[RunPanel] 使用LLM节点提示词:', prompt);
+    } else {
+      // 如果没有找到LLM节点或提示词，使用默认提示词并添加输入变量
+      prompt = `分析以下新闻是否为假新闻，并给出详细理由：\n\n${values.news || '未提供新闻内容'}`;
+      console.log('[RunPanel] 使用默认提示词:', prompt);
+    }
     
-    // 构建请求参数
-    const apiParams: DeepSeekRequestParams = {
-      model: 'deepseek-chat',
-      messages: [
-        {
-          role: 'system',
-          content: '你是一个有帮助的AI助手。'
-        },
-        {
-          role: 'user',
-          content: inputValues['content'] || '请提供一个简短的回复，以测试流式响应功能。'
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 1000
-    };
-    
-    console.log('DeepSeek API请求参数:', apiParams);
-    
-    // 向DeepSeek API发送流式请求
     await streamDeepSeekResponse(
-      apiParams,
-      // 每收到一个块就更新结果
+      {
+        model: "deepseek-chat",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 800,
+        stream: true
+      },
+      // 流式处理
       async (chunk: string) => {
         // 如果是第一个数据块，把loading状态关闭
         if (resultText.value === '') {
-          console.log('收到第一个数据块，结束loading状态');
+          console.log('[RunPanel] 收到第一个数据块，结束loading状态');
           isApiLoading.value = false;
+          workflowStore.isRunning = false;
         }
         
         resultText.value += chunk;
+        
+        // 更新store中的结果
+        workflowStore.result = resultText.value;
       },
       // 完成处理
       (fullText: string) => {
-        console.log('DeepSeek API调用完成，完整响应:', fullText);
+        console.log('[RunPanel] DeepSeek API调用完成');
         
-        // 更新测试详情和追踪信息
-        details.value.push({
+        // 更新详情和追踪信息
+        workflowStore.details.push({
           name: 'API调用',
           description: 'DeepSeek API请求',
           value: '成功'
         });
         
-        traces.value.push({
+        workflowStore.traces.push({
           node: 'DeepSeek API',
           timestamp: new Date().toLocaleTimeString(),
           message: '请求完成'
@@ -213,13 +183,13 @@ const callDeepSeekApi = async () => {
         resultText.value = `请求失败: ${error.message || '未知错误'}`;
         
         // 更新测试详情和追踪信息
-        details.value.push({
+        workflowStore.details.push({
           name: 'API调用',
           description: 'DeepSeek API请求',
           value: '失败'
         });
         
-        traces.value.push({
+        workflowStore.traces.push({
           node: 'DeepSeek API',
           timestamp: new Date().toLocaleTimeString(),
           message: `请求失败: ${error.message || '未知错误'}`

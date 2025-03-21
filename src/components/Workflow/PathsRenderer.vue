@@ -1,20 +1,20 @@
 <template>
-  <svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 3;">
+  <svg class="paths-container absolute inset-0 w-full h-full pointer-events-none" style="z-index: 1;">
     <path 
       v-for="edge in edges" 
       :key="edge.id"
-      :d="calculatePath(edge)" 
+      :d="getEdgePath(edge)"
       stroke="#94a3b8" 
       stroke-width="2" 
       fill="none"
-      class="connection-path"
+      marker-end="url(#arrowhead)"
     />
   </svg>
 </template>
 
 <script setup lang="ts">
-import { Node, Edge } from '../../types/workflow';
-import { calculatePath as calculatePathUtil } from '../../utils/workflow/nodeUtils';
+import { Edge, Node } from '../../types/workflow';
+import { calculatePath } from '../../utils/workflow/nodeUtils';
 
 // 接收属性
 const props = defineProps<{
@@ -22,9 +22,15 @@ const props = defineProps<{
   nodes: Node[];
 }>();
 
-// 计算路径
-const calculatePath = (edge: Edge) => {
-  return calculatePathUtil(edge, props.nodes);
+// 计算每条边的路径
+const getEdgePath = (edge: Edge): string => {
+  const sourceNode = props.nodes.find(n => n.id === edge.source);
+  const targetNode = props.nodes.find(n => n.id === edge.target);
+  
+  if (!sourceNode || !targetNode) return '';
+  
+  // 使用修改后的calculatePath函数
+  return calculatePath(sourceNode, targetNode);
 };
 </script>
 

@@ -35,20 +35,15 @@ export function selectNode(
 /**
  * 计算连线路径
  */
-export function calculatePath(edge: Edge, nodes: Node[]) {
-  const sourceNode = nodes.find(n => n.id === edge.source);
-  const targetNode = nodes.find(n => n.id === edge.target);
-  
-  if (!sourceNode || !targetNode) return '';
-  
-  const startX = sourceNode.x + 240;  // 使用新的节点宽度
-  const startY = sourceNode.y + 34;   // 连接点垂直位置
-  const endX = targetNode.x;
-  const endY = targetNode.y + 34;
+export function calculatePath(source: Node | { x: number, y: number }, target: Node | { x: number, y: number }) {
+  const startX = source.x + 240;
+  const startY = source.y + 34;
+  const endX = target.x;
+  const endY = target.y + 34;
   
   // 计算控制点，确保曲线平滑
   const dx = Math.abs(endX - startX);
-  const offsetX = Math.max(100, dx * 0.4);  // 根据距离调整控制点，但最小保持100px
+  const offsetX = Math.max(100, dx * 0.4);
   
   // 贝塞尔曲线
   return `M ${startX} ${startY} C ${startX + offsetX} ${startY}, ${endX - offsetX} ${endY}, ${endX} ${endY}`;

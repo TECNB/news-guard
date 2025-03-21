@@ -89,7 +89,7 @@ export async function streamDeepSeekResponse(
           
           try {
             const parsed = JSON.parse(data);
-            console.log('解析的数据块:', parsed);
+            // console.log('解析的数据块:', parsed);
             if (parsed.choices && parsed.choices[0]) {
               // 获取内容 - 支持不同的API响应格式
               let content = '';

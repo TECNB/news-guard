@@ -1,7 +1,7 @@
 <template>
   <div class="h-full">
     <!-- 加载状态 -->
-    <div v-if="isApiLoading" class="h-full flex justify-center items-center">
+    <div v-if="isLoading" class="h-full flex justify-center items-center">
       <div class="text-center">
         <div class="spinner mb-4"></div>
         <p class="text-gray-600">正在运行...</p>
@@ -9,7 +9,7 @@
     </div>
     
     <!-- 结果展示 -->
-    <el-scrollbar v-else-if="resultText" height="100%">
+    <el-scrollbar v-else-if="resultContent" height="100%">
       <div class="result-container text-left py-1">
         <div v-if="isJsonMode" class="json-wrapper">
           <div class="json-header">
@@ -33,32 +33,35 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { formatJsonContent } from '../../utils/jsonFormatter';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
+import { useWorkflowStore } from '../../stores/workflowStore';
 
-const props = defineProps<{
-  resultText: string;
-  isApiLoading: boolean;
-}>();
+// 使用store获取状态
+const workflowStore = useWorkflowStore();
+
+// 从store中获取数据
+const isLoading = ref(false); // 我们将使用本地状态跟踪加载状态
+const resultContent = computed(() => workflowStore.result);
 
 // 复制状态
 const copied = ref(false);
 
 // 检查是否处于JSON模式
 const isJsonMode = computed(() => {
-  return props.resultText.startsWith('```json');
+  return resultContent.value && resultContent.value.startsWith('```json');
 });
 
 // 提取当前内容
 const currentContent = computed(() => {
   if (isJsonMode.value) {
     // 去除 ```json 和 ``` 标记
-    const match = props.resultText.match(/```json\n?([\s\S]*?)(\n?```)?$/);
+    const match = resultContent.value.match(/```json\n?([\s\S]*?)(\n?```)?$/);
     return match ? match[1] : '';
   }
-  return props.resultText;
+  return resultContent.value || '';  // 确保返回有效的字符串
 });
 
 // 格式化和高亮处理后的内容
@@ -88,6 +91,14 @@ const copyJson = async () => {
     console.error('Failed to copy text: ', err);
   }
 };
+
+// 监听store中的isRunning状态
+watch(() => workflowStore.isRunning, (running) => {
+  isLoading.value = running;
+});
+
+// 初始化时同步状态
+isLoading.value = workflowStore.isRunning;
 </script>
 
 <style scoped>

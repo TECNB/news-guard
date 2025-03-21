@@ -17,9 +17,12 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue';
+import { computed } from 'vue';
+import { useWorkflowStore } from '../../stores/workflowStore';
 
-defineProps<{
-  traces: Array<{node: string, timestamp: string, message: string}>;
-}>();
+// 使用store获取状态
+const workflowStore = useWorkflowStore();
+
+// 从store中获取数据
+const traces = computed(() => workflowStore.traces);
 </script> 

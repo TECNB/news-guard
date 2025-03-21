@@ -49,7 +49,7 @@
           <span class="text-xs text-gray-400">⌘C</span>
         </div>
         <div class="border-t border-gray-200 my-1"></div>
-        <div class="p-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between text-red-500" @click="deleteNode">
+        <div class="p-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between text-red-500" @click="onDeleteNode">
           <span class="text-gray-500">删除</span>
           <span class="text-xs text-gray-400">⌫</span>
         </div>
@@ -106,6 +106,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { Node } from '../../types/workflow';
+import { useWorkflowStore } from '../../stores/workflowStore';
 
 // 接收属性
 const props = defineProps<{
@@ -118,23 +119,16 @@ const props = defineProps<{
 }>();
 
 // 定义事件
-const emit = defineEmits([
-  'drag-start', 
-  'click', 
-  'connection-start', 
-  'connection-end',
-  'run',
-  'edit',
-  'clone',
-  'copy',
-  'delete',
-]);
+const emit = defineEmits(['drag-start', 'click', 'connection-start']);
 
 // 控制栏状态
 const showControls = ref(false);
 const contextMenuVisible = ref(false);
 const contextMenuX = ref(0);
 const contextMenuY = ref(0);
+
+// 获取工作流 store
+const workflowStore = useWorkflowStore();
 
 // 事件处理
 const onNodeDragStart = (event: MouseEvent) => {
@@ -193,27 +187,22 @@ const onStartConnection = (event: MouseEvent, type: 'input' | 'output') => {
 // 菜单功能
 const runNode = () => {
   contextMenuVisible.value = false;
-  emit('run', props.node.id);
 };
 
 const editNode = () => {
   contextMenuVisible.value = false;
-  emit('edit', props.node.id);
 };
 
 const cloneNode = () => {
   contextMenuVisible.value = false;
-  emit('clone', props.node.id);
 };
 
 const copyNode = () => {
   contextMenuVisible.value = false;
-  emit('copy', props.node.id);
 };
 
-const deleteNode = () => {
-  contextMenuVisible.value = false;
-  emit('delete', props.node.id);
+const onDeleteNode = () => {
+  workflowStore.deleteNode(props.node.id);
 };
 
 const showAbout = () => {

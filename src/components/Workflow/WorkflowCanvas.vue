@@ -24,10 +24,10 @@
       
       <!-- 工作流节点 -->
       <WorkflowNode
-        v-for="node in nodes" 
+        v-for="node in workflowStore.nodes" 
         :key="node.id"
         :node="node"
-        :is-selected="selectedNodeId === node.id"
+        :is-selected="workflowStore.selectedNodeId === node.id"
         :canvas-ref="canvasRef"
         :scale="scale"
         :translate-x="translateX"
@@ -35,13 +35,12 @@
         @drag-start="onNodeDragStart"
         @click="onNodeClick"
         @connection-start="onConnectionStart"
-        @delete="onDeleteNode"
       />
       
       <!-- 连线 -->
       <PathsRenderer 
-        :edges="edges"
-        :nodes="nodes"
+        :edges="workflowStore.edges"
+        :nodes="workflowStore.nodes"
       />
 
       <!-- 临时连线 -->
@@ -63,7 +62,7 @@
         style="z-index: 15;"
       >
         <div 
-          v-for="node in nodes" 
+          v-for="node in workflowStore.nodes" 
           :key="`hitbox-${node.id}`"
           :style="{ 
             position: 'absolute', 
@@ -80,7 +79,7 @@
           class="connection-hitbox-input"
         ></div>
         <div 
-          v-for="node in nodes" 
+          v-for="node in workflowStore.nodes" 
           :key="`hitbox-out-${node.id}`"
           :style="{ 
             position: 'absolute', 
@@ -99,7 +98,7 @@
       </div>
 
       <!-- 无选择状态显示 -->
-      <div v-if="!selectedNodeId && nodes.length === 0" class="absolute inset-0 flex items-center justify-center text-gray-400">
+      <div v-if="!workflowStore.selectedNodeId && workflowStore.nodes.length === 0" class="absolute inset-0 flex items-center justify-center text-gray-400">
         <div class="text-center">
           <i class="fa-solid fa-diagram-project text-5xl mb-3"></i>
           <p class="text-lg">点击右键添加节点开始创建工作流</p>
@@ -126,23 +125,18 @@
       @select-node-type="onAddNode"
     />
 
-    <!-- 测试运行面板 -->
+    <!-- 运行面板 -->
     <RunPanel
-      v-if="showTestPanel"
-      :input-variables="testInputVariables"
-      :is-running="testRunning"
-      :result="testResult"
-      :details="testDetails"
-      :traces="testTraces"
-      @close="closeTestPanel"
-      @run="executeTestRun"
+      v-if="showRunPanel"
+      @close="closeRunPanel"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, defineExpose, computed } from 'vue';
-import { Node, Edge, NODE_TYPES, createNode } from '../../types/workflow';
+import { ref, computed, onMounted, defineExpose, onBeforeUnmount } from 'vue';
+import { NODE_TYPES } from '../../types/workflow';
+import { useWorkflowStore } from '../../stores/workflowStore';
 import WorkflowNode from './WorkflowNode.vue';
 import ContextMenu from './ContextMenu.vue';
 import NodeLibrary from './NodeLibrary.vue';
@@ -150,9 +144,11 @@ import PathsRenderer from './PathsRenderer.vue';
 import RunPanel from './RunPanel.vue';
 
 // 导入工具函数
-import { startCanvasDrag, dragCanvas, stopCanvasDrag, startNodeDrag, dragNode, stopNodeDrag } from '../../utils/workflow/dragUtils';
+import { startCanvasDrag, dragCanvas, stopCanvasDrag } from '../../utils/workflow/dragUtils';
 import { showContextMenu, hideContextMenu as hideContextMenuUtil, openNodeLibrary } from '../../utils/workflow/menuUtils';
-import { handleNodeClick, selectNode, updateNode as updateNodeUtil, addNode as addNodeUtil, getWorkflow as getWorkflowUtil } from '../../utils/workflow/nodeUtils';
+
+// 获取工作流 store
+const workflowStore = useWorkflowStore();
 
 // 节点类型定义
 const nodeTypes = NODE_TYPES;
@@ -166,9 +162,6 @@ const dragStartX = ref(0);
 const dragStartY = ref(0);
 
 // 节点状态
-const nodes = reactive<Node[]>([]);
-const edges = reactive<Edge[]>([]);
-const selectedNodeId = ref<string | null>(null);
 const isDraggingNode = ref(false);
 const draggingNodeId = ref<string | null>(null);
 const nodeStartX = ref(0);
@@ -192,28 +185,21 @@ const connectionStartType = ref<'input' | 'output' | null>(null);
 const connectionEndX = ref(0);
 const connectionEndY = ref(0);
 
-// 测试运行相关
-const showTestPanel = ref(false);
-const testInputVariables = reactive<Record<string, any>>({
-  'news': '' // 默认输入变量，这可以根据开始节点获取
-});
-const testRunning = ref(false);
-const testResult = ref('');
-const testDetails = ref<Array<{name: string, description: string, value: any}>>([]);
-const testTraces = ref<Array<{node: string, timestamp: string, message: string}>>([]);
+// 运行面板状态
+const showRunPanel = ref(false);
 
 // DOM引用
 const canvasRef = ref<HTMLElement | null>(null);
 
 // 定义事件
-const emit = defineEmits(['node-selected', 'node-deselected', 'scale-change']);
+const emit = defineEmits(['scale-change', 'node-selected']);
 
 // 临时连线的路径
 const temporaryConnectionPath = computed(() => {
   if (!drawingConnection.value || !connectionStartNodeId.value) return '';
   
   // 找到起始节点
-  const startNode = nodes.find(node => node.id === connectionStartNodeId.value);
+  const startNode = workflowStore.nodes.find(node => node.id === connectionStartNodeId.value);
   if (!startNode) return '';
 
   // 计算起始点坐标 (考虑节点位置和连接点位置)
@@ -254,19 +240,21 @@ const onOpenNodeLibrary = () => {
 
 // 添加节点
 const onAddNode = (nodeType: { type: string; name: string }) => {
-  addNodeUtil(
-    nodeType, 
-    canvasRef, 
-    nodeLibraryX, 
-    nodeLibraryY, 
-    translateX, 
-    translateY, 
-    scale, 
-    nodes, 
-    nodeLibraryVisible, 
-    (nodeId) => selectNode(nodeId, nodes, selectedNodeId, emit), 
-    createNode
-  );
+  // 获取canvas元素的位置信息
+  const canvasRect = canvasRef.value?.getBoundingClientRect();
+  
+  if (canvasRect) {
+    // 计算相对于canvas的坐标
+    const x = ((nodeLibraryX.value - canvasRect.left) - translateX.value) / scale.value;
+    const y = ((nodeLibraryY.value - canvasRect.top) - translateY.value) / scale.value;
+    
+    // 使用store添加节点
+    const newNodeId = workflowStore.addNode(nodeType.type, x, y);
+    
+    // 隐藏节点库并选择新节点
+    nodeLibraryVisible.value = false;
+    workflowStore.selectNode(newNodeId);
+  }
 };
 
 // 添加注释
@@ -278,6 +266,7 @@ const onAddComment = () => {
 // 运行工作流
 const onRunWorkflow = () => {
   contextMenuVisible.value = false;
+  openRunPanel();
 };
 
 // 缩放处理
@@ -316,43 +305,86 @@ const onCanvasDragEnd = () => {
 // 节点点击处理
 const onNodeClick = (event: MouseEvent, nodeId: string) => {
   if (drawingConnection.value) return; // 如果正在绘制连线，不处理节点点击
-  handleNodeClick(event, nodeId, nodeMoved, (nodeId) => selectNode(nodeId, nodes, selectedNodeId, emit));
+  
+  // 只有当节点未移动时，才认为是点击事件
+  if (!nodeMoved.value) {
+    workflowStore.selectNode(nodeId);
+    
+    // 为了向后兼容，同时发出事件
+    const selectedNode = workflowStore.nodes.find(n => n.id === nodeId);
+    if (selectedNode) {
+      emit('node-selected', selectedNode);
+    }
+  }
 };
 
 // 节点拖动处理
 const onNodeDragStart = (event: MouseEvent, nodeId: string) => {
   if (drawingConnection.value) return; // 如果正在绘制连线，不允许节点拖动
-  startNodeDrag(
-    event, 
-    nodeId, 
-    nodes, 
-    isDraggingNode, 
-    draggingNodeId, 
-    nodeMoved, 
-    nodeStartX, 
-    nodeStartY, 
-    selectedNodeId, 
-    handleDragNode, 
-    handleStopNodeDrag
-  );
+  
+  event.stopPropagation();
+  
+  // 设置拖动状态
+  isDraggingNode.value = true;
+  draggingNodeId.value = nodeId;
+  nodeMoved.value = false;
+  
+  // 保存初始位置
+  const node = workflowStore.nodes.find(n => n.id === nodeId);
+  if (node) {
+    nodeStartX.value = event.clientX - node.x;
+    nodeStartY.value = event.clientY - node.y;
+    
+    // 在鼠标按下时，标记该节点为选中
+    if (workflowStore.selectedNodeId !== nodeId) {
+      workflowStore.selectNode(nodeId);
+    }
+  }
+  
+  // 添加全局事件监听
+  window.addEventListener('mousemove', handleDragNode);
+  window.addEventListener('mouseup', handleStopNodeDrag);
 };
 
 const handleDragNode = (event: MouseEvent) => {
-  dragNode(event, nodes, isDraggingNode, draggingNodeId, nodeStartX, nodeStartY, nodeMoved);
+  if (!isDraggingNode.value || !draggingNodeId.value) return;
+  
+  // 找到当前正在拖动的节点
+  const node = workflowStore.nodes.find(n => n.id === draggingNodeId.value);
+  if (node) {
+    // 计算新位置
+    const x = event.clientX - nodeStartX.value;
+    const y = event.clientY - nodeStartY.value;
+    
+    // 更新节点位置
+    workflowStore.updateNodePosition(node.id, x, y);
+    
+    // 标记为已移动
+    nodeMoved.value = true;
+  }
 };
 
 const handleStopNodeDrag = (event: MouseEvent) => {
-  stopNodeDrag(
-    event, 
-    nodes, 
-    isDraggingNode, 
-    draggingNodeId, 
-    nodeMoved, 
-    selectedNodeId, 
-    (nodeId) => selectNode(nodeId, nodes, selectedNodeId, emit), 
-    handleDragNode, 
-    handleStopNodeDrag
-  );
+  if (isDraggingNode.value && draggingNodeId.value && nodeMoved.value) {
+    // 如果节点被移动了，则不触发选择事件
+    event.stopPropagation();
+    
+    // 如果移动了，但我们希望保持选中状态
+    if (!workflowStore.selectedNodeId && draggingNodeId.value) {
+      workflowStore.selectNode(draggingNodeId.value);
+    }
+  } else if (isDraggingNode.value && draggingNodeId.value && !nodeMoved.value) {
+    // 如果没有移动，则视为点击
+    workflowStore.selectNode(draggingNodeId.value);
+  }
+  
+  // 重置拖动状态
+  isDraggingNode.value = false;
+  draggingNodeId.value = null;
+  
+  // 移除全局事件监听
+  window.removeEventListener('mousemove', handleDragNode);
+  window.removeEventListener('mouseup', handleStopNodeDrag);
 };
 
 // 连线处理
@@ -410,19 +442,16 @@ const tryCreateConnection = (nodeId: string, type: 'input' | 'output') => {
     (connectionStartType.value === 'input' && type === 'output')
   ) {
     // 创建新连线
-    const newEdge: Edge = {
-      id: `edge-${Date.now()}`,
-      source: connectionStartType.value === 'output' ? connectionStartNodeId.value! : nodeId,
-      target: connectionStartType.value === 'output' ? nodeId : connectionStartNodeId.value!,
-    };
+    const source = connectionStartType.value === 'output' ? connectionStartNodeId.value! : nodeId;
+    const target = connectionStartType.value === 'output' ? nodeId : connectionStartNodeId.value!;
     
-    // 检查是否已存在相同的连线
-    const edgeExists = edges.some(
-      edge => edge.source === newEdge.source && edge.target === newEdge.target
-    );
+    // 检查源节点和目标节点是否存在
+    const sourceNode = workflowStore.nodes.find(n => n.id === source);
+    const targetNode = workflowStore.nodes.find(n => n.id === target);
     
-    if (!edgeExists) {
-      edges.push(newEdge);
+    if (sourceNode && targetNode) {
+      // 使用store添加边
+      workflowStore.addEdge(source, target);
     }
   }
   
@@ -482,169 +511,44 @@ const cancelConnection = () => {
   document.removeEventListener('mouseup', handleGlobalMouseUp);
 };
 
-// 更新节点
-const updateNode = (updatedNode: Node) => {
-  updateNodeUtil(updatedNode, nodes);
+// 打开运行面板
+const openRunPanel = () => {
+  showRunPanel.value = true;
+  workflowStore.prepareRun();
 };
 
-// 获取工作流
-const getWorkflow = () => {
-  return getWorkflowUtil(nodes, edges);
+// 关闭运行面板
+const closeRunPanel = () => {
+  showRunPanel.value = false;
 };
-
-// 删除连线
-const removeEdge = (edgeId: string) => {
-  const index = edges.findIndex(edge => edge.id === edgeId);
-  if (index !== -1) {
-    edges.splice(index, 1);
-  }
-};
-
-// 删除节点
-const onDeleteNode = (nodeId: string) => {
-  // 找到要删除的节点索引
-  const nodeIndex = nodes.findIndex(n => n.id === nodeId);
-  if (nodeIndex !== -1) {
-    // 删除与该节点相关的所有边
-    const relatedEdges = edges.filter(edge => 
-      edge.source === nodeId || edge.target === nodeId
-    );
-    
-    relatedEdges.forEach(edge => {
-      const edgeIndex = edges.findIndex(e => e.id === edge.id);
-      if (edgeIndex !== -1) {
-        edges.splice(edgeIndex, 1);
-      }
-    });
-    
-    // 删除节点
-    nodes.splice(nodeIndex, 1);
-    
-    // 如果删除的是当前选中的节点，清除选中状态
-    if (selectedNodeId.value === nodeId) {
-      selectedNodeId.value = null;
-    }
-  }
-};
-
-// 运行测试
-const runTest = () => {
-  showTestPanel.value = true;
-  
-  // 清空之前的测试数据
-  testRunning.value = false;
-  testResult.value = '';
-  testDetails.value = [];
-  testTraces.value = [];
-  
-  // 从开始节点获取所有必要的变量
-  const startNode = nodes.find(node => node.type === 'start');
-  
-  // 清空并重新设置输入变量
-  Object.keys(testInputVariables).forEach(key => {
-    delete testInputVariables[key];
-  });
-  
-  if (startNode && startNode.inputs && startNode.inputs.length > 0) {
-    console.log('从开始节点获取的变量:', startNode.inputs);
-    
-    // 为每个开始节点定义的输入变量创建一个输入字段
-    startNode.inputs.forEach(variable => {
-      if (variable.trim() !== '') {
-        testInputVariables[variable] = '';
-      }
-    });
-  } else {
-    // 如果没有找到开始节点或没有定义变量，提供一些默认变量
-    console.log('未找到开始节点或变量定义，使用默认变量');
-    testInputVariables['news'] = '';
-    testInputVariables['query'] = '';
-  }
-  
-  console.log('设置测试输入变量:', testInputVariables);
-};
-
-// 关闭测试面板
-const closeTestPanel = () => {
-  showTestPanel.value = false;
-};
-
-// 执行测试运行
-const executeTestRun = (inputValues: Record<string, any>) => {
-  testRunning.value = true;
-  testResult.value = '';
-  testDetails.value = [];
-  testTraces.value = [];
-  
-  console.log('WorkflowCanvas: 执行测试运行，接收到的变量值:', inputValues);
-  
-  // 将输入的变量值应用到所有 LLM 节点
-  nodes.forEach(node => {
-    if (node.type === 'llm') {
-      console.log(`处理 LLM 节点 ${node.id}`);
-      
-      // 确保节点配置中有系统提示词
-      if (node.config && node.config.systemPrompt) {
-        // 获取原始系统提示词
-        const systemPrompt = node.config.systemPrompt;
-        console.log('原始提示词:', systemPrompt);
-        
-        // 创建带有变量替换的真实提示词
-        const trueSystemPrompt = systemPrompt.replace(/\{([^}]+)\}/g, (match, varName) => {
-          if (inputValues[varName] !== undefined) {
-            return inputValues[varName];
-          }
-          return match; // 如果没有找到对应变量值，保留原始占位符
-        });
-        
-        console.log('替换后的提示词 (trueSystemPrompt):', trueSystemPrompt);
-        
-        // 将变量值保存到节点配置，用于属性面板显示
-        node.config.variableValues = { ...inputValues };
-        
-        // 保存真实提示词到节点配置
-        node.config.trueSystemPrompt = trueSystemPrompt;
-        
-        // 保存真实提示词到测试结果中，供RunPanel使用
-        if (!inputValues['content']) {
-          inputValues['content'] = trueSystemPrompt;
-          
-          // 记录content字段设置情况，便于调试
-          console.log(`已设置content值为trueSystemPrompt: ${trueSystemPrompt.substring(0, 100)}...`);
-        }
-        
-        console.log(`已为节点 ${node.id} 设置变量值和真实提示词`);
-      }
-    }
-  });
-  
-  // 更新选中节点的属性面板（如果当前选中的是 LLM 节点）
-  if (selectedNodeId.value) {
-    const selectedNode = nodes.find(node => node.id === selectedNodeId.value);
-    if (selectedNode && selectedNode.type === 'llm') {
-      console.log('更新选中的 LLM 节点的属性面板');
-      // 这里会触发 LLMProperties.vue 中的 watch
-      updateNode(selectedNode);
-    }
-  }
-  
-  // 不再使用setTimeout模拟运行，而是由RunPanel直接调用DeepSeek API
-  // RunPanel将处理所有的API调用和结果展示
-}
 
 // 生命周期钩子
 onMounted(() => {
   // 初始化操作，可能包括加载保存的工作流
+  // 添加键盘事件监听，按下D键时打印工作流状态
+  window.addEventListener('keydown', handleKeyDown);
 });
+
+// 在onBeforeUnmount中移除事件监听
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+});
+
+// 处理键盘事件
+const handleKeyDown = (event: KeyboardEvent) => {
+  // 按下D键时打印调试信息
+  if (event.key === 'd' && event.ctrlKey) {
+    console.log('========== 调试输出 ==========');
+    workflowStore.logWorkflowState();
+    console.log('==============================');
+  }
+};
 
 // 暴露方法给父组件
 defineExpose({
   setScale,
   getScale,
-  updateNode,
-  getWorkflow,
-  removeEdge,
-  runTest
+  openRunPanel
 });
 </script>
 

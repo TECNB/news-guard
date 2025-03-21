@@ -8,13 +8,14 @@
         class="w-full p-3 border border-gray-300 rounded-md bg-gray-50 text-gray-700 placeholder-gray-400"
         placeholder="请输入"
         rows="4"
+        @input="updateInputValue(key, localInputValues[key])"
       ></textarea>
     </div>
     
     <!-- 提交按钮 -->
     <div class="mt-auto pt-4">
       <button 
-        @click="$emit('startRun')"
+        @click="onStartRun"
         class="w-full py-3 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors"
         :disabled="hasEmptyInputs"
       >
@@ -28,28 +29,34 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, reactive, watch } from 'vue';
+import { defineProps, defineEmits, reactive, computed } from 'vue';
+import { useWorkflowStore } from '../../stores/workflowStore';
+
+const workflowStore = useWorkflowStore();
 
 const props = defineProps<{
   inputVariables: Record<string, any>;
-  inputValues: Record<string, any>;
-  hasEmptyInputs: boolean;
+  hasEmptyInputs?: boolean;
 }>();
 
-defineEmits(['startRun']);
+const emit = defineEmits(['updateValue', 'startRun']);
 
 // 创建本地响应式对象，用于双向绑定
-const localInputValues = reactive({...props.inputValues});
+const localInputValues = reactive({...props.inputVariables});
 
-// 监听外部输入值变化，同步到本地值
-watch(() => props.inputValues, (newValues) => {
-  Object.assign(localInputValues, newValues);
-}, { deep: true });
+// 检查是否有空输入
+const checkEmptyInputs = computed(() => {
+  return Object.values(localInputValues).some(value => !value || value.trim() === '');
+});
 
-// 监听本地值变化，同步回父组件
-watch(localInputValues, (newValues) => {
-  Object.entries(newValues).forEach(([key, value]) => {
-    props.inputValues[key] = value;
-  });
-}, { deep: true });
+// 更新输入值
+const updateInputValue = (key: string, value: any) => {
+  emit('updateValue', key, value);
+};
+
+// 开始运行
+const onStartRun = () => {
+  // 触发开始运行事件，将所有输入值传递给父组件
+  emit('startRun', {...localInputValues});
+};
 </script> 

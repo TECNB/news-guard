@@ -27,7 +27,7 @@
         <label class="block text-sm font-medium text-gray-700 mb-1">节点名称</label>
         <input 
           type="text" 
-          v-model="selectedNode.name" 
+          v-model="nodeName" 
           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
@@ -83,51 +83,40 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, ref } from 'vue';
-import { Node, NODE_TYPES, LLMConfig, KnowledgeConfig, ConditionalConfig, StartConfig } from '../../types/workflow';
+import { computed, ref, watch } from 'vue';
+import { NODE_TYPES, LLMConfig, KnowledgeConfig, ConditionalConfig, StartConfig } from '../../types/workflow';
 import IOEditor from './NodeProperties/IOEditor.vue';
 import LLMProperties from './NodeProperties/LLMProperties.vue';
 import KnowledgeProperties from './NodeProperties/KnowledgeProperties.vue';
 import ConditionalProperties from './NodeProperties/ConditionalProperties.vue';
-
 import StartProperties from './NodeProperties/StartProperties.vue';
+import { useWorkflowStore } from '../../stores/workflowStore';
 
-// 接收选中的节点
-const props = defineProps<{
-  node: Node | null;
-  workflow?: {nodes: Node[], edges: any[]};
-}>();
+// 使用工作流store
+const workflowStore = useWorkflowStore();
 
-// 计算属性：开始节点配置
-const startConfig = computed<StartConfig>({
-  get: () => {
-    if (!selectedNode.value || selectedNode.value.type !== 'start') {
-      return { variables: [] };
-    }
-    return {
-      variables: selectedNode.value.inputs || []
-    };
-  },
+// 直接从store获取选中的节点
+const selectedNode = computed(() => workflowStore.selectedNode);
+
+// 节点名称（用于直接编辑）
+const nodeName = computed({
+  get: () => selectedNode.value?.name || '',
   set: (value) => {
-    if (!selectedNode.value || selectedNode.value.type !== 'start') return;
-    selectedNode.value.inputs = value.variables;
+    if (selectedNode.value) {
+      // 创建节点的拷贝进行修改
+      const updatedNode = { ...selectedNode.value, name: value };
+      // 将修改同步到工作节点对象
+      localNodeChanges.value = { ...localNodeChanges.value, name: value };
+    }
   }
 });
 
-// 定义事件
-const emit = defineEmits(['update:node', 'save', 'close']);
+// 本地存储节点变更，只有点击保存时才更新到store
+const localNodeChanges = ref<any>({});
 
-// 本地状态，用于编辑
-const selectedNode = ref<Node | null>(null);
-
-// 当传入的节点变化时，更新本地状态，同时初始化配置
-watch(() => props.node, (newNode) => {
-  if (newNode) {
-    const copy = JSON.parse(JSON.stringify(newNode));
-    selectedNode.value = copy;
-  } else {
-    selectedNode.value = null;
-  }
+// 监听选中节点变化，重置本地变更
+watch(() => workflowStore.selectedNodeId, () => {
+  localNodeChanges.value = {};
 }, { immediate: true });
 
 // 计算属性：节点类型对应的颜色
@@ -140,9 +129,7 @@ const nodeTypeColor = computed(() => {
 
 // 计算属性：获取开始节点的变量
 const startNodeVariables = computed(() => {
-  if (!props.workflow?.nodes) return [];
-  
-  const startNode = props.workflow.nodes.find(
+  const startNode = workflowStore.nodes.find(
     node => node.type === 'start' || node.type === '开始'
   );
   
@@ -165,12 +152,29 @@ const llmConfig = computed<LLMConfig>({
   },
   set: (value) => {
     if (!selectedNode.value || selectedNode.value.type !== 'llm') return;
-    // 保留原始的variableValues
+    // 保存到本地变更
     const variableValues = selectedNode.value.config.variableValues;
-    selectedNode.value.config = { 
+    localNodeChanges.value.config = { 
       ...value,
       variableValues
     };
+  }
+});
+
+// 计算属性：开始节点配置
+const startConfig = computed<StartConfig>({
+  get: () => {
+    if (!selectedNode.value || selectedNode.value.type !== 'start') {
+      return { variables: [] };
+    }
+    return {
+      variables: selectedNode.value.inputs || []
+    };
+  },
+  set: (value) => {
+    if (!selectedNode.value || selectedNode.value.type !== 'start') return;
+    // 保存到本地变更
+    localNodeChanges.value.inputs = value.variables;
   }
 });
 
@@ -187,7 +191,8 @@ const knowledgeConfig = computed<KnowledgeConfig>({
   },
   set: (value) => {
     if (!selectedNode.value || selectedNode.value.type !== 'knowledge') return;
-    selectedNode.value.config = value;
+    // 保存到本地变更
+    localNodeChanges.value.config = value;
   }
 });
 
@@ -204,7 +209,8 @@ const conditionalConfig = computed<ConditionalConfig>({
   },
   set: (value) => {
     if (!selectedNode.value || selectedNode.value.type !== 'conditional') return;
-    selectedNode.value.config = value;
+    // 保存到本地变更
+    localNodeChanges.value.config = value;
   }
 });
 
@@ -217,25 +223,36 @@ const ioValue = computed(() => {
   };
 });
 
-
 // 更新输入输出变量
 const updateIO = (value: { inputs: string[]; outputs: string[]; }) => {
   if (!selectedNode.value) return;
-  selectedNode.value.inputs = value.inputs;
-  selectedNode.value.outputs = value.outputs;
+  // 保存到本地变更
+  localNodeChanges.value.inputs = value.inputs;
+  localNodeChanges.value.outputs = value.outputs;
 };
 
 // 保存更改
 const saveChanges = () => {
-  if (selectedNode.value) {
-    emit('update:node', selectedNode.value);
-    emit('save', selectedNode.value);
+  if (selectedNode.value && Object.keys(localNodeChanges.value).length > 0) {
+    // 创建更新后的节点对象
+    const updatedNode = {
+      ...selectedNode.value,
+      ...localNodeChanges.value
+    };
+    
+    // 使用store更新节点
+    workflowStore.updateNode(updatedNode);
+    console.log('节点属性已保存');
+    
+    // 清空本地变更
+    localNodeChanges.value = {};
   }
 };
 
 // 关闭编辑器
 const closeEditor = () => {
-  emit('close');
+  // 清除选中状态
+  workflowStore.selectNode(null);
 };
 </script>
 
