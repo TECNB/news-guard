@@ -37,6 +37,7 @@
 import { ref, computed, markRaw } from 'vue';
 import { streamDeepSeekResponse } from '../../utils/deepseekApi';
 import { useWorkflowStore } from '../../stores/workflowStore';
+import { Node as WorkflowNode } from '../../types/workflow'; // 导入自定义Node类型
 
 // 导入子组件
 import InputPanel from '../Panel/InputPanel.vue';
@@ -86,110 +87,272 @@ const startRun = (values: Record<string, any>) => {
   console.log('[RunPanel] 开始运行工作流，输入值:', values);
   
   // 更新store中的状态
-  workflowStore.isRunning = true; // 明确设置运行状态
-  workflowStore.executeRun(values);
+  workflowStore.isRunning = true;
+  workflowStore.result = ''; // 清空以前的结果
+  workflowStore.details = []; // 清空详情
+  workflowStore.traces = []; // 清空追踪
   
   // 切换到结果标签
   activeTab.value = 'result';
   
-  // 调用API示例
-  callDeepSeekAPI(values);
+  // 执行工作流程引擎
+  executeWorkflow(values);
 };
 
-// 调用DeepSeek API示例
-const callDeepSeekAPI = async (values: Record<string, any>) => {
-  isApiLoading.value = true;
-  resultText.value = '';
-  workflowStore.result = ''; // 清空store中的结果
+// 工作流执行引擎
+const executeWorkflow = async (inputValues: Record<string, any>) => {
+  console.log('[RunPanel] 开始执行工作流引擎');
   
-  console.log('[RunPanel] 调用DeepSeek API，输入参数:', values);
+  // 将输入值应用于工作流
+  workflowStore.executeRun(inputValues);
+  
+  // 找到开始节点
+  const startNode = workflowStore.nodes.find(node => node.type === 'start');
+  if (!startNode) {
+    workflowStore.result = '错误: 工作流缺少开始节点';
+    workflowStore.isRunning = false;
+    return;
+  }
+  
+  // 找到连接到结束节点的路径
+  const endNode = workflowStore.nodes.find(node => node.type === 'end');
+  let hasPathToEnd = false;
+  
+  if (endNode) {
+    const visitedNodes = new Set<string>();
+    const findPathToEnd = (nodeId: string): boolean => {
+      if (nodeId === endNode.id) return true;
+      if (visitedNodes.has(nodeId)) return false;
+      
+      visitedNodes.add(nodeId);
+      const outgoingEdges = workflowStore.edges.filter(edge => edge.source === nodeId);
+      
+      for (const edge of outgoingEdges) {
+        if (findPathToEnd(edge.target)) return true;
+      }
+      
+      return false;
+    };
+    
+    hasPathToEnd = findPathToEnd(startNode.id);
+  }
+  
+  if (!endNode || !hasPathToEnd) {
+    // 添加警告到结果
+    workflowStore.result = '警告: 工作流没有连接到结束节点，执行可能不完整';
+    workflowStore.details.push({
+      name: '工作流验证',
+      description: '结束节点检查',
+      value: '未连接到结束节点'
+    });
+  }
+  
+  // 执行节点链
+  const executionContext = {
+    variables: { ...inputValues },
+    visited: new Set<string>()
+  };
   
   try {
-    // 查找第一个LLM节点，获取其替换变量后的提示词
-    const llmNode = workflowStore.nodes.find(node => node.type === 'llm');
-    let prompt = '分析以下内容并回复';
-    
-    if (llmNode && llmNode.config && llmNode.config.trueSystemPrompt) {
-      prompt = llmNode.config.trueSystemPrompt;
-      console.log('[RunPanel] 使用LLM节点提示词:', prompt);
-    } else {
-      // 如果没有找到LLM节点或提示词，使用默认提示词并添加输入变量
-      prompt = `分析以下新闻是否为假新闻，并给出详细理由：\n\n${values.news || '未提供新闻内容'}`;
-      console.log('[RunPanel] 使用默认提示词:', prompt);
-    }
-    
+    // 从开始节点开始执行
+    await executeNode(startNode.id, executionContext);
+  } catch (error) {
+    console.error('工作流执行出错:', error);
+    workflowStore.result += `\n\n执行出错: ${error instanceof Error ? error.message : '未知错误'}`;
+  } finally {
+    workflowStore.isRunning = false;
+  }
+};
+
+// 执行单个节点
+const executeNode = async (nodeId: string, context: any): Promise<void> => {
+  // 防止循环执行
+  if (context.visited.has(nodeId)) {
+    console.log(`[RunPanel] 节点 ${nodeId} 已经执行过，跳过`);
+    return;
+  }
+  
+  // 标记为已访问
+  context.visited.add(nodeId);
+  
+  // 获取当前节点
+  const node = workflowStore.nodes.find(n => n.id === nodeId) as WorkflowNode;
+  if (!node) {
+    console.error(`[RunPanel] 未找到节点 ${nodeId}`);
+    return;
+  }
+  
+  console.log(`[RunPanel] 执行节点: ${node.name} (${node.type})`);
+  
+  // 添加追踪信息
+  workflowStore.traces.push({
+    node: node.name || node.type,
+    timestamp: new Date().toLocaleTimeString(),
+    message: '开始执行'
+  });
+  
+  // 根据节点类型执行不同操作
+  switch (node.type) {
+    case 'start':
+      // 开始节点，直接执行下一个节点
+      break;
+      
+    case 'end':
+      // 结束节点，完成执行
+      workflowStore.traces.push({
+        node: node.name || node.type,
+        timestamp: new Date().toLocaleTimeString(),
+        message: '工作流执行完成'
+      });
+      return;
+      
+    case 'llm':
+      // 执行LLM节点
+      await executeLlmNode(node, context);
+      break;
+      
+    case 'knowledge':
+      // 知识检索节点（尚未实现）
+      workflowStore.result += `\n\n[知识检索节点 "${node.name}" 执行中...]\n知识检索功能开发中，敬请期待！`;
+      workflowStore.details.push({
+        name: '知识检索',
+        description: node.name || '知识检索节点',
+        value: '功能开发中'
+      });
+      
+      workflowStore.traces.push({
+        node: node.name || node.type,
+        timestamp: new Date().toLocaleTimeString(),
+        message: '知识检索功能开发中'
+      });
+      break;
+      
+    case 'conditional':
+      // 条件节点（尚未实现完整逻辑）
+      workflowStore.traces.push({
+        node: node.name || node.type,
+        timestamp: new Date().toLocaleTimeString(),
+        message: '条件分支，默认选择第一个出口'
+      });
+      break;
+      
+    default:
+      console.log(`[RunPanel] 未知节点类型: ${node.type}`);
+      workflowStore.traces.push({
+        node: node.name || node.type,
+        timestamp: new Date().toLocaleTimeString(),
+        message: `未知节点类型: ${node.type}`
+      });
+  }
+  
+  // 执行下一个节点
+  const outgoingEdges = workflowStore.edges.filter(edge => edge.source === nodeId);
+  for (const edge of outgoingEdges) {
+    await executeNode(edge.target, context);
+  }
+};
+
+// 执行LLM节点
+const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> => {
+  console.log(`[RunPanel] 执行LLM节点: ${node.name}`);
+  
+  // 获取当前节点的正确提示词
+  let prompt = node.config?.trueSystemPrompt || node.config?.systemPrompt || '';
+  if (!prompt) {
+    prompt = `请分析以下内容:\n\n${JSON.stringify(context.variables)}`;
+  }
+  
+  console.log(`[RunPanel] LLM节点提示词: ${prompt}`);
+  
+  // 记录执行开始
+  workflowStore.details.push({
+    name: 'LLM调用',
+    description: node.name || 'LLM节点',
+    value: '开始'
+  });
+  
+  // 调用API
+  let llmResult = '';
+  isApiLoading.value = true;
+  
+  try {
     await streamDeepSeekResponse(
       {
         model: "deepseek-chat",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
+        temperature: (node.config as any)?.temperature || 0.7,
         max_tokens: 800,
         stream: true
       },
       // 流式处理
       async (chunk: string) => {
-        // 如果是第一个数据块，把loading状态关闭
-        if (resultText.value === '') {
-          console.log('[RunPanel] 收到第一个数据块，结束loading状态');
+        if (llmResult === '') {
           isApiLoading.value = false;
-          workflowStore.isRunning = false;
         }
         
-        resultText.value += chunk;
+        llmResult += chunk;
         
-        // 更新store中的结果
-        workflowStore.result = resultText.value;
+        // 更新结果，标记当前节点的输出
+        workflowStore.result = workflowStore.result || '';
+        workflowStore.result = workflowStore.result.replace(/\[LLM节点 ".+" 执行中...\]\n等待响应.../, '');
+        workflowStore.result += llmResult === chunk 
+          ? `\n\n[LLM节点 "${node.name}" 执行中...]\n${llmResult}`
+          : chunk;
       },
       // 完成处理
       (fullText: string) => {
-        console.log('[RunPanel] DeepSeek API调用完成');
+        console.log(`[RunPanel] LLM节点 "${node.name}" 执行完成`);
         
-        // 更新详情和追踪信息
+        // 更新详情
         workflowStore.details.push({
-          name: 'API调用',
-          description: 'DeepSeek API请求',
+          name: 'LLM调用',
+          description: node.name || 'LLM节点',
           value: '成功'
         });
         
+        // 更新追踪
         workflowStore.traces.push({
-          node: 'DeepSeek API',
+          node: node.name || node.type,
           timestamp: new Date().toLocaleTimeString(),
-          message: '请求完成'
+          message: 'LLM响应完成'
         });
         
-        // 确保加载状态结束
+        // 如果节点定义了输出变量，存储到上下文中
+        if (node.outputs && node.outputs.includes('text')) {
+          context.variables['text'] = fullText;
+          console.log(`[RunPanel] 存储LLM输出到变量 'text'`);
+        }
+        
         isApiLoading.value = false;
-        console.log('========== DeepSeek API调用成功完成 ==========');
       },
       // 错误处理
       (error: any) => {
-        console.error('DeepSeek API调用失败:', error);
-        resultText.value = `请求失败: ${error.message || '未知错误'}`;
+        console.error(`LLM节点 "${node.name}" 执行失败:`, error);
         
-        // 更新测试详情和追踪信息
+        // 更新详情
         workflowStore.details.push({
-          name: 'API调用',
-          description: 'DeepSeek API请求',
+          name: 'LLM调用',
+          description: node.name || 'LLM节点',
           value: '失败'
         });
         
+        // 更新追踪
         workflowStore.traces.push({
-          node: 'DeepSeek API',
+          node: node.name || node.type,
           timestamp: new Date().toLocaleTimeString(),
           message: `请求失败: ${error.message || '未知错误'}`
         });
         
-        // 确保加载状态结束
+        // 更新结果
+        workflowStore.result += `\n\n[LLM节点 "${node.name}" 执行失败]\n错误: ${error.message || '未知错误'}`;
+        
         isApiLoading.value = false;
-        console.log('========== DeepSeek API调用失败完成 ==========');
       }
     );
   } catch (error) {
-    console.error('调用DeepSeek API时发生错误:', error);
-    resultText.value = `请求失败: ${error instanceof Error ? error.message : '未知错误'}`;
-    // 确保加载状态结束
+    console.error(`LLM节点 "${node.name}" 执行出错:`, error);
+    workflowStore.result += `\n\n[LLM节点 "${node.name}" 执行出错]\n${error instanceof Error ? error.message : '未知错误'}`;
     isApiLoading.value = false;
-    console.log('========== DeepSeek API调用发生未处理的异常 ==========');
   }
 };
 </script>

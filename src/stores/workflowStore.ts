@@ -64,6 +64,7 @@ export const useWorkflowStore = defineStore('workflow', {
         // 添加开始节点变量
         const startNode = this.nodes.find(node => node.type === 'start');
         if (startNode) {
+          // 获取开始节点的输入变量
           const variables = startNode.inputs
             .filter(input => input.trim() !== '')
             .map(name => ({ name }));
@@ -80,14 +81,28 @@ export const useWorkflowStore = defineStore('workflow', {
           }
         }
         
-        // 找到当前节点的所有前置节点
+        // 使用BFS广度优先搜索算法来查找当前节点的所有前置节点
+        const visited = new Set<string>(); // 记录已访问过的节点
+        const queue: string[] = []; // BFS队列
+        
+        // 初始化队列，添加当前节点的直接前置节点
         const incomingEdges = this.edges.filter(edge => edge.target === nodeId);
         const predecessorIds = incomingEdges.map(edge => edge.source);
+        queue.push(...predecessorIds);
         
-        // 获取前置节点的输出变量
-        predecessorIds.forEach(predecessorId => {
-          const node = this.nodes.find(n => n.id === predecessorId);
-          if (!node || !node.outputs || node.outputs.length === 0) return;
+        // BFS遍历所有前置节点
+        while (queue.length > 0) {
+          const currentNodeId = queue.shift()!;
+          
+          // 如果已经访问过，跳过
+          if (visited.has(currentNodeId)) continue;
+          
+          // 标记为已访问
+          visited.add(currentNodeId);
+          
+          // 获取当前节点
+          const node = this.nodes.find(n => n.id === currentNodeId);
+          if (!node || !node.outputs || node.outputs.length === 0) continue;
           
           // 根据节点类型设置不同的颜色
           let color = 'blue';
@@ -110,7 +125,12 @@ export const useWorkflowStore = defineStore('workflow', {
               variables
             });
           }
-        });
+          
+          // 将当前节点的所有前置节点加入队列
+          const nodeIncomingEdges = this.edges.filter(edge => edge.target === currentNodeId);
+          const nodePredecessorIds = nodeIncomingEdges.map(edge => edge.source);
+          queue.push(...nodePredecessorIds);
+        }
         
         return result;
       };

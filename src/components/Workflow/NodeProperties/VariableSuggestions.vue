@@ -74,6 +74,7 @@ const positionStyle = computed(() => {
 const groupedVariables = computed<NodeVariables[]>(() => {
   // 如果已经是分组格式，直接返回
   if (props.variables.length > 0 && typeof props.variables[0] !== 'string') {
+    console.log('分组后的变量列表:', props.variables);
     return props.variables as NodeVariables[];
   }
   

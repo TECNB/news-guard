@@ -50,6 +50,7 @@ declare module 'vue' {
     Node: typeof import('./src/components/Workflow/Node.vue')['default']
     NodeConfigPanel: typeof import('./src/components/Workflow/NodeConfigPanel.vue')['default']
     NodeLibrary: typeof import('./src/components/Workflow/NodeLibrary.vue')['default']
+    OutputProperties: typeof import('./src/components/Workflow/NodeProperties/OutputProperties.vue')['default']
     PathsRenderer: typeof import('./src/components/Workflow/PathsRenderer.vue')['default']
     PieContainer: typeof import('./src/components/Container/PieContainer.vue')['default']
     PipelineAccessSettings: typeof import('./src/components/Pipeline/PipelineAccessSettings.vue')['default']

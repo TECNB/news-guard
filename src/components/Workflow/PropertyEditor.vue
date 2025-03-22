@@ -53,9 +53,15 @@
       </div>
       
       <!-- 输入/输出配置 -->
-      <div class="mb-6" v-if="selectedNode.type !== 'start'">
+      <div class="mb-6" v-if="selectedNode.type !== 'start' && selectedNode.type !== 'output'">
         <IOEditor
           v-model="ioValue"
+        />
+      </div>
+      
+      <div class="mb-6" v-if="selectedNode.type === 'output'">
+        <OutputProperties
+          v-model="outputVariables"
         />
       </div>
       
@@ -88,6 +94,7 @@ import KnowledgeProperties from './NodeProperties/KnowledgeProperties.vue';
 import ConditionalProperties from './NodeProperties/ConditionalProperties.vue';
 import StartProperties from './NodeProperties/StartProperties.vue';
 import { useWorkflowStore } from '../../stores/workflowStore';
+import OutputProperties from './NodeProperties/OutputProperties.vue';
 
 // 使用工作流store
 const workflowStore = useWorkflowStore();
@@ -215,6 +222,12 @@ const ioValue = computed({
     localNodeChanges.value.inputs = value.inputs;
     localNodeChanges.value.outputs = value.outputs;
   }
+});
+
+// 计算属性：输出配置
+const outputVariables = computed({
+  get: () => getNodeConfig<string[]>('output', 'outputs', () => []),
+  set: (value) => updateNodeConfig('output', 'outputs', value)
 });
 
 // 保存更改
