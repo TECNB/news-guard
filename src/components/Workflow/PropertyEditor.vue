@@ -41,8 +41,6 @@
         <LLMProperties
           v-else-if="selectedNode.type === 'llm'"
           v-model="llmConfig"
-          :variables="availableVariables"
-          :variable-values="selectedNode.config.variableValues"
         />
         <knowledge-properties
           v-else-if="selectedNode.type === 'knowledge'"
@@ -57,8 +55,7 @@
       <!-- 输入/输出配置 -->
       <div class="mb-6" v-if="selectedNode.type !== 'start'">
         <IOEditor
-          :model-value="ioValue"
-          @update:model-value="updateIO"
+          v-model="ioValue"
         />
       </div>
       
@@ -103,10 +100,7 @@ const nodeName = computed({
   get: () => selectedNode.value?.name || '',
   set: (value) => {
     if (selectedNode.value) {
-      // 创建节点的拷贝进行修改
-      const updatedNode = { ...selectedNode.value, name: value };
-      // 将修改同步到工作节点对象
-      localNodeChanges.value = { ...localNodeChanges.value, name: value };
+      localNodeChanges.value.name = value;
     }
   }
 });
@@ -127,171 +121,101 @@ const nodeTypeColor = computed(() => {
   return nodeType ? nodeType.colorClass : 'bg-gray-500';
 });
 
-// 计算属性：获取开始节点的变量
-const startNodeVariables = computed(() => {
-  const startNode = workflowStore.nodes.find(
-    node => node.type === 'start' || node.type === '开始'
-  );
-  
-  if (!startNode) return [];
-  return startNode.inputs.filter(input => input.trim() !== '');
-});
-
-// 计算属性：获取当前节点可用的所有变量（包括前置节点的输出）
-const availableVariables = computed(() => {
-  if (!selectedNode.value) return [];
-  
-  const nodeId = selectedNode.value.id;
-  const result = [];
-  
-  // 添加开始节点变量
-  const startNode = workflowStore.nodes.find(node => node.type === 'start');
-  if (startNode) {
-    const variables = startNode.inputs
-      .filter(input => input.trim() !== '')
-      .map(name => ({ name }));
-    
-    if (variables.length > 0) {
-      result.push({
-        nodeId: startNode.id,
-        nodeName: '开始节点',
-        variables: variables.map(v => ({ 
-          ...v, 
-          color: 'green' 
-        }))
-      });
-    }
+// 获取配置（对所有节点类型通用）
+// 如果本地有变更，返回变更的配置；否则返回节点原始配置
+const getNodeConfig = <T>(nodeType: string, configProp: string = 'config', defaultConfigProvider?: () => T): T => {
+  // 如果有本地变更且节点类型匹配，优先返回本地变更
+  if (localNodeChanges.value[configProp] && selectedNode.value?.type === nodeType) {
+    return localNodeChanges.value[configProp] as T;
   }
   
-  // 找到当前节点的所有前置节点
-  const incomingEdges = workflowStore.edges.filter(edge => edge.target === nodeId);
-  const predecessorIds = incomingEdges.map(edge => edge.source);
-  
-  // 获取前置节点的输出变量
-  predecessorIds.forEach(predecessorId => {
-    const node = workflowStore.nodes.find(n => n.id === predecessorId);
-    if (!node || !node.outputs || node.outputs.length === 0) return;
-    
-    // 根据节点类型设置不同的颜色
-    let color = 'blue';
-    if (node.type === 'knowledge') color = 'purple';
-    else if (node.type === 'llm') color = 'blue';
-    else if (node.type === 'conditional') color = 'yellow';
-    
-    // 为LLM节点添加类型信息
-    const variables = node.outputs.map(output => {
-      if (node.type === 'llm' && output === 'text') {
-        return { name: output, type: 'String', color };
-      }
-      return { name: output, color };
-    });
-    
-    if (variables.length > 0) {
-      result.push({
-        nodeId: node.id,
-        nodeName: `${node.name} (${node.type})`,
-        variables
-      });
+  // 如果节点类型不匹配或没有选中节点，返回默认值
+  if (!selectedNode.value || selectedNode.value.type !== nodeType) {
+    // 如果提供了默认配置提供者函数，使用它
+    if (defaultConfigProvider) {
+      return defaultConfigProvider();
     }
-  });
+    // 否则尝试使用 store 中的默认配置
+    if (configProp === 'config') {
+      return workflowStore.getDefaultNodeConfig(nodeType) as unknown as T;
+    }
+    // 对于 inputs 和 outputs，返回空数组
+    return (configProp === 'inputs' || configProp === 'outputs' ? [] : {}) as unknown as T;
+  }
   
-  return result;
-});
+  // 否则返回原始配置
+  if (configProp === 'config') {
+    return selectedNode.value.config as unknown as T;
+  } else if (configProp === 'inputs') {
+    return selectedNode.value.inputs as unknown as T;
+  } else if (configProp === 'outputs') {
+    return selectedNode.value.outputs as unknown as T;
+  }
+  
+  // 默认返回配置或空对象
+  return (configProp === 'config' 
+    ? workflowStore.getDefaultNodeConfig(nodeType)
+    : (configProp === 'inputs' || configProp === 'outputs' ? [] : {})) as unknown as T;
+};
+
+// 更新配置（对所有节点类型通用）
+const updateNodeConfig = <T>(nodeType: string, configProp: string, value: T): void => {
+  if (!selectedNode.value || selectedNode.value.type !== nodeType) return;
+  localNodeChanges.value[configProp] = value;
+};
 
 // 计算属性：LLM配置
 const llmConfig = computed<LLMConfig>({
-  get: () => {
-    if (!selectedNode.value || selectedNode.value.type !== 'llm') {
-      return { model: 'gpt-3.5-turbo', temperature: 0.7, systemPrompt: '' };
-    }
-    return {
-      model: selectedNode.value.config.model || 'gpt-3.5-turbo',
-      temperature: selectedNode.value.config.temperature || 0.7,
-      systemPrompt: selectedNode.value.config.systemPrompt || '',
-      trueSystemPrompt: selectedNode.value.config.trueSystemPrompt
-    };
-  },
-  set: (value) => {
-    if (!selectedNode.value || selectedNode.value.type !== 'llm') return;
-    // 保存到本地变更
-    const variableValues = selectedNode.value.config.variableValues;
-    localNodeChanges.value.config = { 
-      ...value,
-      variableValues
-    };
-  }
+  get: () => getNodeConfig<LLMConfig>('llm', 'config'),
+  set: (value) => updateNodeConfig('llm', 'config', value)
 });
 
 // 计算属性：开始节点配置
 const startConfig = computed<StartConfig>({
-  get: () => {
-    if (!selectedNode.value || selectedNode.value.type !== 'start') {
-      return { variables: [] };
-    }
-    return {
-      variables: selectedNode.value.inputs || []
-    };
-  },
-  set: (value) => {
-    if (!selectedNode.value || selectedNode.value.type !== 'start') return;
-    // 保存到本地变更
-    localNodeChanges.value.inputs = value.variables;
-  }
+  get: () => ({ 
+    variables: getNodeConfig<string[]>('start', 'inputs', () => []) 
+  }),
+  set: (value) => updateNodeConfig('start', 'inputs', value.variables)
 });
 
 // 计算属性：知识库配置
 const knowledgeConfig = computed<KnowledgeConfig>({
-  get: () => {
-    if (!selectedNode.value || selectedNode.value.type !== 'knowledge') {
-      return { knowledgeBase: 'news', topK: 3 };
-    }
-    return {
-      knowledgeBase: selectedNode.value.config.knowledgeBase || 'news',
-      topK: selectedNode.value.config.topK || 3
-    };
-  },
-  set: (value) => {
-    if (!selectedNode.value || selectedNode.value.type !== 'knowledge') return;
-    // 保存到本地变更
-    localNodeChanges.value.config = value;
-  }
+  get: () => getNodeConfig<KnowledgeConfig>('knowledge', 'config'),
+  set: (value) => updateNodeConfig('knowledge', 'config', value)
 });
 
 // 计算属性：条件配置
 const conditionalConfig = computed<ConditionalConfig>({
-  get: () => {
-    if (!selectedNode.value || selectedNode.value.type !== 'conditional') {
-      return { conditionType: 'content', expression: '' };
-    }
-    return {
-      conditionType: selectedNode.value.config.conditionType || 'content',
-      expression: selectedNode.value.config.expression || ''
-    };
-  },
-  set: (value) => {
-    if (!selectedNode.value || selectedNode.value.type !== 'conditional') return;
-    // 保存到本地变更
-    localNodeChanges.value.config = value;
-  }
+  get: () => getNodeConfig<ConditionalConfig>('conditional', 'config'),
+  set: (value) => updateNodeConfig('conditional', 'config', value)
 });
 
 // 计算属性：IO值
-const ioValue = computed(() => {
-  if (!selectedNode.value) return { inputs: [], outputs: [], nodeType: '' };
-  return {
-    inputs: selectedNode.value.inputs,
-    outputs: selectedNode.value.outputs,
-    nodeType: selectedNode.value.type
-  };
+const ioValue = computed({
+  get: () => {
+    if (!selectedNode.value) return { inputs: [], outputs: [], nodeType: '' };
+    
+    // 优先使用本地变更的输入输出
+    const inputs = localNodeChanges.value.inputs 
+      ? localNodeChanges.value.inputs 
+      : selectedNode.value.inputs;
+      
+    const outputs = localNodeChanges.value.outputs 
+      ? localNodeChanges.value.outputs 
+      : selectedNode.value.outputs;
+    
+    return {
+      inputs,
+      outputs,
+      nodeType: selectedNode.value.type
+    };
+  },
+  set: (value: { inputs: string[]; outputs: string[]; nodeType?: string }) => {
+    if (!selectedNode.value) return;
+    localNodeChanges.value.inputs = value.inputs;
+    localNodeChanges.value.outputs = value.outputs;
+  }
 });
-
-// 更新输入输出变量
-const updateIO = (value: { inputs: string[]; outputs: string[]; nodeType?: string }) => {
-  if (!selectedNode.value) return;
-  // 保存到本地变更
-  localNodeChanges.value.inputs = value.inputs;
-  localNodeChanges.value.outputs = value.outputs;
-};
 
 // 保存更改
 const saveChanges = () => {

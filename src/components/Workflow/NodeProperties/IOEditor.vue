@@ -1,21 +1,21 @@
 <template>
-  <div class="space-y-4">
+  <div class="space-y-5">
     <h4 class="text-md font-medium text-gray-700">输入/输出配置</h4>
     
-    <div class="mb-4">
+    <div>
       <label class="block text-sm font-medium text-gray-700 mb-1">输入变量</label>
       <div class="space-y-2">
         <div 
-          v-for="(input, index) in io.inputs" 
+          v-for="(input, index) in localIO.inputs" 
           :key="`input-${index}`"
           class="flex items-center gap-2"
         >
           <input 
             type="text" 
-            v-model="io.inputs[index]" 
+            v-model="localIO.inputs[index]" 
             class="flex-1 px-3 py-1 border border-gray-300 rounded-md shadow-sm text-sm"
             placeholder="变量名称"
-            @input="emitUpdate"
+            @input="updateModelValue"
           />
           <button 
             @click="removeInput(index)" 
@@ -53,16 +53,16 @@
       <label class="block text-sm font-medium text-gray-700 mb-1">输出变量</label>
       <div class="space-y-2">
         <div 
-          v-for="(output, index) in io.outputs" 
+          v-for="(output, index) in localIO.outputs" 
           :key="`output-${index}`"
           class="flex items-center gap-2"
         >
           <input 
             type="text" 
-            v-model="io.outputs[index]" 
+            v-model="localIO.outputs[index]" 
             class="flex-1 px-3 py-1 border border-gray-300 rounded-md shadow-sm text-sm"
             placeholder="变量名称"
-            @input="emitUpdate"
+            @input="updateModelValue"
           />
           <button 
             @click="removeOutput(index)" 
@@ -98,59 +98,57 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue']);
 
-const io = ref<IOConfig>({
-  inputs: [],
-  outputs: []
+// 本地IO状态，用于修改
+const localIO = ref<IOConfig>({
+  inputs: [...props.modelValue.inputs],
+  outputs: [...props.modelValue.outputs],
+  nodeType: props.modelValue.nodeType
 });
 
-// 判断是否为LLM节点
-const isLLMNode = computed(() => props.modelValue.nodeType === 'llm');
-
+// 当props变化时同步到本地状态
 watch(() => props.modelValue, (newValue) => {
-  io.value = {
+  localIO.value = {
     inputs: [...newValue.inputs],
     outputs: [...newValue.outputs],
     nodeType: newValue.nodeType
   };
-  
-  // 如果是LLM节点，确保其输出为["text"]
-  if (isLLMNode.value && (!io.value.outputs.includes('text') || io.value.outputs.length !== 1)) {
-    io.value.outputs = ['text'];
-    emitUpdate();
-  }
-}, { immediate: true });
+}, { deep: true });
 
-const emitUpdate = () => {
+// 判断是否为LLM节点
+const isLLMNode = computed(() => props.modelValue.nodeType === 'llm');
+
+// 更新父组件的值
+const updateModelValue = () => {
   emit('update:modelValue', {
-    inputs: [...io.value.inputs],
-    outputs: [...io.value.outputs],
-    nodeType: io.value.nodeType
+    inputs: [...localIO.value.inputs],
+    outputs: [...localIO.value.outputs],
+    nodeType: localIO.value.nodeType
   });
 };
 
 const addInput = () => {
-  io.value.inputs.push('');
-  emitUpdate();
+  localIO.value.inputs.push('');
+  updateModelValue();
 };
 
 const removeInput = (index: number) => {
-  io.value.inputs.splice(index, 1);
-  emitUpdate();
+  localIO.value.inputs.splice(index, 1);
+  updateModelValue();
 };
 
 const addOutput = () => {
   // 如果是LLM节点，不允许添加输出
   if (isLLMNode.value) return;
   
-  io.value.outputs.push('');
-  emitUpdate();
+  localIO.value.outputs.push('');
+  updateModelValue();
 };
 
 const removeOutput = (index: number) => {
   // 如果是LLM节点，不允许删除输出
   if (isLLMNode.value) return;
   
-  io.value.outputs.splice(index, 1);
-  emitUpdate();
+  localIO.value.outputs.splice(index, 1);
+  updateModelValue();
 };
 </script>

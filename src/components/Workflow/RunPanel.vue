@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, markRaw } from 'vue';
+import { ref, computed, markRaw } from 'vue';
 import { streamDeepSeekResponse } from '../../utils/deepseekApi';
 import { useWorkflowStore } from '../../stores/workflowStore';
 

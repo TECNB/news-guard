@@ -2,6 +2,7 @@
   <div 
     class="variable-suggestions absolute z-100 mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-2 max-h-60 overflow-y-auto w-[280px] max-h-[250px]"
     :style="position"
+    @mousedown.prevent
   >
     <!-- 按节点分组显示变量 -->
     <div v-for="(nodeVars, idx) in groupedVariables" :key="idx" class="mb-3">
@@ -15,7 +16,7 @@
         v-for="variable in nodeVars.variables" 
         :key="`${nodeVars.nodeId}-${variable.name}`"
         class="suggestion-item p-2 hover:bg-blue-50 cursor-pointer rounded flex items-center gap-2 text-sm transition duration-150 ease-in-out"
-        @click="$emit('select', variable.name)"
+        @click.stop="handleSelect(variable.name)"
       >
         <span :class="`text-${variable.color || 'blue'}-500 w-5 text-center`">
           <i class="fa-solid fa-bracket-curly text-xs"></i>
@@ -55,6 +56,10 @@ const props = defineProps<{
   };
 }>();
 
+const emit = defineEmits<{
+  (e: 'select', variable: string): void;
+}>();
+
 // 计算分组后的变量列表
 const groupedVariables = computed<NodeVariables[]>(() => {
   // 如果已经是分组格式，直接返回
@@ -77,9 +82,10 @@ const groupedVariables = computed<NodeVariables[]>(() => {
   return [];
 });
 
-defineEmits<{
-  (e: 'select', variable: string): void;
-}>();
+// 处理变量选择，防止事件冒泡
+const handleSelect = (variable: string) => {
+  emit('select', variable);
+};
 </script>
 
 <style scoped>

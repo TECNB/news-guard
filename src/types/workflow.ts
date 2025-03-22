@@ -98,7 +98,9 @@ export const NODE_TYPES = [
     type: 'start', 
     name: '开始节点', 
     colorClass: 'bg-green-500',
-    defaultConfig: {}
+    defaultConfig: {
+      variables: []
+    }
   },
   { 
     type: 'llm', 
@@ -107,7 +109,8 @@ export const NODE_TYPES = [
     defaultConfig: {
       model: 'deepseek-chat',
       temperature: 0.7,
-      systemPrompt: ''
+      systemPrompt: '',
+      trueSystemPrompt: ''
     }
   },
   { 
@@ -159,9 +162,18 @@ export function createNode(type: string, x: number, y: number): Node {
     config: { ...nodeType.defaultConfig }
   };
   
-  // 为LLM节点设置固定输出
-  if (type === 'llm') {
+  // 根据节点类型设置默认输入输出
+  if (type === 'start') {
+    node.outputs = ['query'];
+  } else if (type === 'llm') {
+    node.inputs = ['prompt'];
     node.outputs = ['text'];
+  } else if (type === 'knowledge') {
+    node.inputs = ['query'];
+    node.outputs = ['knowledge'];
+  } else if (type === 'conditional') {
+    node.inputs = ['condition'];
+    node.outputs = ['true', 'false'];
   }
   
   return node;

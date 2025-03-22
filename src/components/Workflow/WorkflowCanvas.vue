@@ -4,7 +4,6 @@
     class="workflow-canvas bg-gray-50 w-full h-full relative overflow-hidden select-none"
     @contextmenu.prevent="onContextMenu"
     @click="hideContextMenu"
-    @mousemove="onMouseMove"
     @mouseup="onMouseUp"
   >
     <!-- 工作流主画布区域 -->
@@ -485,11 +484,6 @@ const handleGlobalMouseUp = (event: MouseEvent) => {
   // 移除全局事件监听
   document.removeEventListener('mousemove', handleGlobalMouseMove);
   document.removeEventListener('mouseup', handleGlobalMouseUp);
-};
-
-// 鼠标移动处理
-const onMouseMove = (event: MouseEvent) => {
-  // 在画布内的鼠标移动主要通过全局事件处理
 };
 
 // 鼠标抬起处理

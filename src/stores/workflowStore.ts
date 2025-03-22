@@ -52,6 +52,76 @@ export const useWorkflowStore = defineStore('workflow', {
       }
       
       return variables;
+    },
+    
+    // 获取指定节点可用的所有变量（包括前置节点的输出）
+    getNodeAvailableVariables(): (nodeId: string | null) => any[] {
+      return (nodeId: string | null) => {
+        if (!nodeId) return [];
+        
+        const result = [];
+        
+        // 添加开始节点变量
+        const startNode = this.nodes.find(node => node.type === 'start');
+        if (startNode) {
+          const variables = startNode.inputs
+            .filter(input => input.trim() !== '')
+            .map(name => ({ name }));
+          
+          if (variables.length > 0) {
+            result.push({
+              nodeId: startNode.id,
+              nodeName: '开始节点',
+              variables: variables.map(v => ({ 
+                ...v, 
+                color: 'green' 
+              }))
+            });
+          }
+        }
+        
+        // 找到当前节点的所有前置节点
+        const incomingEdges = this.edges.filter(edge => edge.target === nodeId);
+        const predecessorIds = incomingEdges.map(edge => edge.source);
+        
+        // 获取前置节点的输出变量
+        predecessorIds.forEach(predecessorId => {
+          const node = this.nodes.find(n => n.id === predecessorId);
+          if (!node || !node.outputs || node.outputs.length === 0) return;
+          
+          // 根据节点类型设置不同的颜色
+          let color = 'blue';
+          if (node.type === 'knowledge') color = 'purple';
+          else if (node.type === 'llm') color = 'blue';
+          else if (node.type === 'conditional') color = 'yellow';
+          
+          // 为LLM节点添加类型信息
+          const variables = node.outputs.map(output => {
+            if (node.type === 'llm' && output === 'text') {
+              return { name: output, type: 'String', color };
+            }
+            return { name: output, color };
+          });
+          
+          if (variables.length > 0) {
+            result.push({
+              nodeId: node.id,
+              nodeName: `${node.name} (${node.type})`,
+              variables
+            });
+          }
+        });
+        
+        return result;
+      };
+    },
+    
+    // 获取任何节点类型的默认配置
+    getDefaultNodeConfig() {
+      return (nodeType: string): any => {
+        const nodeTypeObj = NODE_TYPES.find(nt => nt.type === nodeType);
+        return nodeTypeObj ? { ...nodeTypeObj.defaultConfig } : {};
+      };
     }
   },
   
@@ -59,7 +129,10 @@ export const useWorkflowStore = defineStore('workflow', {
     // 添加节点
     addNode(type: string, x: number, y: number): string {
       console.log(`[WorkflowStore] 添加节点 type=${type}, x=${x}, y=${y}`);
+      
+      // 使用 createNode 函数创建节点并应用默认配置
       const newNode = createNode(type, x, y);
+      
       this.nodes.push(newNode);
       console.log(`[WorkflowStore] 节点已添加 id=${newNode.id}`);
       console.log(`[WorkflowStore] 当前节点数量: ${this.nodes.length}`);
@@ -227,9 +300,6 @@ export const useWorkflowStore = defineStore('workflow', {
               console.log(`[WorkflowStore] 未找到变量值 ${varName}，保留原始占位符`);
               return match; // 如果没有找到对应变量值，保留原始占位符
             });
-            
-            // 将变量值保存到节点配置，用于属性面板显示
-            node.config.variableValues = { ...inputValues };
             
             // 保存真实提示词到节点配置
             node.config.trueSystemPrompt = trueSystemPrompt;

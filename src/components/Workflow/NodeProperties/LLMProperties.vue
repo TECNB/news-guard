@@ -5,9 +5,8 @@
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-1">模型</label>
       <select 
-        v-model="modelConfig.model" 
+        v-model="modelValue.model" 
         class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        @change="updateModelConfig"
       >
         <option value="gpt-4">GPT-4</option>
         <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
@@ -21,32 +20,31 @@
       <div class="flex items-center gap-2">
         <input 
           type="range" 
-          v-model.number="modelConfig.temperature" 
+          v-model.number="modelValue.temperature" 
           min="0" 
           max="1" 
           step="0.1"
           class="w-full"
-          @change="updateModelConfig"
         />
-        <span class="text-sm text-gray-600 w-10 text-right">{{ modelConfig.temperature }}</span>
+        <span class="text-sm text-gray-600 w-10 text-right">{{ modelValue.temperature }}</span>
       </div>
     </div>
     
     <div class="relative">
       <label class="block text-sm font-medium text-gray-700 mb-1">系统提示词</label>
-      <textarea 
-        ref="promptTextarea"
-        v-model="modelConfig.systemPrompt" 
-        rows="4"
-        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        @input="handlePromptInput"
-        @keydown="handleKeyDown"
-        @change="updateModelConfig"
-      ></textarea>
       
+      <!-- 使用新的编辑器组件 -->
+      <LLMPromptEditor
+        v-model="modelValue.systemPrompt"
+        :variables="variables"
+        :suggestionsEnabled="true"
+        @variable-input="handleVariableInput"
+      />
+      
+      <!-- 变量建议下拉框 -->
       <variable-suggestions
         v-if="showVariableSuggestions"
-        :variables="variables"
+        :variables="filteredVariables"
         :position="suggestionsPosition"
         @select="insertVariable"
       />
@@ -55,151 +53,175 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, watch, reactive } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import LLMPromptEditor from '@/components/Workflow/NodeProperties/LLMPromptEditor.vue';
 import VariableSuggestions from '@/components/Workflow/NodeProperties/VariableSuggestions.vue';
 import { useCursorPosition } from '@/utils/workflow/cursorUtils';
+import { getAllValidVariableNames, type NodeVariables } from '@/utils/workflow/editor/variableHighlighter';
 import type { LLMConfig } from '@/types/workflow';
+import { useWorkflowStore } from '@/stores/workflowStore';
 
-interface Variable {
-  name: string;
-  type?: string;
-  color?: string;
-}
-
-interface NodeVariables {
-  nodeId: string;
-  nodeName: string;
-  variables: Variable[];
-}
-
-const props = defineProps<{
-  modelValue: LLMConfig & { trueSystemPrompt?: string };
-  variables: string[] | NodeVariables[];
-  variableValues?: Record<string, any>;
-}>();
-
-const emit = defineEmits(['update:modelValue']);
-
-// 使用reactive而不是computed，以便我们可以更精确地控制何时更新父组件
-const modelConfig = reactive<LLMConfig>({
-  model: props.modelValue.model,
-  temperature: props.modelValue.temperature,
-  systemPrompt: props.modelValue.systemPrompt
+// 使用 defineModel() 宏实现双向绑定，提供默认值确保不为 undefined
+const modelValue = defineModel<LLMConfig>('modelValue', {
+  default: () => ({
+    model: '',
+    temperature: 0,
+    systemPrompt: '',
+    trueSystemPrompt: ''
+  })
 });
 
-// 当props变化时更新本地状态
-watch(() => props.modelValue, (newValue) => {
-  modelConfig.model = newValue.model;
-  modelConfig.temperature = newValue.temperature;
-  modelConfig.systemPrompt = newValue.systemPrompt;
-}, { deep: true });
+// 使用工作流 store
+const workflowStore = useWorkflowStore();
 
-// 更新模型配置到父组件
-const updateModelConfig = () => {
-  console.log('LLM属性：更新配置到父组件:', modelConfig);
-  
-  // 保持trueSystemPrompt值不变
-  const updatedConfig = { 
-    ...modelConfig,
-    trueSystemPrompt: props.modelValue.trueSystemPrompt 
-  };
-  
-  emit('update:modelValue', updatedConfig);
-};
+// 从 store 获取当前选中节点的变量
+const variables = computed(() => {
+  if (!workflowStore.selectedNodeId) return [];
+  return workflowStore.getNodeAvailableVariables(workflowStore.selectedNodeId);
+});
 
-const promptTextarea = ref<HTMLTextAreaElement | null>(null);
+// 变量建议相关
 const showVariableSuggestions = ref(false);
 const suggestionsPosition = ref({ left: '0px', top: '0px' });
 const { cursorPosition, getCursorPosition } = useCursorPosition();
+const filteredVariables = ref<string[] | NodeVariables[]>([]);
 
-// 监听变量值变化，处理系统提示词中的变量
-watch(() => props.variableValues, (newValues) => {
-  if (newValues) {
-    console.log('LLM属性：接收到新的变量值', newValues);
-    
-    // 检查系统提示词中是否包含变量
-    const systemPrompt = modelConfig.systemPrompt;
-    if (systemPrompt.includes('{')) {
-      // 打印变量替换前后的提示词，用于调试
-      console.log('替换前的提示词:', systemPrompt);
-      
-      // 创建带有变量值的提示词副本（此处仅用于调试，不修改原始提示词）
-      const interpolatedPrompt = interpolatePrompt(systemPrompt, newValues);
-      console.log('替换后的提示词:', interpolatedPrompt);
-    }
+// 处理变量输入
+const handleVariableInput = (data: { text: string, position: number }) => {
+  // 获取用户已经输入的部分变量名
+  const partialVar = data.text;
+  
+  // 更新过滤后的变量列表
+  if (!variables.value || !Array.isArray(variables.value) || variables.value.length === 0) {
+    // 无变量的情况
+    filteredVariables.value = [];
+    showVariableSuggestions.value = false;
+    return;
   }
-}, { deep: true, immediate: true });
-
-// 插值处理函数，将提示词中的变量替换为实际值
-const interpolatePrompt = (prompt: string, values: Record<string, any>): string => {
-  return prompt.replace(/\{([^}]+)\}/g, (match, varName) => {
-    return values[varName] !== undefined ? values[varName] : match;
-  });
-};
-
-const handlePromptInput = (event: Event) => {
-  const textarea = event.target as HTMLTextAreaElement;
-  const text = textarea.value;
-  const position = textarea.selectionStart;
-
-  cursorPosition.value = {
-    start: textarea.selectionStart,
-    end: textarea.selectionEnd
-  };
-
-  if (text[position - 1] === '{') {
-    const pos = getCursorPosition(textarea);
-    console.log('光标位置:', pos);
-    
-    suggestionsPosition.value = {
-      left: `${pos.left}px`,
-      top: `${pos.top + 24}px`
-    };
+  
+  if (typeof variables.value[0] === 'string') {
+    // 如果是字符串数组
+    const allVars = variables.value as string[];
+    filteredVariables.value = allVars.filter(v => 
+      v.toLowerCase().includes(partialVar.toLowerCase())
+    );
+  } else {
+    // 如果是节点变量数组
+    const nodeVars = variables.value as NodeVariables[];
+    filteredVariables.value = nodeVars.map(nodeVar => {
+      // 复制节点信息
+      const filtered: NodeVariables = {
+        nodeId: nodeVar.nodeId,
+        nodeName: nodeVar.nodeName,
+        variables: nodeVar.variables.filter(v =>
+          v.name.toLowerCase().includes(partialVar.toLowerCase())
+        )
+      };
+      return filtered;
+    }).filter(nodeVar => nodeVar.variables.length > 0); // 只保留有变量的节点
+  }
+  
+  if (Array.isArray(filteredVariables.value) && filteredVariables.value.length > 0) {
+    // 计算建议框位置 - 这里可能需要修改为使用编辑器组件提供的方法
+    const textareaElement = document.querySelector('textarea.prompt-container');
+    if (textareaElement) {
+      const pos = getCursorPosition(textareaElement as HTMLTextAreaElement);
+      suggestionsPosition.value = {
+        left: `${pos.left}px`,
+        top: `${pos.top + 24}px`
+      };
+    }
     
     console.log('显示建议框:', suggestionsPosition.value);
+    console.log('过滤后的变量:', filteredVariables.value);
+    
     showVariableSuggestions.value = true;
   } else {
     showVariableSuggestions.value = false;
   }
 };
 
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (showVariableSuggestions.value && event.key === 'Escape') {
-    showVariableSuggestions.value = false;
-    event.preventDefault();
-    return;
-  }
-
-  if (showVariableSuggestions.value && event.key === '{') {
-    event.preventDefault();
-    return;
-  }
-};
-
+// 插入变量到提示词
 const insertVariable = (variable: string) => {
-  if (!promptTextarea.value) return;
+  // 确保插入的是有效变量
+  const allValidVariables = getAllValidVariableNames(variables.value);
+  if (!allValidVariables.includes(variable)) {
+    console.warn(`[LLMProperties] 尝试插入无效变量: ${variable}`);
+    showVariableSuggestions.value = false;
+    return;
+  }
   
-  const textarea = promptTextarea.value;
+  const textareaElement = document.querySelector('textarea.prompt-container');
+  if (!textareaElement) {
+    showVariableSuggestions.value = false;
+    return;
+  }
+  
+  const textarea = textareaElement as HTMLTextAreaElement;
   const { start, end } = cursorPosition.value;
   const text = textarea.value;
   
-  const newText = 
-    text.substring(0, start - 1) + 
-    `{${variable}}` + 
-    text.substring(end);
+  // 检查光标位置是否合法
+  if (start === undefined || start < 1) {
+    console.warn(`[LLMProperties] 无效的光标位置: ${start}`);
+    showVariableSuggestions.value = false;
+    return;
+  }
   
-  modelConfig.systemPrompt = newText;
+  // 确保是在输入变量名的上下文中
+  const lastOpenBrace = text.lastIndexOf('{', start - 1);
+  const lastCloseBrace = text.lastIndexOf('}', start - 1);
+  
+  let newText: string;
+  if (lastOpenBrace < 0 || lastOpenBrace < lastCloseBrace) {
+    // 直接插入完整变量
+    newText = 
+      text.substring(0, start) + 
+      `{${variable}}` + 
+      text.substring(end || start);
+  } else {
+    // 替换已经开始输入的变量
+    newText = 
+      text.substring(0, lastOpenBrace) + 
+      `{${variable}}` + 
+      text.substring(end || start);
+  }
+  
+  // 更新提示词，使用 defineModel 的方式
+  modelValue.value = {
+    ...modelValue.value,
+    systemPrompt: newText
+  };
+  
+  // 立即隐藏建议框
   showVariableSuggestions.value = false;
-  
-  // 确保更新回父组件
-  updateModelConfig();
-  
-  nextTick(() => {
-    if (promptTextarea.value) {
-      const newCursorPosition = start - 1 + variable.length + 2;
-      promptTextarea.value.focus();
-      promptTextarea.value.setSelectionRange(newCursorPosition, newCursorPosition);
-    }
-  });
 };
+
+// 点击外部关闭变量建议框
+const handleClickOutside = (event: MouseEvent) => {
+  if (showVariableSuggestions.value) {
+    const target = event.target as HTMLElement;
+    const suggestionsElement = document.querySelector('.variable-suggestions');
+    const textareaElement = document.querySelector('textarea.prompt-container');
+    
+    if (suggestionsElement && !suggestionsElement.contains(target) && 
+        textareaElement && !textareaElement.contains(target)) {
+      showVariableSuggestions.value = false;
+    }
+  }
+};
+
+onMounted(() => {
+  // 添加全局点击事件监听
+  document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  // 移除事件监听
+  document.removeEventListener('click', handleClickOutside);
+});
 </script>
+
+<style scoped>
+
+</style>

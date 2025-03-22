@@ -5,7 +5,7 @@
     @contextmenu.prevent="showContextMenu"
   >
     <div 
-      class="node bg-white rounded-lg shadow-md border border-gray-200 p-4 cursor-move relative min-w-[240px] transition duration-200"
+      class="node bg-white rounded-lg shadow-md border border-gray-200 p-3 cursor-move relative min-w-[240px] transition duration-200"
       :class="{ 'border-blue-500 ring-2 ring-blue-200': isSelected }"
       @mousedown.stop="onNodeDragStart"
       @click.stop="onNodeClick"
@@ -54,7 +54,7 @@
           <span class="text-xs text-gray-400">⌫</span>
         </div>
         <div class="border-t border-gray-200 my-1"></div>
-        <div class="flex flex-col p-2 hover:bg-gray-50 cursor-pointer" @click="showAbout">
+        <div class="flex flex-col p-2 hover:bg-gray-50 cursor-pointer">
           <span class="text-left text-gray-500">关于</span>
           <span v-if="node.type === '开始' || node.type === 'start'" class="text-left text-xs text-gray-500 mt-1">定义一个 workflow 流程启动的初始参数</span>
           <span v-else-if="node.type === 'LLM' || node.type === 'llm' || node.type === 'deepseek-chat'" class="text-left text-xs text-gray-500 mt-1">调用大语言模型回答问题或者对自然语言进行处理</span>
@@ -75,18 +75,31 @@
       </div>
       
       <!-- 开始节点变量展示 -->
-      <div v-if="node.type === '开始' && hasVariables" class="mt-2 border-t border-gray-100 pt-2">
-        <div v-for="(value, key) in extractedVariables" :key="key" class="text-xs flex items-center py-1">
-          <span class="font-medium mr-2">{{ key }}:</span> 
-          <span class="text-blue-600">{{ value }}</span>
+      <div v-if="node.type === 'start' && hasVariables" class="">
+        <div v-for="(value, key) in extractedVariables" :key="key" 
+             class="bg-gray-50 rounded-md px-1 py-1 flex items-center justify-between">
+          <div class="flex items-center">
+            <span class="text-blue-500 mr-1">{x}</span>
+            <span class="text-gray-700">{{ key }}</span>
+          </div>
+          <div class="flex items-center">
+            <span class="text-xs text-gray-500 mr-2">必填</span>
+            <i class="fa-solid fa-bars-staggered text-gray-400"></i>
+          </div>
         </div>
       </div>
 
       <!-- LLM节点模型名称 -->
-      <div v-if="isModelNode" class="mt-2 border-t border-gray-100 pt-2">
-        <div v-if="node.config && node.config.model" class="text-xs flex items-center">
-          <i class="fa-solid fa-microchip mr-1 text-purple-400"></i>
-          <span>{{ node.config.model }}</span>
+      <div v-if="isModelNode" class="mt-2">
+        <div v-if="node.config && node.config.model" 
+             class="bg-gray-50 rounded-md px-3 py-2 flex items-center justify-between">
+          <div class="flex items-center">
+            <i  class="fa-solid fa-microchip text-purple-400"></i>
+            <span class="text-gray-700">{{ node.config.model }}</span>
+          </div>
+          <div>
+            <span class="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-md">CHAT</span>
+          </div>
         </div>
       </div>
       
@@ -205,62 +218,23 @@ const onDeleteNode = () => {
   workflowStore.deleteNode(props.node.id);
 };
 
-const showAbout = () => {
-  contextMenuVisible.value = false;
-  let description = '';
-  
-  if (props.node.type === '开始' || props.node.type === 'start') {
-    description = '定义一个 workflow 流程启动的初始参数';
-  } else if (props.node.type === 'LLM' || props.node.type === 'llm' || props.node.type === 'deepseek-chat') {
-    description = '调用大语言模型回答问题或者对自然语言进行处理';
-  }
-  
-  // 更新右键菜单中的关于部分
-  contextMenuVisible.value = false;
-};
-
-// 点击文档其他地方时关闭菜单
-const closeMenu = (event: MouseEvent) => {
-  if (contextMenuVisible.value) {
-    contextMenuVisible.value = false;
-  }
-};
-
-// 挂载和卸载全局事件监听器
-import { onMounted, onBeforeUnmount } from 'vue';
-
-onMounted(() => {
-  document.addEventListener('click', closeMenu);
-});
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', closeMenu);
-  contextMenuVisible.value = false;
-});
-
 // 计算属性：检查是否有变量可以显示
 const hasVariables = computed(() => {
-  return props.node.config && Object.keys(props.node.config).some(key => 
-    key !== 'model' && key !== 'temperature' && key !== 'systemPrompt' &&
-    key !== 'knowledgeBase' && key !== 'topK' && key !== 'conditionType' && 
-    key !== 'expression'
-  );
+  // 仅对开始节点检查是否有输入变量
+  if (props.node.type === '开始' || props.node.type === 'start') {
+    return props.node.inputs && props.node.inputs.length > 0;
+  }
+  return false;
 });
 
 // 计算属性：提取可以展示的变量
 const extractedVariables = computed(() => {
-  if (!props.node.config) return {};
-  
-  const variables: Record<string, any> = {};
-  Object.entries(props.node.config).forEach(([key, value]) => {
-    if (key !== 'model' && key !== 'temperature' && key !== 'systemPrompt' &&
-        key !== 'knowledgeBase' && key !== 'topK' && key !== 'conditionType' && 
-        key !== 'expression') {
-      variables[key] = value;
-    }
-  });
-  
-  return variables;
+  // 仅对开始节点获取输入变量
+  if ((props.node.type === '开始' || props.node.type === 'start') && props.node.inputs) {
+    // 从 workflowStore 获取输入变量
+    return workflowStore.inputVariables;
+  }
+  return {};
 });
 
 // 计算属性：检查是否为模型节点

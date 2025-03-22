@@ -42,6 +42,7 @@ declare module 'vue' {
     KnowledgeProperties: typeof import('./src/components/Workflow/NodeProperties/KnowledgeProperties.vue')['default']
     KnowledgeSelector: typeof import('./src/components/KnowledgeSelector.vue')['default']
     LineContainer: typeof import('./src/components/Container/LineContainer.vue')['default']
+    LLMPromptEditor: typeof import('./src/components/Workflow/NodeProperties/LLMPromptEditor.vue')['default']
     LLMProperties: typeof import('./src/components/Workflow/NodeProperties/LLMProperties.vue')['default']
     LoadingSpinner: typeof import('./src/components/common/LoadingSpinner.vue')['default']
     MainPointsSection: typeof import('./src/components/Analysis/MainPointsSection.vue')['default']
