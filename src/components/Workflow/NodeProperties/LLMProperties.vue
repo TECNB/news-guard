@@ -82,8 +82,11 @@ const variables = computed(() => {
 
 // 变量建议相关
 const showVariableSuggestions = ref(false);
-const suggestionsPosition = ref({ left: '0px', top: '0px' });
-const { cursorPosition, getCursorPosition } = useCursorPosition();
+const suggestionsPosition = ref({ 
+  left: '0px', 
+  top: '0px'
+});
+const { cursorPosition, getCursorPosition, updateCursorPosition } = useCursorPosition();
 const filteredVariables = ref<string[] | NodeVariables[]>([]);
 
 // 处理变量输入
@@ -125,10 +128,14 @@ const handleVariableInput = (data: { text: string, position: number }) => {
     // 计算建议框位置 - 这里可能需要修改为使用编辑器组件提供的方法
     const textareaElement = document.querySelector('textarea.prompt-container');
     if (textareaElement) {
+      // 先更新光标位置
+      updateCursorPosition(textareaElement as HTMLTextAreaElement);
       const pos = getCursorPosition(textareaElement as HTMLTextAreaElement);
+      
+      // 设置菜单显示在光标上方
       suggestionsPosition.value = {
         left: `${pos.left}px`,
-        top: `${pos.top + 24}px`
+        top: `${pos.top}px`
       };
     }
     
@@ -158,11 +165,14 @@ const insertVariable = (variable: string) => {
   }
   
   const textarea = textareaElement as HTMLTextAreaElement;
+  
+  // 先更新光标位置
+  updateCursorPosition(textarea);
   const { start, end } = cursorPosition.value;
   const text = textarea.value;
   
-  // 检查光标位置是否合法
-  if (start === undefined || start < 1) {
+  // 检查光标位置是否合法 - 允许从位置0开始
+  if (start === undefined || start < 0) {
     console.warn(`[LLMProperties] 无效的光标位置: ${start}`);
     showVariableSuggestions.value = false;
     return;
@@ -211,14 +221,38 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 };
 
+// 更新光标位置的事件处理函数
+const handleSelectionChange = () => {
+  const textareaElement = document.querySelector('textarea.prompt-container');
+  if (textareaElement) {
+    updateCursorPosition(textareaElement as HTMLTextAreaElement);
+  }
+};
+
 onMounted(() => {
   // 添加全局点击事件监听
   document.addEventListener('click', handleClickOutside);
+  
+  // 监听文本区域的选择变化
+  const textareaElement = document.querySelector('textarea.prompt-container');
+  if (textareaElement) {
+    textareaElement.addEventListener('click', handleSelectionChange);
+    textareaElement.addEventListener('keyup', handleSelectionChange);
+    textareaElement.addEventListener('select', handleSelectionChange);
+  }
 });
 
 onUnmounted(() => {
   // 移除事件监听
   document.removeEventListener('click', handleClickOutside);
+  
+  // 移除文本区域事件监听
+  const textareaElement = document.querySelector('textarea.prompt-container');
+  if (textareaElement) {
+    textareaElement.removeEventListener('click', handleSelectionChange);
+    textareaElement.removeEventListener('keyup', handleSelectionChange);
+    textareaElement.removeEventListener('select', handleSelectionChange);
+  }
 });
 </script>
 

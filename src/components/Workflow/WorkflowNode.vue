@@ -5,7 +5,7 @@
     @contextmenu.prevent="showContextMenu"
   >
     <div 
-      class="node bg-white rounded-lg shadow-md border border-gray-200 p-3 cursor-move relative min-w-[240px] transition duration-200"
+      class="node bg-white rounded-2xl shadow-md border border-gray-200 p-3 cursor-move relative min-w-[240px] transition duration-200"
       :class="{ 'border-blue-500 ring-2 ring-blue-200': isSelected }"
       @mousedown.stop="onNodeDragStart"
       @click.stop="onNodeClick"

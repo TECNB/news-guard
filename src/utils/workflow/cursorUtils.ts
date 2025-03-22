@@ -13,8 +13,21 @@ interface Position {
 export function useCursorPosition() {
   const cursorPosition = ref<CursorPosition>({ start: 0, end: 0 });
 
+  // 更新光标位置的辅助函数
+  const updateCursorPosition = (textarea: HTMLTextAreaElement) => {
+    if (textarea) {
+      cursorPosition.value = {
+        start: textarea.selectionStart,
+        end: textarea.selectionEnd
+      };
+    }
+  };
+
   const getCursorPosition = (textarea: HTMLTextAreaElement): Position => {
     const { selectionStart } = textarea;
+    
+    // 更新cursorPosition值
+    updateCursorPosition(textarea);
     
     // 获取textarea的位置和尺寸
     const textareaRect = textarea.getBoundingClientRect();
@@ -70,6 +83,7 @@ export function useCursorPosition() {
 
   return {
     cursorPosition,
-    getCursorPosition
+    getCursorPosition,
+    updateCursorPosition
   };
 }

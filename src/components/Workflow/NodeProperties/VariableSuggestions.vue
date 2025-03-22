@@ -1,7 +1,7 @@
 <template>
   <div 
-    class="variable-suggestions absolute z-100 mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-2 max-h-60 overflow-y-auto w-[280px] max-h-[250px]"
-    :style="position"
+    class="variable-suggestions suggestions-above z-100 bg-white border border-gray-200 rounded-md shadow-lg p-2 overflow-y-auto w-[280px] max-h-[250px]"
+    :style="positionStyle"
     @mousedown.prevent
   >
     <!-- 按节点分组显示变量 -->
@@ -48,17 +48,27 @@ interface NodeVariables {
   variables: Variable[];
 }
 
+interface PositionProps {
+  left: string;
+  top: string;
+}
+
 const props = defineProps<{
   variables: string[] | NodeVariables[];
-  position: {
-    left: string;
-    top: string;
-  };
+  position: PositionProps;
 }>();
 
 const emit = defineEmits<{
   (e: 'select', variable: string): void;
 }>();
+
+// 根据位置属性计算样式
+const positionStyle = computed(() => {
+  return {
+    left: props.position.left,
+    top: props.position.top
+  };
+});
 
 // 计算分组后的变量列表
 const groupedVariables = computed<NodeVariables[]>(() => {
@@ -90,7 +100,15 @@ const handleSelect = (variable: string) => {
 
 <style scoped>
 .variable-suggestions {
-  animation: fadeIn 0.2s ease-out;
+  position: absolute;
+  animation: fadeIn 0.15s ease-out;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  transform-origin: bottom left;
+  /* 向上移动自身高度，显示在光标上方 */
+  transform: translateY(-80%);
+  margin-top: -5px; /* 微调位置 */
 }
 
 .suggestion-item:hover {
@@ -100,11 +118,29 @@ const handleSelect = (variable: string) => {
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(-5px);
+    transform: translateY(-90%);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(-100%);
   }
+}
+
+/* 美化滚动条 */
+.variable-suggestions::-webkit-scrollbar {
+  width: 6px;
+}
+
+.variable-suggestions::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.variable-suggestions::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.variable-suggestions::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.2);
 }
 </style>

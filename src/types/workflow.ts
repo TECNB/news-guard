@@ -164,12 +164,12 @@ export function createNode(type: string, x: number, y: number): Node {
   
   // 根据节点类型设置默认输入输出
   if (type === 'start') {
-    node.outputs = ['query'];
+    // node.outputs = ['query'];
   } else if (type === 'llm') {
-    node.inputs = ['prompt'];
+    // node.inputs = ['prompt'];
     node.outputs = ['text'];
   } else if (type === 'knowledge') {
-    node.inputs = ['query'];
+    // node.inputs = ['query'];
     node.outputs = ['knowledge'];
   } else if (type === 'conditional') {
     node.inputs = ['condition'];
