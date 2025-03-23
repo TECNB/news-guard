@@ -83,7 +83,6 @@ export interface Node {
   outputs: string[];
   config: NodeConfig;
   outputValues?: Record<string, any>;
-  runStatus?: NodeRunStatus; // 节点运行状态
   runInfo?: NodeRunInfo;     // 节点运行信息
 }
 

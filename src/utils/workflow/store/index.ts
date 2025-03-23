@@ -20,17 +20,17 @@ import { ExecutionManager } from './ExecutionManager';
  * @returns 包含所有工作流工具类的对象
  */
 export function createWorkflowUtils() {
-  const logger = new WorkflowLogger();
-  const nodeManager = new NodeManager(logger);
-  const edgeManager = new EdgeManager(logger);
-  const variableResolver = new VariableResolver(logger);
-  const executionManager = new ExecutionManager(logger, variableResolver);
+    const logger = new WorkflowLogger();
+    const nodeManager = new NodeManager(logger);
+    const edgeManager = new EdgeManager(logger);
+    const variableResolver = new VariableResolver(logger);
+    const executionManager = new ExecutionManager(logger, variableResolver);
 
-  return {
-    logger,
-    nodeManager,
-    edgeManager,
-    variableResolver,
-    executionManager
-  };
+    return {
+        logger,
+        nodeManager,
+        edgeManager,
+        variableResolver,
+        executionManager
+    };
 } 

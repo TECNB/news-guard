@@ -50,16 +50,9 @@ const emit = defineEmits(['close']);
 // 获取工作流 store
 const workflowStore = useWorkflowStore();
 
-// 使用computed获取store中的数据
-const isRunning = computed(() => workflowStore.isRunning);
-const result = computed(() => workflowStore.result);
-const details = computed(() => workflowStore.details);
-const traces = computed(() => workflowStore.traces);
-
 // 本地状态
 const activeTab = ref('input');
 const isApiLoading = ref(false);
-const resultText = ref('');
 
 // 标签定义
 const tabs = [
