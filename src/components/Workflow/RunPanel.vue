@@ -116,22 +116,8 @@ const executeWorkflow = async (inputValues: Record<string, any>) => {
   let hasPathToEnd = false;
   
   if (endNode) {
-    const visitedNodes = new Set<string>();
-    const findPathToEnd = (nodeId: string): boolean => {
-      if (nodeId === endNode.id) return true;
-      if (visitedNodes.has(nodeId)) return false;
-      
-      visitedNodes.add(nodeId);
-      const outgoingEdges = workflowStore.edges.filter(edge => edge.source === nodeId);
-      
-      for (const edge of outgoingEdges) {
-        if (findPathToEnd(edge.target)) return true;
-      }
-      
-      return false;
-    };
-    
-    hasPathToEnd = findPathToEnd(startNode.id);
+    // 使用workflowStore中的方法检查路径
+    hasPathToEnd = workflowStore.hasPathToEndNode(startNode.id);
   }
   
   if (!endNode || !hasPathToEnd) {
@@ -220,7 +206,7 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
     case 'knowledge':
       // 知识检索节点
       workflowStore.startNodeExecution(node.id);
-      workflowStore.prepareKnowledgeNodeExecution(node.id, context.variables);
+      workflowStore.prepareNodeExecution(node.id, context.variables);
       
       workflowStore.result += `\n\n[知识检索节点 "${node.name}" 执行中...]\n知识检索功能开发中，敬请期待！`;
       workflowStore.details.push({
@@ -249,7 +235,7 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
     case 'conditional':
       // 条件节点
       workflowStore.startNodeExecution(node.id);
-      workflowStore.prepareConditionalNodeExecution(node.id, context.variables);
+      workflowStore.prepareNodeExecution(node.id, context.variables);
       
       // 获取替换变量后的表达式
       const expression = node.config?.trueExpression || node.config?.expression || '';
@@ -296,7 +282,7 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
   workflowStore.startNodeExecution(node.id);
   
   // 执行前先准备节点 - 这会替换提示词中的变量
-  workflowStore.prepareLLMNodeExecution(node.id, context.variables);
+  workflowStore.prepareNodeExecution(node.id, context.variables);
   
   // 获取当前节点的正确提示词
   let prompt = node.config?.trueSystemPrompt || node.config?.systemPrompt || '';
