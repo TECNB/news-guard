@@ -35,8 +35,6 @@ export const useWorkflowStore = defineStore('workflow', {
     result: '',
     details: [] as Array<{name: string, description: string, value: any}>,
     traces: [] as Array<{node: string, timestamp: string, message: string}>,
-    // 存储节点输出值
-    nodeOutputValues: {} as Record<string, any>,
   }),
   
   getters: {
@@ -121,56 +119,55 @@ export const useWorkflowStore = defineStore('workflow', {
       nodeManager.updateNodePosition(this.nodes, nodeId, x, y);
     },
     
-    // 设置节点的输出值
+    // 设置节点的输出值 - 直接操作node.outputValues
     setNodeOutputValue(nodeId: string, outputName: string, value: any): void {
-      nodeManager.setNodeOutputValue(
-        this.nodes, 
-        this.nodeOutputValues, 
-        nodeId, 
-        outputName, 
-        value
-      );
+      const node = this.nodes.find(n => n.id === nodeId);
+      if (node) {
+        if (!node.outputValues) {
+          node.outputValues = {};
+        }
+        node.outputValues[outputName] = value;
+      }
     },
     
-    // 获取节点的输出值
+    // 获取节点的输出值 - 直接从node.outputValues获取
     getNodeOutputValue(nodeId: string, outputName: string): any {
-      return nodeManager.getNodeOutputValue(
-        this.nodes, 
-        this.nodeOutputValues, 
-        nodeId, 
-        outputName
-      );
+      const node = this.nodes.find(n => n.id === nodeId);
+      if (!node || !node.outputValues) return undefined;
+      return node.outputValues[outputName];
     },
     
-    // 获取所有节点的输出值
+    // 获取所有节点的输出值 - 从节点中收集
     getAllNodeOutputValues(): Record<string, any> {
-      return this.nodeOutputValues;
-    },
-    
-    // 获取最终输出结果
-    getFinalResult(): string {
-      return executionManager.getFinalResult(
-        this.nodes,
-        this.edges,
-        this.nodeOutputValues
-      );
+      const allOutputs: Record<string, any> = {};
+      this.nodes.forEach(node => {
+        if (node.outputValues) {
+          allOutputs[node.id] = { ...node.outputValues };
+        }
+      });
+      return allOutputs;
     },
     
     // 准备运行工作流
     prepareRun(): void {
       this.isRunning = false;
+      // 清除所有节点的输出值
+      this.nodes.forEach(node => {
+        node.outputValues = {};
+      });
+      // 使用更新后的方法
       executionManager.prepareRun(
         this.nodes,
         { value: this.result },
         this.details,
-        this.traces,
-        this.nodeOutputValues
+        this.traces
       );
       this.result = '';
     },
     
     // 执行工作流
     executeRun(inputValues: Record<string, any>): void {
+      // 使用原有方法
       this.isRunning = executionManager.executeRun(
         this.nodes,
         { value: this.result },
@@ -182,33 +179,50 @@ export const useWorkflowStore = defineStore('workflow', {
     
     // 替换提示词中的变量
     replaceVariablesInPrompt(prompt: string, nodeId: string, inputValues: Record<string, any>): string {
+      // 使用更新后的方法
       return variableResolver.replaceVariablesInPrompt(
         prompt,
         nodeId,
         inputValues,
-        this.nodes,
-        this.nodeOutputValues
+        this.nodes
       );
     },
     
     // 通用的变量替换方法 - 用于替换任何字符串中的变量
     replaceVariables(text: string, currentNodeId: string, inputValues: Record<string, any>): string {
+      // 使用更新后的方法
       return variableResolver.replaceVariables(
         text,
         currentNodeId,
         inputValues,
-        this.nodes,
-        this.nodeOutputValues
+        this.nodes
+      );
+    },
+    
+    // 判断节点是否是结束节点需要的输出节点
+    isNodeRequiredForOutput(nodeId: string, requiredOutputVariables: Set<string>): boolean {
+      if (!requiredOutputVariables || requiredOutputVariables.size === 0) return false;
+      
+      // 直接检查节点ID是否在需要的变量集合中
+      if (requiredOutputVariables.has(nodeId)) return true;
+      
+      // 获取节点对象
+      const node = this.nodes.find(n => n.id === nodeId);
+      if (!node || !node.outputs) return false;
+      
+      // 检查节点的输出变量是否匹配需要的变量
+      return node.outputs.some(output => 
+        requiredOutputVariables.has(`${output}_${nodeId}`)
       );
     },
     
     // 准备节点执行
     prepareNodeExecution(nodeId: string, inputValues: Record<string, any>): void {
+      // 使用更新后的方法
       executionManager.prepareNodeExecution(
         this.nodes,
         nodeId,
-        inputValues,
-        this.nodeOutputValues
+        inputValues
       );
     },
     
@@ -244,7 +258,7 @@ export const useWorkflowStore = defineStore('workflow', {
       this.result = '';
       this.details = [];
       this.traces = [];
-      this.nodeOutputValues = {};
+      // nodeOutputValues已经移除，不需要重置
       logger.log(`工作流已重置`);
     },
     

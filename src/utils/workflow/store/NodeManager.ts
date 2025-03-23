@@ -177,14 +177,12 @@ export class NodeManager {
     /**
      * 设置节点的输出值
      * @param nodes 节点数组
-     * @param nodeOutputValues 全局节点输出值存储
      * @param nodeId 节点ID
      * @param outputName 输出名称
      * @param value 输出值
      */
     setNodeOutputValue(
         nodes: Node[],
-        nodeOutputValues: Record<string, any>,
         nodeId: string,
         outputName: string,
         value: any
@@ -202,45 +200,30 @@ export class NodeManager {
             // 设置节点的输出值
             node.outputValues[outputName] = value;
             this.logger.log(`节点 ${nodeId} 的输出值已设置`);
+        } else {
+            this.logger.warn(`未找到节点 ${nodeId}`);
         }
-
-        // 创建输出变量的唯一标识符
-        const outputKey = `${outputName}_${nodeId}`;
-
-        // 设置到nodeOutputValues中
-        nodeOutputValues[outputKey] = value;
-
-        // 全局文本变量也设置一下，用于向后兼容
-        if (outputName === 'text') {
-            nodeOutputValues['text'] = value;
-        }
-
-        this.logger.log(`节点输出已保存到全局 ${outputKey}`);
     }
 
     /**
      * 获取节点的输出值
      * @param nodes 节点数组
-     * @param nodeOutputValues 全局节点输出值存储
      * @param nodeId 节点ID
      * @param outputName 输出名称
      * @returns 节点输出值
      */
     getNodeOutputValue(
         nodes: Node[],
-        nodeOutputValues: Record<string, any>,
         nodeId: string,
         outputName: string
     ): any {
-        // 先尝试从节点自身获取
+        // 从节点获取输出值
         const node = nodes.find(n => n.id === nodeId);
         if (node && node.outputValues && node.outputValues[outputName] !== undefined) {
             return node.outputValues[outputName];
         }
-
-        // 再尝试从全局中获取
-        const outputKey = `${outputName}_${nodeId}`;
-        return nodeOutputValues[outputKey];
+        
+        return undefined;
     }
 
     /**

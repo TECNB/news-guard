@@ -52,7 +52,6 @@ const workflowStore = useWorkflowStore();
 
 // 本地状态
 const activeTab = ref('input');
-const isApiLoading = ref(false);
 
 // 标签定义
 const tabs = [
@@ -81,6 +80,9 @@ const startRun = (values: Record<string, any>) => {
   
   // 切换到结果标签
   activeTab.value = 'result';
+  
+  // 清空之前的结果
+  workflowStore.result = '';
   
   // 执行工作流程引擎
   executeWorkflow(values);
@@ -114,32 +116,65 @@ const executeWorkflow = async (inputValues: Record<string, any>) => {
   }
   
   if (!endNode || !hasPathToEnd) {
-    // 修改无结束节点的提示信息
-    workflowStore.result = '抱歉没有连接到结束节点，请转到详细信息面板查看它';
+    // 简化无结束节点的提示信息
     workflowStore.details.push({
       name: '工作流验证',
       description: '结束节点检查',
       value: '未连接到结束节点'
     });
+    
+    // 清空结果，让用户查看详情面板
+    workflowStore.isRunning = false;
+    return;
   }
+  
+  // 确定结束节点需要的输出变量
+  const requiredOutputVariables = new Set<string>();
+  
+  // 从结束节点配置中获取需要的输入变量
+  if (endNode.config) {
+    const inputVariables = (endNode.config as any).inputVariables || [];
+    inputVariables.forEach((variable: string) => {
+      // 直接添加变量名
+      requiredOutputVariables.add(variable);
+      
+      // 如果变量格式为 "outputName_nodeId"，也提取nodeId
+      const match = variable.match(/^(\w+)_(\w+-\d+-\d+)$/);
+      if (match) {
+        const [_, outputName, nodeId] = match;
+        // 添加节点ID，用于后续判断哪个节点的输出需要直接显示
+        requiredOutputVariables.add(nodeId);
+      }
+    });
+  }
+  
+  // 如果结束节点没有指定输入变量，则找到连接到结束节点的节点
+  if (requiredOutputVariables.size === 0) {
+    const incomingEdges = workflowStore.edges.filter(edge => edge.target === endNode.id);
+    incomingEdges.forEach(edge => {
+      requiredOutputVariables.add(edge.source);
+    });
+  }
+  
+  console.log('[RunPanel] 结束节点需要的输出变量:', [...requiredOutputVariables]);
   
   // 执行节点链
   const executionContext = {
     variables: { ...inputValues },
-    visited: new Set<string>()
+    visited: new Set<string>(),
+    requiredOutputVariables // 将需要的输出变量传递给执行上下文
   };
   
   try {
     // 从开始节点开始执行
     await executeNode(startNode.id, executionContext);
     
-    // 执行完成后，获取最终结果并设置到result
-    if (endNode && hasPathToEnd) {
-      workflowStore.result = workflowStore.getFinalResult();
-    }
+    // 不再需要获取最终结果，因为在流程中已经处理好了
+    // 执行完成后会自动更新isRunning状态
   } catch (error) {
     console.error('工作流执行出错:', error);
-    workflowStore.result += `\n\n执行出错: ${error instanceof Error ? error.message : '未知错误'}`;
+    // 简化错误显示
+    workflowStore.result = `执行出错: ${error instanceof Error ? error.message : '未知错误'}`;
   } finally {
     workflowStore.isRunning = false;
   }
@@ -201,7 +236,9 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
       workflowStore.startNodeExecution(node.id);
       workflowStore.prepareNodeExecution(node.id, context.variables);
       
-      workflowStore.result += `\n\n[知识检索节点 "${node.name}" 执行中...]\n知识检索功能开发中，敬请期待！`;
+      // 确定当前节点是否是结束节点需要的输出节点
+      const isKnowledgeNodeRequired = workflowStore.isNodeRequiredForOutput(node.id, context.requiredOutputVariables);
+      
       workflowStore.details.push({
         name: '知识检索',
         description: node.name || '知识检索节点',
@@ -215,11 +252,16 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
       });
       
       // 设置知识节点的输出
+      const knowledgeOutputValue = '知识检索功能开发中，敬请期待！';
       if (node.outputs && node.outputs.includes('knowledge')) {
-        const outputValue = '知识检索功能开发中，敬请期待！';
-        workflowStore.setNodeOutputValue(node.id, 'knowledge', outputValue);
-        context.variables[`knowledge_${node.id}`] = outputValue;
-        context.variables['knowledge'] = outputValue;
+        workflowStore.setNodeOutputValue(node.id, 'knowledge', knowledgeOutputValue);
+        context.variables[`knowledge_${node.id}`] = knowledgeOutputValue;
+        context.variables['knowledge'] = knowledgeOutputValue;
+        
+        // 只有当为所需节点时才更新结果
+        if (isKnowledgeNodeRequired && activeTab.value === 'result') {
+          workflowStore.result = knowledgeOutputValue;
+        }
       }
       
       workflowStore.completeNodeExecution(node.id, true);
@@ -229,6 +271,9 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
       // 条件节点
       workflowStore.startNodeExecution(node.id);
       workflowStore.prepareNodeExecution(node.id, context.variables);
+      
+      // 确定当前节点是否是结束节点需要的输出节点
+      const isConditionNodeRequired = workflowStore.isNodeRequiredForOutput(node.id, context.requiredOutputVariables);
       
       // 获取替换变量后的表达式
       const expression = node.config?.trueExpression || node.config?.expression || '';
@@ -243,9 +288,15 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
       // 设置条件节点的输出
       if (node.outputs && node.outputs.length > 0) {
         // 目前默认设置为true分支
-        workflowStore.setNodeOutputValue(node.id, 'condition', 'true');
-        context.variables[`condition_${node.id}`] = 'true';
-        context.variables['condition'] = 'true';
+        const conditionValue = 'true';
+        workflowStore.setNodeOutputValue(node.id, 'condition', conditionValue);
+        context.variables[`condition_${node.id}`] = conditionValue;
+        context.variables['condition'] = conditionValue;
+        
+        // 只有当为所需节点时才更新结果
+        if (isConditionNodeRequired && activeTab.value === 'result') {
+          workflowStore.result = conditionValue;
+        }
       }
       
       workflowStore.completeNodeExecution(node.id, true);
@@ -280,7 +331,7 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
   // 获取当前节点的正确提示词
   let prompt = node.config?.trueSystemPrompt || node.config?.systemPrompt || '';
   if (!prompt) {
-    prompt = `请分析以下内容:\n\n${JSON.stringify(context.variables)}`;
+    prompt = `${JSON.stringify(context.variables)}`;
   }
   
   console.log(`[RunPanel] LLM节点提示词: ${prompt}`);
@@ -292,12 +343,13 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
     value: '开始'
   });
   
-  // 显示临时状态
-  workflowStore.result += `\n\n[LLM节点 "${node.name}" 执行中...]\n等待响应...`;
+  // 确定当前节点是否是结束节点需要的输出节点
+  const isRequiredNode = workflowStore.isNodeRequiredForOutput(node.id, context.requiredOutputVariables);
+  
+  console.log(`[RunPanel] 节点 ${node.id} 是否为结束节点所需: ${isRequiredNode}`);
   
   // 调用API
   let llmResult = '';
-  isApiLoading.value = true;
   
   try {
     await streamDeepSeekResponse(
@@ -310,18 +362,14 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
       },
       // 流式处理
       async (chunk: string) => {
-        if (llmResult === '') {
-          isApiLoading.value = false;
-        }
-        
+        // 累加LLM输出
         llmResult += chunk;
         
-        // 更新临时结果，标记当前节点的输出
-        workflowStore.result = workflowStore.result || '';
-        workflowStore.result = workflowStore.result.replace(/\[LLM节点 ".+" 执行中...\]\n等待响应.../, '');
-        workflowStore.result += llmResult === chunk 
-          ? `\n\n[LLM节点 "${node.name}" 执行中...]\n${llmResult}`
-          : chunk;
+        // 只有当前节点是结束节点需要的输出节点时才更新结果面板
+        if (isRequiredNode && activeTab.value === 'result') {
+          // 直接更新结果，不添加任何前缀或格式
+          workflowStore.result = llmResult;
+        }
       },
       // 完成处理
       (fullText: string) => {
@@ -341,7 +389,7 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
           message: 'LLM响应完成'
         });
         
-        // 如果节点定义了输出变量，存储到上下文和节点输出中
+        // 保存节点输出
         if (node.outputs && node.outputs.includes('text')) {
           const outputName = 'text';
           // 设置到节点输出中
@@ -357,8 +405,6 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
         
         // 更新节点状态为完成
         workflowStore.completeNodeExecution(node.id, true);
-        
-        isApiLoading.value = false;
       },
       // 错误处理
       (error: any) => {
@@ -378,25 +424,27 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
           message: `请求失败: ${error.message || '未知错误'}`
         });
         
-        // 更新临时结果
-        workflowStore.result = workflowStore.result.replace(/\[LLM节点 ".+" 执行中...\]\n等待响应.../, '');
-        workflowStore.result += `\n\n[LLM节点 "${node.name}" 执行失败]\n错误: ${error.message || '未知错误'}`;
+        // 如果是需要的节点才更新结果显示
+        if (isRequiredNode) {
+          const errorMessage = `执行失败: ${error.message || '未知错误'}`;
+          workflowStore.result = errorMessage;
+        }
         
         // 更新节点状态为错误
         workflowStore.completeNodeExecution(node.id, false, error.message || '未知错误');
-        
-        isApiLoading.value = false;
       }
     );
   } catch (error) {
     console.error(`LLM节点 "${node.name}" 执行出错:`, error);
-    workflowStore.result = workflowStore.result.replace(/\[LLM节点 ".+" 执行中...\]\n等待响应.../, '');
-    workflowStore.result += `\n\n[LLM节点 "${node.name}" 执行出错]\n${error instanceof Error ? error.message : '未知错误'}`;
+    
+    // 如果是需要的节点才更新结果显示
+    if (isRequiredNode) {
+      const errorMessage = `执行出错: ${error instanceof Error ? error.message : '未知错误'}`;
+      workflowStore.result = errorMessage;
+    }
     
     // 更新节点状态为错误
     workflowStore.completeNodeExecution(node.id, false, error instanceof Error ? error.message : '未知错误');
-    
-    isApiLoading.value = false;
   }
 };
 </script>

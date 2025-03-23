@@ -22,17 +22,15 @@ export class VariableResolver {
      * @param nodeId 当前节点ID
      * @param inputValues 输入变量值
      * @param nodes 节点数组
-     * @param nodeOutputValues 节点输出值
      * @returns 替换变量后的提示词
      */
     replaceVariablesInPrompt(
         prompt: string,
         nodeId: string,
         inputValues: Record<string, any>,
-        nodes: Node[],
-        nodeOutputValues: Record<string, any>
+        nodes: Node[]
     ): string {
-        return this.replaceVariables(prompt, nodeId, inputValues, nodes, nodeOutputValues);
+        return this.replaceVariables(prompt, nodeId, inputValues, nodes);
     }
 
     /**
@@ -41,15 +39,13 @@ export class VariableResolver {
      * @param currentNodeId 当前节点ID
      * @param inputValues 输入变量值
      * @param nodes 节点数组
-     * @param nodeOutputValues 节点输出值
      * @returns 替换变量后的文本
      */
     replaceVariables(
         text: string,
         currentNodeId: string,
         inputValues: Record<string, any>,
-        nodes: Node[],
-        nodeOutputValues: Record<string, any>
+        nodes: Node[]
     ): string {
         if (!text) return text;
 
@@ -67,13 +63,6 @@ export class VariableResolver {
                 if (sourceNode && sourceNode.outputValues && sourceNode.outputValues[outputName] !== undefined) {
                     this.logger.log(`替换节点变量 ${varName} = ${sourceNode.outputValues[outputName]}`);
                     return sourceNode.outputValues[outputName];
-                }
-
-                // 检查全局节点输出值
-                const outputValue = nodeOutputValues[varName];
-                if (outputValue !== undefined) {
-                    this.logger.log(`替换全局变量 ${varName} = ${outputValue}`);
-                    return outputValue;
                 }
             }
             // 尝试从输入变量或普通变量中获取

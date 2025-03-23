@@ -1,12 +1,12 @@
 <template>
   <div 
     class="h-full"
-    v-loading="isLoading"
+    v-loading="isLoading && !resultContent"
     element-loading-text="正在运行..."
     element-loading-background="rgba(255, 255, 255, 0.9)"
   >
     <!-- 结果展示 -->
-    <div class="h-full" v-if="!isLoading">
+    <div class="h-full">
       <el-scrollbar v-if="resultContent" height="100%">
         <div class="text-left py-1 w-full">
           <div v-if="isJsonMode" class="bg-gray-50 border border-gray-200 rounded-md m-0">
@@ -24,7 +24,7 @@
       </el-scrollbar>
       
       <!-- 无结果状态 -->
-      <div v-else class="h-full flex justify-center items-center text-gray-500">
+      <div v-if="!isLoading && !resultContent" class="h-full flex justify-center items-center text-gray-500">
         暂无运行结果
       </div>
     </div>

@@ -26,24 +26,17 @@ export class ExecutionManager {
      * @param result 当前结果
      * @param details 当前详情
      * @param traces 当前执行轨迹
-     * @param nodeOutputValues 节点输出值
      */
     prepareRun(
         nodes: Node[],
         result: { value: string },
         details: Array<{ name: string, description: string, value: any }>,
-        traces: Array<{ node: string, timestamp: string, message: string }>,
-        nodeOutputValues: Record<string, any>
+        traces: Array<{ node: string, timestamp: string, message: string }>
     ): void {
         this.logger.log(`准备运行工作流`);
         result.value = '';
         details.length = 0;
         traces.length = 0;
-
-        // 清空节点输出值
-        for (const key in nodeOutputValues) {
-            delete nodeOutputValues[key];
-        }
 
         // 清空所有节点的outputValues和运行状态
         nodes.forEach(node => {
@@ -98,13 +91,11 @@ export class ExecutionManager {
      * @param nodes 节点数组
      * @param nodeId 节点ID
      * @param inputValues 输入变量值
-     * @param nodeOutputValues 节点输出值
      */
     prepareNodeExecution(
         nodes: Node[],
         nodeId: string,
-        inputValues: Record<string, any>,
-        nodeOutputValues: Record<string, any>
+        inputValues: Record<string, any>
     ): void {
         const node = nodes.find(n => n.id === nodeId);
         if (!node) return;
@@ -113,13 +104,13 @@ export class ExecutionManager {
 
         switch (node.type) {
             case 'llm':
-                this.prepareLLMNodeExecution(nodes, nodeId, inputValues, nodeOutputValues);
+                this.prepareLLMNodeExecution(nodes, nodeId, inputValues);
                 break;
             case 'conditional':
-                this.prepareConditionalNodeExecution(nodes, nodeId, inputValues, nodeOutputValues);
+                this.prepareConditionalNodeExecution(nodes, nodeId, inputValues);
                 break;
             case 'knowledge':
-                this.prepareKnowledgeNodeExecution(nodes, nodeId, inputValues, nodeOutputValues);
+                this.prepareKnowledgeNodeExecution(nodes, nodeId, inputValues);
                 break;
             case 'start':
                 // 开始节点不需要特殊准备
@@ -137,13 +128,11 @@ export class ExecutionManager {
      * @param nodes 节点数组
      * @param nodeId 节点ID
      * @param inputValues 输入变量值 
-     * @param nodeOutputValues 节点输出值
      */
     private prepareLLMNodeExecution(
         nodes: Node[],
         nodeId: string,
-        inputValues: Record<string, any>,
-        nodeOutputValues: Record<string, any>
+        inputValues: Record<string, any>
     ): void {
         const node = nodes.find(n => n.id === nodeId);
 
@@ -158,8 +147,7 @@ export class ExecutionManager {
                 systemPrompt,
                 nodeId,
                 inputValues,
-                nodes,
-                nodeOutputValues
+                nodes
             );
 
             // 保存真实提示词到节点配置
@@ -178,13 +166,11 @@ export class ExecutionManager {
      * @param nodes 节点数组
      * @param nodeId 节点ID
      * @param inputValues 输入变量值
-     * @param nodeOutputValues 节点输出值
      */
     private prepareConditionalNodeExecution(
         nodes: Node[],
         nodeId: string,
-        inputValues: Record<string, any>,
-        nodeOutputValues: Record<string, any>
+        inputValues: Record<string, any>
     ): void {
         const node = nodes.find(n => n.id === nodeId);
 
@@ -199,8 +185,7 @@ export class ExecutionManager {
                 expression,
                 nodeId,
                 inputValues,
-                nodes,
-                nodeOutputValues
+                nodes
             );
 
             // 保存真实表达式到节点配置
@@ -219,13 +204,11 @@ export class ExecutionManager {
      * @param nodes 节点数组
      * @param nodeId 节点ID
      * @param inputValues 输入变量值
-     * @param nodeOutputValues 节点输出值
      */
     private prepareKnowledgeNodeExecution(
         nodes: Node[],
         nodeId: string,
-        inputValues: Record<string, any>,
-        nodeOutputValues: Record<string, any>
+        inputValues: Record<string, any>
     ): void {
         const node = nodes.find(n => n.id === nodeId);
 
@@ -314,73 +297,6 @@ export class ExecutionManager {
                     ? `节点执行完成: ${node.name}`
                     : `节点执行失败: ${node.name} - ${error || '未知错误'}`
             });
-        }
-    }
-
-    /**
-     * 获取最终输出结果
-     * @param nodes 节点数组
-     * @param edges 边数组
-     * @param nodeOutputValues 节点输出值
-     * @returns 最终输出结果
-     */
-    getFinalResult(
-        nodes: Node[],
-        edges: any[],
-        nodeOutputValues: Record<string, any>
-    ): string {
-        // 检查是否有结束节点
-        const endNode = nodes.find(node => node.type === 'end');
-        if (!endNode) {
-            return '抱歉没有连接到结束节点，请转到详细信息面板查看它';
-        }
-
-        // 检查结束节点是否有连入边
-        const hasIncomingEdges = edges.some(edge => edge.target === endNode.id);
-        if (!hasIncomingEdges) {
-            return '抱歉没有连接到结束节点，请转到详细信息面板查看它';
-        }
-
-        // 寻找输入到结束节点的前一个节点
-        const incomingEdges = edges.filter(edge => edge.target === endNode.id);
-
-        // 如果有输入边，获取源节点的输出
-        if (incomingEdges.length > 0) {
-            const sourceNodeIds = incomingEdges.map(edge => edge.source);
-
-            // 构建输出结果
-            let finalResult = '';
-
-            for (const sourceNodeId of sourceNodeIds) {
-                const sourceNode = nodes.find(node => node.id === sourceNodeId);
-                if (sourceNode) {
-                    // 对于每一个源节点，优先从节点的outputValues获取输出结果
-                    if (sourceNode.outputValues && Object.keys(sourceNode.outputValues).length > 0) {
-                        // 如果节点有自己的outputValues，直接使用
-                        Object.values(sourceNode.outputValues).forEach(value => {
-                            if (value !== undefined) {
-                                if (finalResult) finalResult += '\n\n';
-                                finalResult += value;
-                            }
-                        });
-                    } else {
-                        // 否则从全局nodeOutputValues获取
-                        sourceNode.outputs.forEach(outputName => {
-                            const outputKey = `${outputName}_${sourceNodeId}`;
-                            const outputValue = nodeOutputValues[outputKey];
-
-                            if (outputValue !== undefined) {
-                                if (finalResult) finalResult += '\n\n';
-                                finalResult += outputValue;
-                            }
-                        });
-                    }
-                }
-            }
-
-            return finalResult || '工作流执行完成，但没有产生输出结果';
-        } else {
-            return '工作流执行完成，但没有产生输出结果';
         }
     }
 } 
