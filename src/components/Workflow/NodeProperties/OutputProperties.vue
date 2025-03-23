@@ -40,8 +40,7 @@
     
     <!-- 变量建议弹窗 (移到外层以避免定位问题) -->
     <VariableSuggestions
-      v-if="activeIndex !== null && showSuggestions && availableVariables.length"
-      :variables="availableVariables"
+      v-if="activeIndex !== null && showSuggestions"
       :position="suggestionPosition"
       @select="onSelectVariable"
     />
@@ -49,45 +48,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted,Ref } from 'vue';
 import VariableSuggestions from './VariableSuggestions.vue';
-import { useWorkflowStore } from '../../../stores/workflowStore';
-
-// 定义NodeVariables接口或导入
-interface Variable {
-  name: string;
-  type?: string;
-  color?: string;
-}
-
-interface NodeVariables {
-  nodeId: string;
-  nodeName: string;
-  variables: Variable[];
-}
 
 // 使用defineModel创建双向绑定
 const modelValue = defineModel<string[]>({ default: () => [] });
-
-// 工作流store
-const workflowStore = useWorkflowStore();
-
-// 获取当前节点ID
-const props = defineProps<{
-  nodeId?: string;
-}>();
 
 // 用于变量建议功能
 const inputRefs = ref<HTMLInputElement[]>([]);
 const activeIndex = ref<number | null>(null);
 const showSuggestions = ref(false);
 const suggestionPosition = ref({ left: '0px', top: '0px' });
-const availableVariables = ref<NodeVariables[]>([]);
 let hideTimeout: any = null;
 
 // 添加输出变量
 const addOutput = () => {
+  // 创建新数组以确保响应性
   modelValue.value = [...modelValue.value, ''];
+  console.log('modelValue.value:', modelValue.value); 
+  // 延迟执行获取DOM，确保模板已更新
+  setTimeout(() => {
+    const lastIndex = modelValue.value.length - 1;
+    if (inputRefs.value[lastIndex]) {
+      inputRefs.value[lastIndex].focus();
+    }
+  }, 0);
 };
 
 // 删除输出变量
@@ -116,9 +101,6 @@ const showSuggestion = (index: number, event: Event) => {
   const input = event.target as HTMLInputElement;
   const rect = input.getBoundingClientRect();
   
-  // 获取可用变量
-  availableVariables.value = workflowStore.getNodeAvailableVariables(workflowStore.selectedNodeId);
-  
   // 计算建议框位置 - 使用固定定位，不需要考虑页面滚动
   // 建议框定位在输入框上方
   suggestionPosition.value = {
@@ -138,12 +120,14 @@ const scheduleHideSuggestion = () => {
   }, 150);
 };
 
-// 选择变量
+// 选择变量,modelValue.value为
 const onSelectVariable = (variable: string) => {
   if (activeIndex.value !== null) {
     const newOutputs = [...modelValue.value];
+    console.log('modelValue.value:', newOutputs);
     newOutputs[activeIndex.value] = variable;
     modelValue.value = newOutputs;
+    console.log('选择变量:', variable);
     showSuggestions.value = false;
   }
 };

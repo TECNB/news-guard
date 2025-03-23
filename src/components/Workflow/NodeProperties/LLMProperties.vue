@@ -36,7 +36,6 @@
       <!-- 使用新的编辑器组件 -->
       <LLMPromptEditor
         v-model="modelValue.systemPrompt"
-        :variables="variables"
         :suggestionsEnabled="true"
         @variable-input="handleVariableInput"
       />
@@ -44,8 +43,8 @@
       <!-- 变量建议下拉框 -->
       <variable-suggestions
         v-if="showVariableSuggestions"
-        :variables="filteredVariables"
         :position="suggestionsPosition"
+        :filter="currentVariableInput"
         @select="insertVariable"
       />
     </div>
@@ -53,11 +52,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import LLMPromptEditor from '@/components/Workflow/NodeProperties/LLMPromptEditor.vue';
 import VariableSuggestions from '@/components/Workflow/NodeProperties/VariableSuggestions.vue';
 import { useCursorPosition } from '@/utils/workflow/cursorUtils';
-import { getAllValidVariableNames, type NodeVariables } from '@/utils/workflow/editor/variableHighlighter';
 import type { LLMConfig } from '@/types/workflow';
 import { useWorkflowStore } from '@/stores/workflowStore';
 
@@ -74,12 +72,6 @@ const modelValue = defineModel<LLMConfig>('modelValue', {
 // 使用工作流 store
 const workflowStore = useWorkflowStore();
 
-// 从 store 获取当前选中节点的变量
-const variables = computed(() => {
-  if (!workflowStore.selectedNodeId) return [];
-  return workflowStore.getNodeAvailableVariables(workflowStore.selectedNodeId);
-});
-
 // 变量建议相关
 const showVariableSuggestions = ref(false);
 const suggestionsPosition = ref({ 
@@ -87,60 +79,25 @@ const suggestionsPosition = ref({
   top: '0px'
 });
 const { cursorPosition, getCursorPosition, updateCursorPosition } = useCursorPosition();
-const filteredVariables = ref<string[] | NodeVariables[]>([]);
+const currentVariableInput = ref('');
 
 // 处理变量输入
 const handleVariableInput = (data: { text: string, position: number }) => {
   // 获取用户已经输入的部分变量名
-  const partialVar = data.text;
+  currentVariableInput.value = data.text;
   
-  // 更新过滤后的变量列表
-  if (!variables.value || !Array.isArray(variables.value) || variables.value.length === 0) {
-    // 无变量的情况
-    filteredVariables.value = [];
-    showVariableSuggestions.value = false;
-    return;
-  }
-  
-  if (typeof variables.value[0] === 'string') {
-    // 如果是字符串数组
-    const allVars = variables.value as string[];
-    filteredVariables.value = allVars.filter(v => 
-      v.toLowerCase().includes(partialVar.toLowerCase())
-    );
-  } else {
-    // 如果是节点变量数组
-    const nodeVars = variables.value as NodeVariables[];
-    filteredVariables.value = nodeVars.map(nodeVar => {
-      // 复制节点信息
-      const filtered: NodeVariables = {
-        nodeId: nodeVar.nodeId,
-        nodeName: nodeVar.nodeName,
-        variables: nodeVar.variables.filter(v =>
-          v.name.toLowerCase().includes(partialVar.toLowerCase())
-        )
-      };
-      return filtered;
-    }).filter(nodeVar => nodeVar.variables.length > 0); // 只保留有变量的节点
-  }
-  
-  if (Array.isArray(filteredVariables.value) && filteredVariables.value.length > 0) {
-    // 计算建议框位置 - 这里可能需要修改为使用编辑器组件提供的方法
-    const textareaElement = document.querySelector('textarea.prompt-container');
-    if (textareaElement) {
-      // 先更新光标位置
-      updateCursorPosition(textareaElement as HTMLTextAreaElement);
-      const pos = getCursorPosition(textareaElement as HTMLTextAreaElement);
-      
-      // 设置菜单显示在光标上方
-      suggestionsPosition.value = {
-        left: `${pos.left}px`,
-        top: `${pos.top}px`
-      };
-    }
+  // 计算建议框位置
+  const textareaElement = document.querySelector('textarea.prompt-container');
+  if (textareaElement) {
+    // 先更新光标位置
+    updateCursorPosition(textareaElement as HTMLTextAreaElement);
+    const pos = getCursorPosition(textareaElement as HTMLTextAreaElement);
     
-    console.log('显示建议框:', suggestionsPosition.value);
-    console.log('过滤后的变量:', filteredVariables.value);
+    // 设置菜单显示在光标上方
+    suggestionsPosition.value = {
+      left: `${pos.left}px`,
+      top: `${pos.top}px`
+    };
     
     showVariableSuggestions.value = true;
   } else {
@@ -150,14 +107,6 @@ const handleVariableInput = (data: { text: string, position: number }) => {
 
 // 插入变量到提示词
 const insertVariable = (variable: string) => {
-  // 确保插入的是有效变量
-  const allValidVariables = getAllValidVariableNames(variables.value);
-  if (!allValidVariables.includes(variable)) {
-    console.warn(`[LLMProperties] 尝试插入无效变量: ${variable}`);
-    showVariableSuggestions.value = false;
-    return;
-  }
-  
   const textareaElement = document.querySelector('textarea.prompt-container');
   if (!textareaElement) {
     showVariableSuggestions.value = false;

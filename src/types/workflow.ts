@@ -45,6 +45,28 @@ export interface NodeConfig extends Partial<LLMConfig>,
   Partial<ConditionalConfig> {
   variableValues?: Record<string, any>;
   trueSystemPrompt?: string;
+  trueExpression?: string;  // 条件节点的实际执行表达式（替换变量后）
+}
+
+/**
+ * 节点运行状态枚举
+ */
+export enum NodeRunStatus {
+  IDLE = 'idle',       // 空闲状态
+  WAITING = 'waiting', // 等待执行
+  RUNNING = 'running', // 正在执行
+  COMPLETED = 'completed', // 执行完成
+  ERROR = 'error'      // 执行错误
+}
+
+/**
+ * 节点运行信息接口
+ */
+export interface NodeRunInfo {
+  status: NodeRunStatus;
+  startTime?: number;
+  endTime?: number;
+  error?: string;
 }
 
 /**
@@ -60,6 +82,9 @@ export interface Node {
   inputs: string[];
   outputs: string[];
   config: NodeConfig;
+  outputValues?: Record<string, any>;
+  runStatus?: NodeRunStatus; // 节点运行状态
+  runInfo?: NodeRunInfo;     // 节点运行信息
 }
 
 /**
@@ -132,7 +157,7 @@ export const NODE_TYPES = [
     }
   },
   { 
-    type: 'output', 
+    type: 'end', 
     name: '输出节点', 
     colorClass: 'bg-red-500',
     defaultConfig: {}

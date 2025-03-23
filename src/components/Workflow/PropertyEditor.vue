@@ -53,13 +53,13 @@
       </div>
       
       <!-- 输入/输出配置 -->
-      <div class="mb-6" v-if="selectedNode.type !== 'start' && selectedNode.type !== 'output'">
+      <div class="mb-6" v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end'">
         <IOEditor
           v-model="ioValue"
         />
       </div>
       
-      <div class="mb-6" v-if="selectedNode.type === 'output'">
+      <div class="mb-6" v-if="selectedNode.type === 'end'">
         <OutputProperties
           v-model="outputVariables"
         />
@@ -226,8 +226,8 @@ const ioValue = computed({
 
 // 计算属性：输出配置
 const outputVariables = computed({
-  get: () => getNodeConfig<string[]>('output', 'outputs', () => []),
-  set: (value) => updateNodeConfig('output', 'outputs', value)
+  get: () => getNodeConfig<string[]>('end', 'outputs', () => []),
+  set: (value) => updateNodeConfig('end', 'outputs', value)
 });
 
 // 保存更改

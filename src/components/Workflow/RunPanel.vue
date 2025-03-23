@@ -86,12 +86,6 @@ const currentPanel = computed(() => {
 const startRun = (values: Record<string, any>) => {
   console.log('[RunPanel] 开始运行工作流，输入值:', values);
   
-  // 更新store中的状态
-  workflowStore.isRunning = true;
-  workflowStore.result = ''; // 清空以前的结果
-  workflowStore.details = []; // 清空详情
-  workflowStore.traces = []; // 清空追踪
-  
   // 切换到结果标签
   activeTab.value = 'result';
   
@@ -102,6 +96,9 @@ const startRun = (values: Record<string, any>) => {
 // 工作流执行引擎
 const executeWorkflow = async (inputValues: Record<string, any>) => {
   console.log('[RunPanel] 开始执行工作流引擎');
+  
+  // 准备工作流运行环境
+  workflowStore.prepareRun();
   
   // 将输入值应用于工作流
   workflowStore.executeRun(inputValues);
@@ -138,8 +135,8 @@ const executeWorkflow = async (inputValues: Record<string, any>) => {
   }
   
   if (!endNode || !hasPathToEnd) {
-    // 添加警告到结果
-    workflowStore.result = '警告: 工作流没有连接到结束节点，执行可能不完整';
+    // 修改无结束节点的提示信息
+    workflowStore.result = '抱歉没有连接到结束节点，请转到详细信息面板查看它';
     workflowStore.details.push({
       name: '工作流验证',
       description: '结束节点检查',
@@ -156,6 +153,11 @@ const executeWorkflow = async (inputValues: Record<string, any>) => {
   try {
     // 从开始节点开始执行
     await executeNode(startNode.id, executionContext);
+    
+    // 执行完成后，获取最终结果并设置到result
+    if (endNode && hasPathToEnd) {
+      workflowStore.result = workflowStore.getFinalResult();
+    }
   } catch (error) {
     console.error('工作流执行出错:', error);
     workflowStore.result += `\n\n执行出错: ${error instanceof Error ? error.message : '未知错误'}`;
@@ -199,11 +201,15 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
       
     case 'end':
       // 结束节点，完成执行
+      workflowStore.startNodeExecution(node.id);
+      
       workflowStore.traces.push({
         node: node.name || node.type,
         timestamp: new Date().toLocaleTimeString(),
         message: '工作流执行完成'
       });
+      
+      workflowStore.completeNodeExecution(node.id, true);
       return;
       
     case 'llm':
@@ -212,7 +218,10 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
       break;
       
     case 'knowledge':
-      // 知识检索节点（尚未实现）
+      // 知识检索节点
+      workflowStore.startNodeExecution(node.id);
+      workflowStore.prepareKnowledgeNodeExecution(node.id, context.variables);
+      
       workflowStore.result += `\n\n[知识检索节点 "${node.name}" 执行中...]\n知识检索功能开发中，敬请期待！`;
       workflowStore.details.push({
         name: '知识检索',
@@ -225,15 +234,42 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
         timestamp: new Date().toLocaleTimeString(),
         message: '知识检索功能开发中'
       });
+      
+      // 设置知识节点的输出
+      if (node.outputs && node.outputs.includes('knowledge')) {
+        const outputValue = '知识检索功能开发中，敬请期待！';
+        workflowStore.setNodeOutputValue(node.id, 'knowledge', outputValue);
+        context.variables[`knowledge_${node.id}`] = outputValue;
+        context.variables['knowledge'] = outputValue;
+      }
+      
+      workflowStore.completeNodeExecution(node.id, true);
       break;
       
     case 'conditional':
-      // 条件节点（尚未实现完整逻辑）
+      // 条件节点
+      workflowStore.startNodeExecution(node.id);
+      workflowStore.prepareConditionalNodeExecution(node.id, context.variables);
+      
+      // 获取替换变量后的表达式
+      const expression = node.config?.trueExpression || node.config?.expression || '';
+      console.log(`[RunPanel] 条件节点表达式: ${expression}`);
+      
       workflowStore.traces.push({
         node: node.name || node.type,
         timestamp: new Date().toLocaleTimeString(),
-        message: '条件分支，默认选择第一个出口'
+        message: `条件表达式: ${expression}（默认选择第一个出口）`
       });
+      
+      // 设置条件节点的输出
+      if (node.outputs && node.outputs.length > 0) {
+        // 目前默认设置为true分支
+        workflowStore.setNodeOutputValue(node.id, 'condition', 'true');
+        context.variables[`condition_${node.id}`] = 'true';
+        context.variables['condition'] = 'true';
+      }
+      
+      workflowStore.completeNodeExecution(node.id, true);
       break;
       
     default:
@@ -256,6 +292,12 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
 const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> => {
   console.log(`[RunPanel] 执行LLM节点: ${node.name}`);
   
+  // 更新节点状态为开始执行
+  workflowStore.startNodeExecution(node.id);
+  
+  // 执行前先准备节点 - 这会替换提示词中的变量
+  workflowStore.prepareLLMNodeExecution(node.id, context.variables);
+  
   // 获取当前节点的正确提示词
   let prompt = node.config?.trueSystemPrompt || node.config?.systemPrompt || '';
   if (!prompt) {
@@ -270,6 +312,9 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
     description: node.name || 'LLM节点',
     value: '开始'
   });
+  
+  // 显示临时状态
+  workflowStore.result += `\n\n[LLM节点 "${node.name}" 执行中...]\n等待响应...`;
   
   // 调用API
   let llmResult = '';
@@ -292,7 +337,7 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
         
         llmResult += chunk;
         
-        // 更新结果，标记当前节点的输出
+        // 更新临时结果，标记当前节点的输出
         workflowStore.result = workflowStore.result || '';
         workflowStore.result = workflowStore.result.replace(/\[LLM节点 ".+" 执行中...\]\n等待响应.../, '');
         workflowStore.result += llmResult === chunk 
@@ -317,11 +362,22 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
           message: 'LLM响应完成'
         });
         
-        // 如果节点定义了输出变量，存储到上下文中
+        // 如果节点定义了输出变量，存储到上下文和节点输出中
         if (node.outputs && node.outputs.includes('text')) {
-          context.variables['text'] = fullText;
-          console.log(`[RunPanel] 存储LLM输出到变量 'text'`);
+          const outputName = 'text';
+          // 设置到节点输出中
+          workflowStore.setNodeOutputValue(node.id, outputName, fullText);
+          
+          // 保持原有的上下文变量设置，保证向后兼容
+          const variableName = `${outputName}_${node.id}`;
+          context.variables[variableName] = fullText;
+          context.variables[outputName] = fullText;
+          
+          console.log(`[RunPanel] 存储LLM输出到变量 '${variableName}' 和节点输出`);
         }
+        
+        // 更新节点状态为完成
+        workflowStore.completeNodeExecution(node.id, true);
         
         isApiLoading.value = false;
       },
@@ -343,15 +399,24 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
           message: `请求失败: ${error.message || '未知错误'}`
         });
         
-        // 更新结果
+        // 更新临时结果
+        workflowStore.result = workflowStore.result.replace(/\[LLM节点 ".+" 执行中...\]\n等待响应.../, '');
         workflowStore.result += `\n\n[LLM节点 "${node.name}" 执行失败]\n错误: ${error.message || '未知错误'}`;
+        
+        // 更新节点状态为错误
+        workflowStore.completeNodeExecution(node.id, false, error.message || '未知错误');
         
         isApiLoading.value = false;
       }
     );
   } catch (error) {
     console.error(`LLM节点 "${node.name}" 执行出错:`, error);
+    workflowStore.result = workflowStore.result.replace(/\[LLM节点 ".+" 执行中...\]\n等待响应.../, '');
     workflowStore.result += `\n\n[LLM节点 "${node.name}" 执行出错]\n${error instanceof Error ? error.message : '未知错误'}`;
+    
+    // 更新节点状态为错误
+    workflowStore.completeNodeExecution(node.id, false, error instanceof Error ? error.message : '未知错误');
+    
     isApiLoading.value = false;
   }
 };

@@ -21,7 +21,7 @@
         <span :class="`text-${variable.color || 'blue'}-500 w-5 text-center`">
           <i class="fa-solid fa-bracket-curly text-xs"></i>
         </span>
-        <span>{{ variable.name }}</span>
+        <span>{{  variable.originalName||variable.name }}</span>
         <span v-if="variable.type" class="text-xs text-gray-400 ml-auto">{{ variable.type }}</span>
       </div>
     </div>
@@ -35,9 +35,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useWorkflowStore } from '../../../stores/workflowStore';
 
 interface Variable {
   name: string;
+  originalName?: string;
+  nodeId?: string;
   type?: string;
   color?: string;
 }
@@ -54,13 +57,16 @@ interface PositionProps {
 }
 
 const props = defineProps<{
-  variables: string[] | NodeVariables[];
   position: PositionProps;
+  filter?: string;  // 用于过滤变量的搜索词
 }>();
 
 const emit = defineEmits<{
   (e: 'select', variable: string): void;
 }>();
+
+// 获取工作流存储
+const workflowStore = useWorkflowStore();
 
 // 根据位置属性计算样式
 const positionStyle = computed(() => {
@@ -72,25 +78,45 @@ const positionStyle = computed(() => {
 
 // 计算分组后的变量列表
 const groupedVariables = computed<NodeVariables[]>(() => {
-  // 如果已经是分组格式，直接返回
-  if (props.variables.length > 0 && typeof props.variables[0] !== 'string') {
-    console.log('分组后的变量列表:', props.variables);
-    return props.variables as NodeVariables[];
+  // 从工作流存储中获取变量数据
+  const selectedNodeId = workflowStore.selectedNodeId;
+  if (!selectedNodeId) return [];
+  
+  let availableVars = workflowStore.getNodeAvailableVariables(selectedNodeId);
+  
+  // 如果提供了filter，进行变量过滤
+  if (props.filter && props.filter.length > 0) {
+    // 根据变量类型进行过滤
+    if (typeof availableVars[0] === 'string') {
+      // 如果是字符串数组
+      const filteredVars = (availableVars as string[]).filter(v => 
+        v.toLowerCase().includes(props.filter!.toLowerCase())
+      );
+      
+      return [{
+        nodeId: 'filtered',
+        nodeName: '过滤结果',
+        variables: filteredVars.map(name => ({ 
+          name, 
+          color: 'green'
+        }))
+      }];
+    } else {
+      // 如果是节点变量数组
+      return (availableVars as NodeVariables[]).map(nodeVar => {
+        // 复制节点信息并过滤变量
+        return {
+          nodeId: nodeVar.nodeId,
+          nodeName: nodeVar.nodeName,
+          variables: nodeVar.variables.filter(v =>
+            v.name.toLowerCase().includes(props.filter!.toLowerCase())
+          )
+        };
+      }).filter(nodeVar => nodeVar.variables.length > 0); // 只保留有变量的节点
+    }
   }
   
-  // 如果是旧格式（简单字符串数组），则转换为分组格式
-  if (props.variables.length > 0) {
-    return [{
-      nodeId: 'start',
-      nodeName: '开始节点',
-      variables: (props.variables as string[]).map(name => ({ 
-        name, 
-        color: 'green'
-      }))
-    }];
-  }
-  
-  return [];
+  return availableVars as NodeVariables[];
 });
 
 // 处理变量选择，防止事件冒泡

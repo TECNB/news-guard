@@ -35,6 +35,7 @@ import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue';
 import { useCursorPosition } from '@/utils/workflow/cursorUtils';
 import { adjustTextareaHeight, getTextPositionFromClick } from '@/utils/workflow/editor/textareaUtils';
 import { parseTextVariables, getAllValidVariableNames, type NodeVariables } from '@/utils/workflow/editor/variableHighlighter';
+import { useWorkflowStore } from '@/stores/workflowStore';
 
 // 使用 defineModel() 宏实现双向绑定，提供默认值确保不为 undefined
 const modelValue = defineModel<string>('modelValue', { 
@@ -42,7 +43,7 @@ const modelValue = defineModel<string>('modelValue', {
 });
 
 const props = defineProps<{
-  variables: string[] | NodeVariables[];
+  variables?: string[] | NodeVariables[];
   suggestionsEnabled?: boolean;
 }>();
 
@@ -50,6 +51,23 @@ const emit = defineEmits<{
   (e: 'change', value: string): void;
   (e: 'variable-input', value: { text: string, position: number }): void;
 }>();
+
+// 获取工作流存储
+const workflowStore = useWorkflowStore();
+
+// 获取有效的变量列表
+const effectiveVariables = computed(() => {
+  // 如果提供了外部变量，则优先使用
+  if (props.variables) {
+    return props.variables;
+  }
+  
+  // 否则从workflowStore获取
+  const selectedNodeId = workflowStore.selectedNodeId;
+  if (!selectedNodeId) return [];
+  
+  return workflowStore.getNodeAvailableVariables(selectedNodeId);
+});
 
 // 引用DOM元素
 const promptTextarea = ref<HTMLTextAreaElement | null>(null);
@@ -63,7 +81,7 @@ const clickPosition = ref<number | null>(null);
 
 // 解析文本中的变量，用于高亮显示
 const highlightedParts = computed(() => {
-  return parseTextVariables(modelValue.value, props.variables);
+  return parseTextVariables(modelValue.value, effectiveVariables.value);
 });
 
 // 光标位置相关
