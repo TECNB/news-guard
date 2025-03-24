@@ -94,69 +94,25 @@ const executeWorkflow = async (inputValues: Record<string, any>) => {
   
   // 准备工作流运行环境
   workflowStore.prepareRun();
-  
+
   // 将输入值应用于工作流
   workflowStore.executeRun(inputValues);
+
+  // 记录工作流开始时间
+  const workflowStartTime = Date.now();
   
-  // 找到开始节点
-  const startNode = workflowStore.nodes.find(node => node.type === 'start');
-  if (!startNode) {
-    workflowStore.result = '错误: 工作流缺少开始节点';
-    workflowStore.isRunning = false;
-    return;
-  }
+  // 记录工作流输入变量
+  recordWorkflowInput(inputValues);
   
-  // 找到连接到结束节点的路径
-  const endNode = workflowStore.nodes.find(node => node.type === 'end');
-  let hasPathToEnd = false;
-  
-  if (endNode) {
-    // 使用workflowStore中的方法检查路径
-    hasPathToEnd = workflowStore.hasPathToEndNode(startNode.id);
-  }
-  
-  if (!endNode || !hasPathToEnd) {
-    // 简化无结束节点的提示信息
-    workflowStore.details.push({
-      name: '工作流验证',
-      description: '结束节点检查',
-      value: '未连接到结束节点'
-    });
-    
-    // 清空结果，让用户查看详情面板
+  // 验证工作流结构
+  const { valid, startNode, endNode } = validateWorkflow();
+  if (!valid || !startNode) {
     workflowStore.isRunning = false;
     return;
   }
   
   // 确定结束节点需要的输出变量
-  const requiredOutputVariables = new Set<string>();
-  
-  // 从结束节点配置中获取需要的输入变量
-  if (endNode.config) {
-    const inputVariables = (endNode.config as any).inputVariables || [];
-    inputVariables.forEach((variable: string) => {
-      // 直接添加变量名
-      requiredOutputVariables.add(variable);
-      
-      // 如果变量格式为 "outputName_nodeId"，也提取nodeId
-      const match = variable.match(/^(\w+)_(\w+-\d+-\d+)$/);
-      if (match) {
-        const [_, outputName, nodeId] = match;
-        // 添加节点ID，用于后续判断哪个节点的输出需要直接显示
-        requiredOutputVariables.add(nodeId);
-      }
-    });
-  }
-  
-  // 如果结束节点没有指定输入变量，则找到连接到结束节点的节点
-  if (requiredOutputVariables.size === 0) {
-    const incomingEdges = workflowStore.edges.filter(edge => edge.target === endNode.id);
-    incomingEdges.forEach(edge => {
-      requiredOutputVariables.add(edge.source);
-    });
-  }
-  
-  console.log('[RunPanel] 结束节点需要的输出变量:', [...requiredOutputVariables]);
+  const requiredOutputVariables = getRequiredOutputVariables(endNode);
   
   // 执行节点链
   const executionContext = {
@@ -169,12 +125,16 @@ const executeWorkflow = async (inputValues: Record<string, any>) => {
     // 从开始节点开始执行
     await executeNode(startNode.id, executionContext);
     
-    // 不再需要获取最终结果，因为在流程中已经处理好了
-    // 执行完成后会自动更新isRunning状态
+    // 设置结束节点的输出值
+    if (endNode) {
+      workflowStore.setNodeOutputValue(endNode.id, 'result', workflowStore.result);
+    }
+
+    // 记录工作流执行统计信息
+    recordWorkflowStats(workflowStartTime, executionContext, endNode);
   } catch (error) {
-    console.error('工作流执行出错:', error);
-    // 简化错误显示
-    workflowStore.result = `执行出错: ${error instanceof Error ? error.message : '未知错误'}`;
+    // 记录工作流执行错误
+    recordWorkflowError(error);
   } finally {
     workflowStore.isRunning = false;
   }
@@ -336,13 +296,6 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
   
   console.log(`[RunPanel] LLM节点提示词: ${prompt}`);
   
-  // 记录执行开始
-  workflowStore.details.push({
-    name: 'LLM调用',
-    description: node.name || 'LLM节点',
-    value: '开始'
-  });
-  
   // 确定当前节点是否是结束节点需要的输出节点
   const isRequiredNode = workflowStore.isNodeRequiredForOutput(node.id, context.requiredOutputVariables);
   
@@ -374,13 +327,7 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
       // 完成处理
       (fullText: string) => {
         console.log(`[RunPanel] LLM节点 "${node.name}" 执行完成`);
-        
-        // 更新详情
-        workflowStore.details.push({
-          name: 'LLM调用',
-          description: node.name || 'LLM节点',
-          value: '成功'
-        });
+      
         
         // 更新追踪
         workflowStore.traces.push({
@@ -409,13 +356,6 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
       // 错误处理
       (error: any) => {
         console.error(`LLM节点 "${node.name}" 执行失败:`, error);
-        
-        // 更新详情
-        workflowStore.details.push({
-          name: 'LLM调用',
-          description: node.name || 'LLM节点',
-          value: '失败'
-        });
         
         // 更新追踪
         workflowStore.traces.push({
@@ -446,6 +386,142 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
     // 更新节点状态为错误
     workflowStore.completeNodeExecution(node.id, false, error instanceof Error ? error.message : '未知错误');
   }
+};
+
+// 获取结束节点需要的输出变量
+const getRequiredOutputVariables = (endNode: WorkflowNode | undefined): Set<string> => {
+  const requiredOutputVariables = new Set<string>();
+  
+  if (!endNode) {
+    return requiredOutputVariables;
+  }
+  
+  // 从结束节点配置中获取需要的输入变量
+  if (endNode.config) {
+    const inputVariables = (endNode.config as any).inputVariables || [];
+    inputVariables.forEach((variable: string) => {
+      // 直接添加变量名
+      requiredOutputVariables.add(variable);
+      
+      // 如果变量格式为 "outputName_nodeId"，也提取nodeId
+      const match = variable.match(/^(\w+)_(\w+-\d+-\d+)$/);
+      if (match) {
+        const [_, outputName, nodeId] = match;
+        // 添加节点ID，用于后续判断哪个节点的输出需要直接显示
+        requiredOutputVariables.add(nodeId);
+      }
+    });
+  }
+  
+  // 如果结束节点没有指定输入变量，则找到连接到结束节点的节点
+  if (requiredOutputVariables.size === 0) {
+    const incomingEdges = workflowStore.edges.filter(edge => edge.target === endNode.id);
+    incomingEdges.forEach(edge => {
+      requiredOutputVariables.add(edge.source);
+    });
+  }
+  
+  console.log('[RunPanel] 结束节点需要的输出变量:', [...requiredOutputVariables]);
+  return requiredOutputVariables;
+};
+
+// 检验工作流节点结构
+const validateWorkflow = () => {
+  // 找到开始节点
+  const startNode = workflowStore.nodes.find(node => node.type === 'start');
+  if (!startNode) {
+    workflowStore.result = '错误: 工作流缺少开始节点';
+    return { valid: false, startNode: undefined, endNode: undefined };
+  }
+  
+  // 找到结束节点
+  const endNode = workflowStore.nodes.find(node => node.type === 'end');
+  
+  // 检查是否有从开始节点到结束节点的路径
+  let hasPathToEnd = false;
+  if (endNode) {
+    hasPathToEnd = workflowStore.hasPathToEndNode(startNode.id);
+  }
+  
+  if (!endNode || !hasPathToEnd) {
+    // 记录无结束节点或无路径的提示信息
+    workflowStore.details.push({
+      name: '工作流验证',
+      description: '结束节点检查',
+      value: '未连接到结束节点'
+    });
+    return { valid: false, startNode, endNode };
+  }
+  
+  return { valid: true, startNode, endNode };
+};
+
+
+// 记录工作流输入变量
+const recordWorkflowInput = (inputValues: Record<string, any>) => {
+  workflowStore.details.push({
+    name: '工作流输入',
+    description: '开始节点输入变量',
+    value: JSON.stringify(inputValues, null, 2)
+  });
+  
+  console.log('[RunPanel] 已记录工作流输入:', inputValues);
+};
+
+// 记录工作流执行统计信息
+const recordWorkflowStats = (
+  startTime: number, 
+  executionContext: any, 
+  endNode: WorkflowNode | undefined
+) => {
+  // 记录工作流结束时间和总用时
+  const workflowEndTime = Date.now();
+  const executionTime = workflowEndTime - startTime;
+
+  // 记录工作流执行信息
+  workflowStore.details.push({
+    name: '工作流执行',
+    description: '执行时间',
+    value: `${executionTime} 毫秒`
+  });
+  
+  // 记录工作流步数
+  workflowStore.details.push({
+    name: '工作流执行',
+    description: '执行步数',
+    value: `${executionContext.visited.size} 步`
+  });
+  
+  // 记录工作流输出变量
+  if (endNode && endNode.outputValues) {
+    workflowStore.details.push({
+      name: '工作流输出',
+      description: '结束节点输出',
+      value: JSON.stringify(endNode.outputValues, null, 2)
+    });
+  } else {
+    // 如果结束节点没有直接的输出值，提供空值
+    workflowStore.details.push({
+      name: '工作流输出',
+      description: '结束节点输出',
+      value: JSON.stringify("", null, 2)
+    });
+  }
+};
+
+// 记录工作流执行错误
+const recordWorkflowError = (error: any) => {
+  console.error('工作流执行出错:', error);
+  
+  // 设置错误结果
+  workflowStore.result = `执行出错: ${error instanceof Error ? error.message : '未知错误'}`;
+  
+  // 记录错误信息到详情中
+  workflowStore.details.push({
+    name: '工作流执行',
+    description: '执行状态',
+    value: `失败: ${error instanceof Error ? error.message : '未知错误'}`
+  });
 };
 </script>
 
