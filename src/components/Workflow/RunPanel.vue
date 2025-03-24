@@ -124,11 +124,7 @@ const executeWorkflow = async (inputValues: Record<string, any>) => {
   try {
     // 从开始节点开始执行
     await executeNode(startNode.id, executionContext);
-    
-    // 设置结束节点的输出值
-    if (endNode) {
-      workflowStore.setNodeOutputValue(endNode.id, 'result', workflowStore.result);
-    }
+  
 
     // 记录工作流执行统计信息
     recordWorkflowStats(workflowStartTime, executionContext, endNode);
@@ -160,28 +156,21 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
   
   console.log(`[RunPanel] 执行节点: ${node.name} (${node.type})`);
   
-  // 添加追踪信息
-  workflowStore.traces.push({
-    node: node.name || node.type,
-    timestamp: new Date().toLocaleTimeString(),
-    message: '开始执行'
-  });
-  
   // 根据节点类型执行不同操作
   switch (node.type) {
     case 'start':
-      // 开始节点，直接执行下一个节点
+      // 开始节点
+      workflowStore.startNodeExecution(node.id);
+      workflowStore.completeNodeExecution(node.id, true);
       break;
       
     case 'end':
       // 结束节点，完成执行
       workflowStore.startNodeExecution(node.id);
       
-      workflowStore.traces.push({
-        node: node.name || node.type,
-        timestamp: new Date().toLocaleTimeString(),
-        message: '工作流执行完成'
-      });
+      // 设置结束节点的输出值
+      workflowStore.setNodeOutputValue(node.id, 'result', workflowStore.result);
+      console.log('[RunPanel] 结束节点输出值:', workflowStore.result);
       
       workflowStore.completeNodeExecution(node.id, true);
       return;
@@ -203,12 +192,6 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
         name: '知识检索',
         description: node.name || '知识检索节点',
         value: '功能开发中'
-      });
-      
-      workflowStore.traces.push({
-        node: node.name || node.type,
-        timestamp: new Date().toLocaleTimeString(),
-        message: '知识检索功能开发中'
       });
       
       // 设置知识节点的输出
@@ -239,12 +222,6 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
       const expression = node.config?.trueExpression || node.config?.expression || '';
       console.log(`[RunPanel] 条件节点表达式: ${expression}`);
       
-      workflowStore.traces.push({
-        node: node.name || node.type,
-        timestamp: new Date().toLocaleTimeString(),
-        message: `条件表达式: ${expression}（默认选择第一个出口）`
-      });
-      
       // 设置条件节点的输出
       if (node.outputs && node.outputs.length > 0) {
         // 目前默认设置为true分支
@@ -264,11 +241,8 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
       
     default:
       console.log(`[RunPanel] 未知节点类型: ${node.type}`);
-      workflowStore.traces.push({
-        node: node.name || node.type,
-        timestamp: new Date().toLocaleTimeString(),
-        message: `未知节点类型: ${node.type}`
-      });
+      // 未知节点类型，由 ExecutionManager 统一处理追踪信息
+      workflowStore.completeNodeExecution(node.id, false, `未知节点类型: ${node.type}`);
   }
   
   // 执行下一个节点
@@ -319,7 +293,7 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
         llmResult += chunk;
         
         // 只有当前节点是结束节点需要的输出节点时才更新结果面板
-        if (isRequiredNode && activeTab.value === 'result') {
+        if (isRequiredNode) {
           // 直接更新结果，不添加任何前缀或格式
           workflowStore.result = llmResult;
         }
@@ -328,14 +302,6 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
       (fullText: string) => {
         console.log(`[RunPanel] LLM节点 "${node.name}" 执行完成`);
       
-        
-        // 更新追踪
-        workflowStore.traces.push({
-          node: node.name || node.type,
-          timestamp: new Date().toLocaleTimeString(),
-          message: 'LLM响应完成'
-        });
-        
         // 保存节点输出
         if (node.outputs && node.outputs.includes('text')) {
           const outputName = 'text';
@@ -356,13 +322,6 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
       // 错误处理
       (error: any) => {
         console.error(`LLM节点 "${node.name}" 执行失败:`, error);
-        
-        // 更新追踪
-        workflowStore.traces.push({
-          node: node.name || node.type,
-          timestamp: new Date().toLocaleTimeString(),
-          message: `请求失败: ${error.message || '未知错误'}`
-        });
         
         // 如果是需要的节点才更新结果显示
         if (isRequiredNode) {

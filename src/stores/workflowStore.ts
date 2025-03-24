@@ -34,7 +34,17 @@ export const useWorkflowStore = defineStore('workflow', {
     isRunning: false,
     result: '',
     details: [] as Array<{name: string, description: string, value: any}>,
-    traces: [] as Array<{node: string, timestamp: string, message: string}>,
+    traces: [] as Array<{
+      node: string, 
+      timestamp: string, 
+      message: string, 
+      status?: string,
+      data?: {
+        inputs: Record<string, any>,
+        outputs: Record<string, any>,
+        error?: string
+      }
+    }>,
   }),
   
   getters: {

@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full overflow-auto p-2">
+  <el-scrollbar class="h-full p-2">
     <!-- 工作流执行状态信息 -->
     <div class="mb-6">
       <h3 class="text-lg font-semibold mb-3 text-gray-800 border-b pb-2">工作流执行状态</h3>
@@ -68,7 +68,7 @@
         暂无详细信息
       </div>
     </div>
-  </div>
+  </el-scrollbar>
 </template>
 
 <script setup lang="ts">
@@ -76,6 +76,7 @@ import { computed } from 'vue';
 import { useWorkflowStore } from '../../stores/workflowStore';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css'; // 导入样式，可以选择其他样式
+import { ElScrollbar } from 'element-plus';
 
 // 使用store获取状态
 const workflowStore = useWorkflowStore();
