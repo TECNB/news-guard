@@ -110,7 +110,7 @@ const menus = [
             { label: '文字', path: '/verify-text' },
             { label: '图片', path: '/verify-image' },
             { label: '音频', path: '/verify-audio' },
-            { label: '视频', path: '/' },
+            { label: '视频', path: '/' }
 
         ],
     },
@@ -144,6 +144,11 @@ const menus = [
         label: '虚假新闻智能体',
         icon: 'Odometer',
         path: '/agent'
+    },
+    {
+        label: '区块链取证',
+        icon: 'Stamp',
+        path: '/blockchain-forensics'
     },
 ];
 

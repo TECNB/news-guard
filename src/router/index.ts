@@ -49,6 +49,10 @@ const routes: Array<RouteRecordRaw> = [
             {
                 path: '/agent',
                 component: () => import("../views/FakeNewsAgentView.vue"),
+            },
+            {
+                path: '/blockchain-forensics',
+                component: () => import("../views/BlockchainForensicsView.vue"),
             }
         ],
     },
