@@ -3,7 +3,7 @@
  */
 export class ApiService {
     // 要处理的标签列表
-    private static readonly targetTags = ['id', 'get_url_article', 'llm', 'search_output', 'search_input', 'calculate'];
+    private static readonly targetTags = ['id', 'article_title', 'article_content', 'llm', 'search_output', 'search_input', 'calculate','sentences'];
 
     /**
      * 从文本中提取标签内容

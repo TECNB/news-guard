@@ -44,16 +44,16 @@
             </div>
             <!-- 标题输入 -->
             <div class="mt-5">
-                <el-input v-model="title" placeholder="请输入新闻标题" size="large" />
+                <el-input v-model="articleTitle" placeholder="请输入新闻标题" size="large" />
             </div>
             <!-- 正文输入 -->
             <div class="mt-5">
-                <el-input v-model="content" placeholder="请输入需要判断的正文内容" :rows="17" type="textarea" />
+                <el-input v-model="articleContent" placeholder="请输入需要判断的正文内容" :rows="17" type="textarea" />
             </div>
             <!-- 检测按钮与字数 -->
             <div class="flex justify-between items-center mt-5">
                 <div>
-                    <p class="text-[#777777]">{{ content.length }}/5000 字数</p>
+                    <p class="text-[#777777]">{{ articleContent.length }}/5000 字数</p>
                 </div>
                 <div class="bg-[#49CFAD] w-fit rounded-lg px-2 py-3 cursor-pointer" @click="detectText">
                     <p class="text-white font-bold">{{ isLoading ? '分析中...' : '检测文字' }}</p>
@@ -79,13 +79,34 @@
             </div>
 
             <!-- Tab内容 -->
-            <div v-if="activeTab === 0" class="mt-10 h-[90%]">
-                <el-scrollbar height="100%">
-                    <AnalysisOverview :analysis="analysis" />
-                    <MainPointsSection :summary="summary" />
-                    <DetailedAnalysis :analysis="analysis" />
-                </el-scrollbar>
+            <div v-if="activeTab === 0" class="h-[89%]">
+                <div class="flex justify-end items-center gap-1 cursor-pointer my-3" v-if="!showSourceView" @click="showSourceView = true">
+                    <p class="text-green-500 ">结果来源查看</p>
+                    <i class="fa-solid fa-magnifying-glass text-green-500"></i>
+                </div>
+                
+                <div class="flex justify-end my-3" v-else>
+                    <el-button 
+                        type="primary" 
+                        text 
+                        :icon="ArrowLeft" 
+                        @click="showSourceView = false"
+                        class="!text-[#49CFAD] hover:!text-[#3DB89A]"
+                    >
+                        返回分析结果
+                    </el-button>
+                </div>
+                
+                <template v-if="!showSourceView">
+                    <el-scrollbar height="100%">
+                        <AnalysisOverview :analysis="analysis" />
+                        <MainPointsSection :summary="summary" />
+                        <DetailedAnalysis :analysis="analysis" />
+                    </el-scrollbar>
+                </template>
 
+                <!-- 使用新的结果来源组件 -->
+                <SourceDataView v-else :sourceData="sourceData" />
             </div>
             <div v-else-if="activeTab === 1" class="h-[90%] mt-10">
                 <SentenceAnalysis :aiSentences="aiSentences" :humanSentences="humanSentences" />
@@ -99,15 +120,17 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Link, Download, Delete } from '@element-plus/icons-vue';
+import { Link, Download, Delete, ArrowLeft } from '@element-plus/icons-vue';
 import AnalysisOverview from '@/components/Analysis/AnalysisOverview.vue';
 import MainPointsSection from '@/components/Analysis/MainPointsSection.vue';
 import DetailedAnalysis from '@/components/Analysis/DetailedAnalysis.vue';
 import SentenceAnalysis from '@/components/Analysis/SentenceAnalysis.vue';
 import SourceAnalysis from '@/components/Analysis/SourceAnalysis.vue';
+import SourceDataView from '@/components/Analysis/SourceDataView.vue';
 import type { Analysis, Summary, Sentence } from '@/utils/types';
 import { ApiService } from '@/utils/apiService';
 import { ElMessage } from 'element-plus';
+import { parsePartialJson, pythonStringToJson } from '@/utils/pythonJsonConverter';
 
 // 语言选项数据
 const allType = ref([
@@ -150,8 +173,8 @@ const sourceSentences = ref<Sentence[]>([
 
 // 文本输入、选中语言、分析类型
 const category = ref('简体中文');
-const title = ref('');
-const content = ref('');
+const articleTitle = ref('');
+const articleContent = ref('');
 const webUrl = ref('');
 const tabs = ['概述', '句子分析', '来源分析'];
 const activeTab = ref(0);
@@ -184,9 +207,18 @@ const summary = ref<Summary>({
     check_facts: ["引用的统计数据未注明来源", "关键事实缺乏官方证实"]
 });
 
+// 结果来源查看控制
+const showSourceView = ref(false);
+const sourceData = ref({
+    searchInput: '',
+    searchOutput: [] as any[],
+    llm: '',
+    sentences: [] as Sentence[]
+});
+
 // 检测文本内容
 const detectText = async () => {
-    if (!title.value || !content.value) {
+    if (!articleTitle.value || !articleTitle.value) {
         ElMessage.warning('请输入标题和正文内容！');
         return;
     }
@@ -218,8 +250,31 @@ const detectText = async () => {
             ]
         };
         
-        // 切换到概述标签显示结果
+        // 添加模拟的来源数据
+        sourceData.value = {
+            searchInput: articleTitle.value,
+            searchOutput: [
+                { title: '人工智能芯片发展最新报告', snippet: '市场研究表明，下一代AI芯片性能提升可能达到150%-180%，低于部分厂商宣称的200%提升。', source: 'AI研究中心' },
+                { title: '智能制造趋势分析', snippet: '智能制造领域正在快速整合AI技术，预计到2025年，有超过60%的制造企业将采用AI辅助系统。', source: '工业4.0协会' }
+            ],
+            llm: JSON.stringify({
+                "main_point": ["详细分析了该公司最新的人工智能芯片架构及其技术优势", "探讨了该技术在自动驾驶和智能制造领域的具体应用场景"],
+                "details": {
+                    "analysis": {
+                        "title_relevance": { "score": 7, "deductions": ["标题使用'颠覆性'等夸张词汇", "正文第三段完全偏离标题主题"] }
+                    }
+                }
+            }, null, 2),
+            sentences: [
+                { text: '该公司最新的人工智能芯片采用了全新架构设计', importance: 3 },
+                { text: '芯片性能提升200%，远超行业平均水平', importance: 2 },
+                { text: '这将在自动驾驶领域带来突破性进展', importance: 1 }
+            ]
+        };
+        
+        // 切换到概述标签显示结果，并显示来源视图
         activeTab.value = 0;
+        showSourceView.value = true;
     } finally {
         isLoading.value = false;
     }
@@ -243,13 +298,35 @@ const detectWebContent = async () => {
             console.log(`[${tag}] =>`, content);
             
             // 根据返回的标签处理不同类型的数据
-            if (tag === 'get_url_article') {
-                // 获取到网页文章内容，设置到标题和内容
-                title.value = content;
+            if (tag === 'article_title') {
+                // 获取到网页文章标题
+                articleTitle.value = content;
                 // 这里可能需要处理文章正文，暂时不设置
+            } else if (tag === 'article_content') {
+                // 获取到网页文章内容
+                articleContent.value = content;
+            } else if (tag === 'search_input') {
+                // 保存搜索输入到来源数据
+                sourceData.value.searchInput = content;
+            } else if (tag === 'search_output') {
+                // 处理搜索结果，可以用于来源分析
+                try {
+                    // 将Python风格的列表转换为标准JSON
+                    const jsonString = pythonStringToJson(content);
+                    const searchResults = JSON.parse(jsonString);
+                    updateSourceAnalysisFromSearch(searchResults);
+                    // 更新来源数据
+                    sourceData.value.searchOutput = searchResults;
+                    console.log('searchResults',searchResults)
+                } catch (error) {
+                    console.error('解析搜索结果出错:', error);
+                }
             } else if (tag === 'llm') {
                 // 处理LLM分析结果
                 try {
+                    // 保存原始LLM输出
+                    sourceData.value.llm = content;
+                    
                     // 解析JSON数据
                     const jsonData = parsePartialJson(content);
 
@@ -267,21 +344,23 @@ const detectWebContent = async () => {
                 } catch (error) {
                     console.error('解析LLM数据出错:', error);
                 }
-            } else if (tag === 'search_output') {
-                // 处理搜索结果，可以用于来源分析
+            } else if (tag === 'sentences') {
+                // 处理句子分析结果
                 try {
-                    // 将Python风格的列表转换为标准JSON
-                    const jsonString = pythonStringToJson(content);
-                    const searchResults = JSON.parse(jsonString);
-                    updateSourceAnalysisFromSearch(searchResults);
+                    const sentencesData = JSON.parse(content);
+                    sourceData.value.sentences = sentencesData.map((sentence: any) => ({
+                        text: sentence.text,
+                        importance: sentence.importance || Math.floor(Math.random() * 3) + 1
+                    }));
                 } catch (error) {
-                    console.error('解析搜索结果出错:', error);
+                    console.error('解析句子数据出错:', error);
                 }
             }
         });
         
-        // 切换到概述标签显示结果
+        // 切换到概述标签显示结果，并显示来源视图
         activeTab.value = 0;
+        showSourceView.value = true;
         
     } catch (error) {
         console.error('网页分析出错:', error);
@@ -310,8 +389,15 @@ const resetAnalysisResults = () => {
     
     aiSentences.value = [];
     humanSentences.value = [];
-    
     sourceSentences.value = [];
+    
+    // 重置来源数据
+    sourceData.value = {
+        searchInput: '',
+        searchOutput: [],
+        llm: '',
+        sentences: []
+    };
 };
 
 const updateAnalysisFromApi = (apiAnalysis: any) => {
@@ -347,52 +433,6 @@ const updateSourceAnalysisFromSearch = (searchResults: any[]) => {
         text: `${result.title} - ${result.snippet}`,
         importance: Math.floor(Math.random() * 3) + 1
     })).slice(0, 5);
-};
-
-const parsePartialJson = (jsonStr: string) => {
-    try {
-        // 处理连续的换行符和特殊字符
-        const sanitizedStr = jsonStr.replace(/\\n/g, ' ').replace(/[\r\n]+/g, ' ');
-        return JSON.parse(sanitizedStr);
-    } catch (e) {
-        console.error('第一次解析JSON失败，尝试修复:', e);
-        try {
-            // 尝试找到并提取有效的JSON部分
-            const jsonMatch = jsonStr.match(/\{.*\}/s);
-            if (jsonMatch) {
-                const extractedJson = jsonMatch[0];
-                // 如果提取成功，尝试再次解析
-                return JSON.parse(extractedJson);
-            }
-            
-            // 如果上述方法失败，尝试补全括号
-            const fixedJson = jsonStr + '}}';
-            return JSON.parse(fixedJson);
-        } catch (e2) {
-            console.error('无法解析JSON，返回空对象:', e2);
-            return {}; 
-        }
-    }
-};
-
-/**
- * 将Python风格的字符串转换为标准JSON格式
- * @param pythonStr Python风格的字符串
- * @returns 标准JSON格式的字符串
- */
-const pythonStringToJson = (pythonStr: string): string => {
-    // 替换单引号为双引号，但不替换转义的单引号
-    let jsonStr = pythonStr.replace(/(?<!\\)'/g, '"');
-    
-    // 处理特殊的转义字符
-    jsonStr = jsonStr.replace(/\\xa0/g, ' ');
-    
-    // 修复Python中None, True, False等关键字
-    jsonStr = jsonStr.replace(/: None/g, ': null');
-    jsonStr = jsonStr.replace(/: True/g, ': true');
-    jsonStr = jsonStr.replace(/: False/g, ': false');
-    
-    return jsonStr;
 };
 </script>
 

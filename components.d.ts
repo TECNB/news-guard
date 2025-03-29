@@ -80,6 +80,7 @@ declare module 'vue' {
     SettingStatement: typeof import('./src/components/Pipeline/SettingStatement.vue')['default']
     Sidebar: typeof import('./src/components/Sidebar.vue')['default']
     SourceAnalysis: typeof import('./src/components/Analysis/SourceAnalysis.vue')['default']
+    SourceDataView: typeof import('./src/components/Analysis/SourceDataView.vue')['default']
     StartProperties: typeof import('./src/components/Workflow/NodeProperties/StartProperties.vue')['default']
     Statement: typeof import('./src/components/Pipeline/Statement.vue')['default']
     TestRunPanel: typeof import('./src/components/Workflow/TestRunPanel.vue')['default']
