@@ -64,9 +64,11 @@
       <div class="flex items-center mb-2">
         <!-- 节点图标 - 根据节点类型显示不同图标 -->
         <div class="mr-3 text-xl">
-          <i v-if="node.type === '开始' || node.type === 'start'" class="fa-solid fa-home text-blue-500"></i>
-          <i v-else-if="node.type === 'LLM' || node.type === 'llm'" class="fa-solid fa-robot text-purple-500"></i>
-          <i v-else-if="node.type === 'deepseek-chat'" class="fa-regular fa-comments text-green-500"></i>
+          <i v-if="node.type === '开始' || node.type === 'start'" class="fa-solid fa-home text-green-500"></i>
+          <i v-else-if="node.type === 'LLM' || node.type === 'llm'" class="fa-solid fa-robot text-blue-500"></i>
+          <i v-else-if="node.type === 'conditional'" class="fa-regular fa-code-branch text-yellow-500"></i>
+          <i v-else-if="node.type === 'end'" class="fa-regular fa-file-export text-red-500"></i>
+          <i v-else-if="node.type === 'knowledge'" class="fa-regular fa-database text-purple-500"></i>
           <i v-else class="fa-solid fa-cube text-gray-500"></i>
         </div>
         <div>
@@ -94,7 +96,7 @@
         <div v-if="node.config && node.config.model" 
              class="bg-gray-50 rounded-md px-3 py-2 flex items-center justify-between">
           <div class="flex items-center">
-            <i  class="fa-solid fa-microchip text-purple-400"></i>
+            <i  class="fa-solid fa-microchip text-blue-400"></i>
             <span class="text-gray-700">{{ node.config.model }}</span>
           </div>
           <div>

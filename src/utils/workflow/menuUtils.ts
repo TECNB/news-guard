@@ -51,10 +51,10 @@ export function getNodeIcon(nodeType: string): string {
       return 'fa-database';
     case 'conditional':
       return 'fa-code-branch';
-    case 'output':
+    case 'end':
       return 'fa-file-export';
-    case 'input':
-      return 'fa-file-import';
+    case 'start':
+      return 'fa-home';
     default:
       return 'fa-circle-nodes';
   }
