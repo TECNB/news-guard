@@ -53,7 +53,7 @@
       </div>
       
       <!-- 输入/输出配置 -->
-      <div class="mb-6" v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end'">
+      <div class="mb-6" v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end'&& selectedNode.type !== 'conditional'">
         <IOEditor
           v-model="ioValue"
         />

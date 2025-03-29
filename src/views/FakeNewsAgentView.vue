@@ -12,7 +12,7 @@
             </div>
 
             <!-- 属性编辑器 - 直接条件渲染，无需传递props -->
-            <div class="w-80 h-full" v-if="selectedNodeId !== null">
+            <div class="w-96 h-full" v-if="selectedNodeId !== null">
                 <PropertyEditor />
             </div>
         </div>
