@@ -55,46 +55,14 @@
       </svg>
 
       <!-- 连接节点检测层 -->
-      <div 
-        v-if="drawingConnection" 
-        class="connection-hitbox-layer absolute inset-0 w-full h-full" 
-        style="z-index: 15;"
-      >
-        <div 
-          v-for="node in workflowStore.nodes" 
-          :key="`hitbox-${node.id}`"
-          :style="{ 
-            position: 'absolute', 
-            left: `${node.x - 12}px`, 
-            top: `${node.y + 28}px`,
-            width: '24px',
-            height: '24px',
-            borderRadius: '50%',
-            cursor: 'pointer',
-            zIndex: 20
-          }"
-          @mouseup.stop="onConnectionHitInput(node.id)"
-          v-show="node.id !== connectionStartNodeId"
-          class="connection-hitbox-input opacity-0 transition duration-200 border-2 border-dashed border-transparent hover:opacity-70 hover:scale-110"
-        ></div>
-        <div 
-          v-for="node in workflowStore.nodes" 
-          :key="`hitbox-out-${node.id}`"
-          :style="{ 
-            position: 'absolute', 
-            left: `${node.x + 240 - 12}px`, 
-            top: `${node.y + 28}px`,
-            width: '24px',
-            height: '24px',
-            borderRadius: '50%',
-            cursor: 'pointer',
-            zIndex: 20
-          }"
-          @mouseup.stop="onConnectionHitOutput(node.id)"
-          v-show="node.id !== connectionStartNodeId"
-          class="connection-hitbox-output opacity-0 transition duration-200 border-2 border-dashed border-transparent hover:opacity-70 hover:scale-110"
-        ></div>
-      </div>
+      <ConnectionHitboxes
+        v-if="drawingConnection"
+        :nodes="workflowStore.nodes"
+        :visible="drawingConnection"
+        :source-node-id="connectionStartNodeId"
+        @hit-input="onConnectionHitInput"
+        @hit-output="onConnectionHitOutput"
+      />
 
       <!-- 无选择状态显示 -->
       <div v-if="!workflowStore.selectedNodeId && workflowStore.nodes.length === 0" class="absolute inset-0 flex items-center justify-center text-gray-400">
@@ -141,6 +109,7 @@ import ContextMenu from './ContextMenu.vue';
 import NodeLibrary from './NodeLibrary.vue';
 import PathsRenderer from './PathsRenderer.vue';
 import RunPanel from './RunPanel.vue';
+import ConnectionHitboxes from './ConnectionHitboxes.vue';
 
 // 导入工具函数
 import { startCanvasDrag, dragCanvas, stopCanvasDrag } from '../../utils/workflow/dragUtils';
@@ -181,6 +150,7 @@ const nodeLibraryY = ref(0);
 const drawingConnection = ref(false);
 const connectionStartNodeId = ref<string | null>(null);
 const connectionStartType = ref<'input' | 'output' | null>(null);
+const connectionBranch = ref<string | undefined>(undefined);
 const connectionEndX = ref(0);
 const connectionEndY = ref(0);
 
@@ -205,9 +175,38 @@ const temporaryConnectionPath = computed(() => {
   let startX, startY;
   
   if (connectionStartType.value === 'output') {
-    // 输出连接点在节点右侧中心
-    startX = startNode.x + 240; // 修改为新的节点宽度
-    startY = startNode.y + 34; // 保持原有的垂直位置
+    // 输出连接点在节点右侧
+    startX = startNode.x + 240; // 节点宽度
+    
+    // 检查是否是条件节点，并根据分支类型确定连接点位置
+    if (startNode.type === 'conditional' && connectionBranch.value) {
+      if (connectionBranch.value === 'if') {
+        startY = startNode.y + 60; // IF 连接点位置
+      } else if (connectionBranch.value.startsWith('elif-')) {
+        const branchIndex = parseInt(connectionBranch.value.replace('elif-', ''));
+        // 基础位置
+        const basePosition = 35;
+        // 计算 IF 分支的空间
+        const ifSpace = startNode.config?.conditions?.length ? 30 + startNode.config.conditions.length * 20 : 0;
+        // 计算之前的 ELIF 分支所占的空间
+        const previousElifSpace = branchIndex > 0 ? branchIndex * 50 : 0;
+        
+        startY = startNode.y + basePosition + ifSpace + previousElifSpace + 30;
+      } else if (connectionBranch.value === 'else') {
+        // 基础位置
+        const basePosition = 40;
+        // 计算 IF 分支的空间
+        const ifSpace = startNode.config?.conditions?.length ? 30 + startNode.config.conditions.length * 20 : 0;
+        // 计算所有 ELIF 分支所占的空间
+        const elifSpace = startNode.config?.branches?.length ? startNode.config.branches.length * 50 : 0;
+        
+        startY = startNode.y + basePosition + ifSpace + elifSpace + 30;
+      } else {
+        startY = startNode.y + 34; // 默认位置
+      }
+    } else {
+      startY = startNode.y + 34; // 默认连接点位置
+    }
   } else {
     // 输入连接点在节点左侧中心
     startX = startNode.x;
@@ -387,11 +386,12 @@ const handleStopNodeDrag = (event: MouseEvent) => {
 };
 
 // 连线处理
-const onConnectionStart = (event: MouseEvent, nodeId: string, type: 'input' | 'output') => {
+const onConnectionStart = (event: MouseEvent, nodeId: string, type: 'input' | 'output', branch?: string) => {
   // 开始绘制连线
   drawingConnection.value = true;
   connectionStartNodeId.value = nodeId;
   connectionStartType.value = type;
+  connectionBranch.value = branch;
   
   // 设置初始终点位置为鼠标位置
   // 需要考虑画布缩放和平移
@@ -419,12 +419,12 @@ const onConnectionHitInput = (nodeId: string) => {
 };
 
 // 处理连接命中输出点
-const onConnectionHitOutput = (nodeId: string) => {
-  tryCreateConnection(nodeId, 'output');
+const onConnectionHitOutput = (nodeId: string, branchType?: string) => {
+  tryCreateConnection(nodeId, 'output', branchType);
 };
 
 // 尝试创建连接
-const tryCreateConnection = (nodeId: string, type: 'input' | 'output') => {
+const tryCreateConnection = (nodeId: string, type: 'input' | 'output', branchType?: string) => {
   // 如果不是在绘制连线，直接返回
   if (!drawingConnection.value) return;
   
@@ -443,14 +443,18 @@ const tryCreateConnection = (nodeId: string, type: 'input' | 'output') => {
     // 创建新连线
     const source = connectionStartType.value === 'output' ? connectionStartNodeId.value! : nodeId;
     const target = connectionStartType.value === 'output' ? nodeId : connectionStartNodeId.value!;
+    const sourceBranch = connectionStartType.value === 'output' ? connectionBranch.value : branchType;
     
     // 检查源节点和目标节点是否存在
     const sourceNode = workflowStore.nodes.find(n => n.id === source);
     const targetNode = workflowStore.nodes.find(n => n.id === target);
     
     if (sourceNode && targetNode) {
-      // 使用store添加边
+      // 使用store添加边，包含分支类型信息
       workflowStore.addEdge(source, target);
+      
+      // 这里可以保存分支信息到边的属性中，但需要先修改 workflowStore 的接口
+      // TODO: 修改 workflowStore.addEdge 方法，支持分支类型参数
     }
   }
   
@@ -499,6 +503,7 @@ const cancelConnection = () => {
   drawingConnection.value = false;
   connectionStartNodeId.value = null;
   connectionStartType.value = null;
+  connectionBranch.value = undefined;
   
   // 移除全局事件监听
   document.removeEventListener('mousemove', handleGlobalMouseMove);

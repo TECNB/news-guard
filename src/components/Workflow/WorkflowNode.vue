@@ -105,14 +105,84 @@
         </div>
       </div>
       
+      <!-- 条件节点配置显示 -->
+      <div v-if="node.type === 'conditional' && node.config" class="mt-2 space-y-2">
+        <!-- IF 条件显示 -->
+        <div v-if="node.config.conditions && node.config.conditions.length > 0" 
+             class="">
+          <div class="flex justify-between items-baseline mb-1">
+            <div class="text-xs text-gray-500">CASE 1</div>
+            <div class="text-sm font-medium mr-2">IF</div>
+          </div>
+          <div v-for="(condition, index) in node.config.conditions" :key="`condition-${index}`" 
+               class="text-xs py-1 flex items-center bg-gray-50 rounded-md">
+            <span class="text-blue-500">[x] {{ condition.field || '选择变量' }}</span>
+            <span class="text-gray-600 ml-1">
+              {{ getOperatorText(condition.operator) }} {{ condition.value }}
+            </span>
+          </div>
+        </div>
+        
+        <!-- ELIF 分支显示 -->
+        <div v-for="(branch, branchIndex) in node.config.branches" :key="`branch-${branchIndex}`" 
+             class="">
+          <div class="flex justify-between items-baseline mb-1">
+            <div class="text-xs text-gray-500">CASE {{ branchIndex + 2 }}</div>
+            <div class="text-sm font-medium mr-2">ELIF</div>
+          </div>
+          <div class="text-xs py-1 flex items-center bg-gray-50 rounded-md">
+            <span class="text-blue-500">[x] {{ branch.field || '选择变量' }}</span>
+            <span class="text-gray-600 ml-1">
+              {{ getOperatorText(branch.operator) }} {{ branch.value }}
+            </span>
+          </div>
+        </div>
+        
+        <!-- ELSE 显示 -->
+        <div v-if="hasConditions" class="">
+          <div class="text-right text-sm font-medium mr-2">ELSE</div>
+        </div>
+      </div>
+      
       <!-- 节点连接点 -->
-      <div 
-        class="connector-out absolute -right-2 top-[27px] w-4 h-4 bg-blue-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
-        @mousedown.stop="onStartConnection($event, 'output')"
-      ></div>
+      <!-- 输入连接点，对所有节点都显示 -->
       <div 
         class="connector-in absolute -left-2 top-[27px] w-4 h-4 bg-green-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
         @mousedown.stop="onStartConnection($event, 'input')"
+      ></div>
+      
+      <!-- 条件节点的多个输出连接点 -->
+      <template v-if="node.type === 'conditional'">
+        <!-- IF 分支输出 -->
+        <div v-if="node.config && node.config.conditions && node.config.conditions.length > 0"
+             class="connector-out absolute -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
+             :style="{ top: `${getIfConnectorPosition()}px` }"
+             @mousedown.stop="onStartConnection($event, 'output', 'if')"
+             title="IF 分支">
+        </div>
+        
+        <!-- ELIF 分支输出 -->
+        <div v-for="(branch, branchIndex) in node.config?.branches || []" 
+             :key="`branch-output-${branchIndex}`"
+             class="connector-out absolute -right-2 w-4 h-4 bg-yellow-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
+             :style="{ top: `${getElifConnectorPosition(branchIndex)}px` }"
+             @mousedown.stop="onStartConnection($event, 'output', `elif-${branchIndex}`)"
+             :title="`ELIF ${branchIndex + 1} 分支`">
+        </div>
+        
+        <!-- ELSE 分支输出 -->
+        <div v-if="hasConditions"
+             class="connector-out absolute -right-2 w-4 h-4 bg-gray-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
+             :style="{ top: `${getElseConnectorPosition()}px` }"
+             @mousedown.stop="onStartConnection($event, 'output', 'else')"
+             title="ELSE 分支">
+        </div>
+      </template>
+      
+      <!-- 非条件节点的标准输出连接点 -->
+      <div v-else
+        class="connector-out absolute -right-2 top-[27px] w-4 h-4 bg-blue-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
+        @mousedown.stop="onStartConnection($event, 'output')"
       ></div>
     </div>
   </div>
@@ -122,6 +192,28 @@
 import { ref, computed } from 'vue';
 import { Node } from '../../types/workflow';
 import { useWorkflowStore } from '../../stores/workflowStore';
+
+// 条件节点的接口定义
+interface Condition {
+  field: string;
+  operator: string;
+  value: string | number;
+}
+
+interface ConditionalConfig {
+  conditions: Condition[];
+  branches: Condition[];
+  elseAction?: string;
+}
+
+// 更新 Node 类型上的 config 属性，使其能够接受 ConditionalConfig
+declare module '../../types/workflow' {
+  interface NodeConfig {
+    model?: string;
+    conditions?: Condition[];
+    branches?: Condition[];
+  }
+}
 
 // 接收属性
 const props = defineProps<{
@@ -194,9 +286,9 @@ const showContextMenu = (event?: MouseEvent) => {
 };
 
 // 连接点事件处理
-const onStartConnection = (event: MouseEvent, type: 'input' | 'output') => {
+const onStartConnection = (event: MouseEvent, type: 'input' | 'output', branch?: string) => {
   // 发出开始连接事件
-  emit('connection-start', event, props.node.id, type);
+  emit('connection-start', event, props.node.id, type, branch);
 };
 
 // 菜单功能
@@ -243,6 +335,63 @@ const extractedVariables = computed(() => {
 const isModelNode = computed(() => {
   return props.node.type === 'LLM' || props.node.type === 'llm' || props.node.type === 'deepseek-chat';
 });
+
+// 计算属性：检查是否为条件节点且有条件或分支
+const hasConditions = computed(() => {
+  return props.node.type === 'conditional' && 
+         props.node.config && 
+         ((props.node.config.conditions && props.node.config.conditions.length > 0) ||
+          (props.node.config.branches && props.node.config.branches.length > 0));
+});
+
+// 计算属性：获取操作符文本
+const getOperatorText = (operator: string) => {
+  const operatorMap: Record<string, string> = {
+    'eq': '是',
+    'in': '包含',
+    'neq': '不是',
+    'gt': '大于',
+    'lt': '小于',
+    '==': '等于',
+    '!=': '不等于',
+    '>': '大于',
+    '<': '小于',
+    '>=': '大于等于',
+    '<=': '小于等于'
+  };
+  return operatorMap[operator] || operator;
+};
+
+// 计算属性：获取 IF 分支连接点的位置
+const getIfConnectorPosition = () => {
+  // 基础位置为60px，表示节点顶部和第一个条件之间的距离
+  const basePosition = 50;
+  return basePosition;
+};
+
+// 计算属性：获取 ELIF 分支连接点的位置
+const getElifConnectorPosition = (branchIndex: number) => {
+  // 基础位置
+  const basePosition = 25;
+  // 计算 IF 分支的空间
+  const ifSpace = props.node.config?.conditions?.length ? 30 + props.node.config.conditions.length * 20 : 0;
+  // 计算之前的 ELIF 分支所占的空间
+  const previousElifSpace = branchIndex > 0 ? branchIndex * 50 : 0;
+  
+  return basePosition + ifSpace + previousElifSpace + 30;
+};
+
+// 计算属性：获取 ELSE 分支连接点的位置
+const getElseConnectorPosition = () => {
+  // 基础位置
+  const basePosition = 32;
+  // 计算 IF 分支的空间
+  const ifSpace = props.node.config?.conditions?.length ? 30 + props.node.config.conditions.length * 20 : 0;
+  // 计算所有 ELIF 分支所占的空间
+  const elifSpace = props.node.config?.branches?.length ? props.node.config.branches.length * 50 : 0;
+  
+  return basePosition + ifSpace + elifSpace + 30;
+};
 </script>
 
 <style lang="scss" scoped>
