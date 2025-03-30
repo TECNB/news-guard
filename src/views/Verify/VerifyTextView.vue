@@ -1,7 +1,7 @@
 <template>
     <div class="VerifyTextView h-full flex justify-center items-center gap-8 p-8">
         <!-- 输入部分 -->
-        <div class="flex-[1.5] h-full shadow-xl border rounded-xl p-5">
+        <div class="w-[55%] h-full shadow-xl border rounded-xl p-5">
             <div class="flex justify-between items-center border-b pb-5">
                 <!-- 语言选择 -->
                 <div class="w-52">
@@ -62,7 +62,7 @@
         </div>
 
         <!-- 分析结果部分 -->
-        <div class="flex-1 h-full shadow-xl border rounded-xl p-5">
+        <div class="w-[45%] h-full shadow-xl border rounded-xl p-5">
             <!-- Tab导航 -->
             <div class="flex justify-center items-center border-b">
                 <div v-for="(tab, index) in tabs" :key="index" class="flex-1 pb-3 cursor-pointer" :class="{
@@ -79,7 +79,7 @@
             </div>
 
             <!-- Tab内容 -->
-            <div v-if="activeTab === 0" class="h-[89%]">
+            <div v-if="activeTab === 0" class="w-full h-[89%]">
                 <div class="flex justify-end items-center gap-1 cursor-pointer my-3" v-if="!showSourceView" @click="showSourceView = true">
                     <p class="text-green-500 ">结果来源查看</p>
                     <i class="fa-solid fa-magnifying-glass text-green-500"></i>
@@ -131,6 +131,7 @@ import type { Analysis, Summary, Sentence } from '@/utils/types';
 import { ApiService } from '@/utils/apiService';
 import { ElMessage } from 'element-plus';
 import { parsePartialJson, pythonStringToJson } from '@/utils/pythonJsonConverter';
+import { removeNewlinesRecursively, removeAllNewlines, cleanLlmContent } from '@/utils/stringCleaner';
 
 // 语言选项数据
 const allType = ref([
@@ -218,7 +219,7 @@ const sourceData = ref({
 
 // 检测文本内容
 const detectText = async () => {
-    if (!articleTitle.value || !articleTitle.value) {
+    if (!articleTitle.value || !articleContent.value) {
         ElMessage.warning('请输入标题和正文内容！');
         return;
     }
@@ -226,6 +227,9 @@ const detectText = async () => {
     isLoading.value = true;
     
     try {
+        // 去除文本内容中的换行符
+        articleContent.value = removeAllNewlines(articleContent.value);
+        
         // 更新分析数据，匹配新的Analysis结构
         analysis.value = {
             title_relevance: { score: 7, deductions: ["标题使用'颠覆性'等夸张词汇", "正文第三段完全偏离标题主题"] },
@@ -257,14 +261,14 @@ const detectText = async () => {
                 { title: '人工智能芯片发展最新报告', snippet: '市场研究表明，下一代AI芯片性能提升可能达到150%-180%，低于部分厂商宣称的200%提升。', source: 'AI研究中心' },
                 { title: '智能制造趋势分析', snippet: '智能制造领域正在快速整合AI技术，预计到2025年，有超过60%的制造企业将采用AI辅助系统。', source: '工业4.0协会' }
             ],
-            llm: JSON.stringify({
+            llm: removeAllNewlines(JSON.stringify({
                 "main_point": ["详细分析了该公司最新的人工智能芯片架构及其技术优势", "探讨了该技术在自动驾驶和智能制造领域的具体应用场景"],
                 "details": {
                     "analysis": {
                         "title_relevance": { "score": 7, "deductions": ["标题使用'颠覆性'等夸张词汇", "正文第三段完全偏离标题主题"] }
                     }
                 }
-            }, null, 2),
+            }, null, 2)),
             sentences: [
                 { text: '该公司最新的人工智能芯片采用了全新架构设计', importance: 3 },
                 { text: '芯片性能提升200%，远超行业平均水平', importance: 2 },
@@ -298,13 +302,18 @@ const detectWebContent = async () => {
             console.log(`[${tag}] =>`, content);
             
             // 根据返回的标签处理不同类型的数据
-            if (tag === 'article_title') {
+            if (tag === 'session_id') {
+                // 保存会话ID，可用于后续请求或跟踪
+                console.log('获取到会话ID:', content);
+                // 这里可以存储sessionId或进行其他处理
+            } else if (tag === 'article_title') {
                 // 获取到网页文章标题
                 articleTitle.value = content;
+                console.log("articleTitle.value",articleTitle.value)
                 // 这里可能需要处理文章正文，暂时不设置
             } else if (tag === 'article_content') {
                 // 获取到网页文章内容
-                articleContent.value = content;
+                articleContent.value = removeAllNewlines(content);
             } else if (tag === 'search_input') {
                 // 保存搜索输入到来源数据
                 sourceData.value.searchInput = content;
@@ -324,25 +333,48 @@ const detectWebContent = async () => {
             } else if (tag === 'llm') {
                 // 处理LLM分析结果
                 try {
-                    // 保存原始LLM输出
-                    sourceData.value.llm = content;
+                    // 保存原始LLM输出，支持流式显示
+                    // 这里直接更新 sourceData.llm 实现流式显示效果
+                    // 确保移除可能存在的外层 llm 标签和所有换行符
+                    let cleanContent = cleanLlmContent(content);
                     
-                    // 解析JSON数据
-                    const jsonData = parsePartialJson(content);
-
-                    console.log('llm:',jsonData)
+                    sourceData.value.llm = cleanContent;
                     
-                    // 更新分析结果
-                    if (jsonData.main_point) {
-                        summary.value.main_points = jsonData.main_point;
-                    }
-                    
-                    if (jsonData.details && jsonData.details.analysis) {
-                        // 更新分析数据
-                        updateAnalysisFromApi(jsonData.details.analysis);
+                    // 尝试解析当前收到的内容（可能是部分内容）
+                    try {
+                        // 检查内容是否是可能完整的JSON（包含结尾花括号）
+                        if (cleanContent.trim().endsWith('}')) {
+                            const jsonData = parsePartialJson(cleanContent);
+                            console.log('llm 部分解析:', jsonData);
+                            
+                            // 清理解析后的JSON对象中的所有换行符
+                            const cleanJsonData = removeNewlinesRecursively(jsonData);
+                            
+                            // 只有包含有效数据时才更新分析结果
+                            if (cleanJsonData.main_point && cleanJsonData.main_point.length > 0) {
+                                summary.value.main_points = cleanJsonData.main_point;
+                            }
+                            
+                            if (cleanJsonData.details && cleanJsonData.details.analysis) {
+                                // 更新分析数据
+                                updateAnalysisFromApi(cleanJsonData.details.analysis);
+                            }
+                            
+                            // 向流添加结束标记，再次更新llm值以触发isStreaming状态的重置
+                            setTimeout(() => {
+                                // 再次赋值相同的内容，触发结束判定
+                                sourceData.value.llm = cleanContent;
+                            }, 200);
+                        } else {
+                            // 不完整的JSON，仅用于显示
+                            console.log('LLM数据流式传输中...');
+                        }
+                    } catch (parseError) {
+                        // 忽略解析错误，因为流式传输时可能会收到不完整的JSON
+                        console.log('解析中的LLM数据尚未完成');
                     }
                 } catch (error) {
-                    console.error('解析LLM数据出错:', error);
+                    console.error('处理LLM数据出错:', error);
                 }
             } else if (tag === 'sentences') {
                 // 处理句子分析结果
@@ -401,30 +433,33 @@ const resetAnalysisResults = () => {
 };
 
 const updateAnalysisFromApi = (apiAnalysis: any) => {
+    // 清理apiAnalysis中的所有换行符
+    const cleanApiAnalysis = removeNewlinesRecursively(apiAnalysis);
+    
     // 更新所有分析结果，以LLM输出为准
-    if (apiAnalysis.title_relevance) {
-        analysis.value.title_relevance = apiAnalysis.title_relevance;
+    if (cleanApiAnalysis.title_relevance) {
+        analysis.value.title_relevance = cleanApiAnalysis.title_relevance;
     }
-    if (apiAnalysis.logical_consistency) {
-        analysis.value.logical_consistency = apiAnalysis.logical_consistency;
+    if (cleanApiAnalysis.logical_consistency) {
+        analysis.value.logical_consistency = cleanApiAnalysis.logical_consistency;
     }
-    if (apiAnalysis.factual_accuracy) {
-        analysis.value.factual_accuracy = apiAnalysis.factual_accuracy;
+    if (cleanApiAnalysis.factual_accuracy) {
+        analysis.value.factual_accuracy = cleanApiAnalysis.factual_accuracy;
     }
-    if (apiAnalysis.subjectivity_and_inflammatory_language) {
-        analysis.value.subjectivity_and_inflammatory_language = apiAnalysis.subjectivity_and_inflammatory_language;
+    if (cleanApiAnalysis.subjectivity_and_inflammatory_language) {
+        analysis.value.subjectivity_and_inflammatory_language = cleanApiAnalysis.subjectivity_and_inflammatory_language;
     }
-    if (apiAnalysis.causal_relevance) {
-        analysis.value.causal_relevance = apiAnalysis.causal_relevance;
+    if (cleanApiAnalysis.causal_relevance) {
+        analysis.value.causal_relevance = cleanApiAnalysis.causal_relevance;
     }
-    if (apiAnalysis.source_credibility) {
-        analysis.value.source_credibility = apiAnalysis.source_credibility;
+    if (cleanApiAnalysis.source_credibility) {
+        analysis.value.source_credibility = cleanApiAnalysis.source_credibility;
     }
-    if (apiAnalysis.debunking_result) {
-        analysis.value.debunking_result = apiAnalysis.debunking_result;
+    if (cleanApiAnalysis.debunking_result) {
+        analysis.value.debunking_result = cleanApiAnalysis.debunking_result;
     }
-    if (apiAnalysis.external_corroboration) {
-        analysis.value.external_corroboration = apiAnalysis.external_corroboration;
+    if (cleanApiAnalysis.external_corroboration) {
+        analysis.value.external_corroboration = cleanApiAnalysis.external_corroboration;
     }
 };
 

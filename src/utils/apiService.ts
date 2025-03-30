@@ -3,7 +3,7 @@
  */
 export class ApiService {
     // 要处理的标签列表
-    private static readonly targetTags = ['id', 'article_title', 'article_content', 'llm', 'search_output', 'search_input', 'calculate','sentences'];
+    private static readonly targetTags = ['session_id', 'article_title', 'article_content', 'llm', 'search_output', 'search_input', 'calculate','sentences'];
 
     /**
      * 从文本中提取标签内容
@@ -61,6 +61,30 @@ export class ApiService {
     }
 
     /**
+     * 在流式处理过程中处理可能包含的完整嵌套标签
+     * @param nestedTag 嵌套标签名称
+     * @param content 包含嵌套标签的当前累积内容
+     * @param onChunk 回调函数
+     */
+    private static processNestedTagPartial(nestedTag: string, content: string, onChunk: (tag: string, content: string) => void): void {
+        const startTag = `<${nestedTag}>`;
+        const endTag = `</${nestedTag}>`;
+        
+        // 只处理完整的标签（有开始和结束）
+        if (content.includes(startTag) && content.includes(endTag)) {
+            const regex = new RegExp(`<${nestedTag}>([\\s\\S]*?)</${nestedTag}>`, 'g');
+            let match;
+            
+            while ((match = regex.exec(content)) !== null) {
+                const tagContent = match[1].trim();
+                if (tagContent) {
+                    onChunk(nestedTag, tagContent);
+                }
+            }
+        }
+    }
+
+    /**
      * 检查文本中是否包含完整的标签（开始和结束标记都在同一行）
      * @param content 要检查的文本
      * @param onChunk 回调函数
@@ -106,6 +130,7 @@ export class ApiService {
      * @param onChunk 回调函数，处理每个标签的内容
      */
     static async postStream(url: string, data: any, onChunk: (tag: string, content: string) => void) {
+        console.log('开始处理流式请求...');
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -144,27 +169,73 @@ export class ApiService {
                 // 如果正在收集某个标签的内容
                 if (collectingTag) {
                     collectedContent += content;
+                    
+                    // 特殊处理LLM标签，实现流式显示
+                    if (collectingTag === 'llm') {
+                        // 保存当前累积的内容，用于处理嵌套标签
+                        let currentContent = collectedContent;
+                        
+                        // 处理嵌套的标签
+                        // 检查当前内容中是否有完整的search_input标签
+                        this.processNestedTagPartial('search_input', currentContent, onChunk);
+                        
+                        // 检查当前内容中是否有完整的search_output标签
+                        this.processNestedTagPartial('search_output', currentContent, onChunk);
+                        
+                        // 移除嵌套标签的内容，只保留真正的LLM内容用于流式显示
+                        let processedContent = currentContent
+                            .replace(/<search_input>[\s\S]*?<\/search_input>/g, '')
+                            .replace(/<search_output>[\s\S]*?<\/search_output>/g, '')
+                            .trim();
+                        
+                        // 确保移除可能存在的外层 llm 标签
+                        processedContent = processedContent
+                            .replace(/^<llm>|^<llm>\s+/s, '')
+                            .replace(/<\/llm>$|\s+<\/llm>$/s, '')
+                            .trim();
+                        
+                        // 将处理后的内容传递给回调
+                        onChunk(collectingTag, processedContent);
+                        console.log(`成功处理${collectingTag}标签，内容长度: ${processedContent.length}`);
+                    }
+                    
                     const endTag = `</${collectingTag}>`;
                     
                     // 检查是否包含结束标记
                     if (collectedContent.includes(endTag)) {
-                        // 提取标签内容
-                        const extracted = this.extractTagContent(collectingTag, collectedContent);
-                        
-                        if (extracted) {
-                            let processedContent = extracted;
+                        // 如果不是llm标签，才在这里处理（llm已经实时传递了）
+                        if (collectingTag !== 'llm') {
+                            // 提取标签内容
+                            const extracted = this.extractTagContent(collectingTag, collectedContent);
                             
-                            // 如果是llm标签，处理嵌套标签
-                            if (collectingTag === 'llm') {
-                                processedContent = this.processNestedTags(extracted, onChunk);
-                            }
-                            
-                            // 如果处理后还有内容，调用回调函数
-                            if (processedContent) {
+                            if (extracted) {
+                                let processedContent = extracted;
+                                
+                                // 对于所有标签，都调用回调函数
                                 onChunk(collectingTag, processedContent);
+                                console.log(`成功处理${collectingTag}标签，内容长度: ${processedContent.length}`);
+                            } else {
+                                console.warn(`未能正确匹配 ${collectingTag}`);
                             }
                         } else {
-                            console.warn(`未能正确匹配 ${collectingTag}`);
+                            // 对于 llm 标签，在结束时发送一次完整的、清理过的内容
+                            // 这确保了最终的内容是完整且干净的
+                            const extracted = this.extractTagContent(collectingTag, collectedContent);
+                            if (extracted) {
+                                let finalContent = extracted
+                                    .replace(/<search_input>[\s\S]*?<\/search_input>/g, '')
+                                    .replace(/<search_output>[\s\S]*?<\/search_output>/g, '')
+                                    .trim();
+                                
+                                // 确保移除可能存在的外层 llm 标签
+                                finalContent = finalContent
+                                    .replace(/^<llm>|^<llm>\s+/s, '')
+                                    .replace(/<\/llm>$|\s+<\/llm>$/s, '')
+                                    .trim();
+                                
+                                // 最后一次传递完整内容
+                                onChunk(collectingTag, finalContent);
+                            }
                         }
                         
                         // 重置状态
@@ -176,6 +247,13 @@ export class ApiService {
                         if (newTag) {
                             collectingTag = newTag;
                             collectedContent = content;
+                            
+                            // 如果是llm标签，立即开始流式显示
+                            if (newTag === 'llm') {
+                                onChunk(newTag, "");
+                            }
+                            
+                            console.log(`开始收集 ${newTag} 标签内容`);
                         }
                     }
                 } else {
@@ -188,6 +266,11 @@ export class ApiService {
                         if (newTag) {
                             collectingTag = newTag;
                             collectedContent = content;
+                            
+                            // 如果是llm标签，立即开始流式显示
+                            if (newTag === 'llm') {
+                                onChunk(newTag, "");
+                            }
                         }
                     }
                 }

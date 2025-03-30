@@ -72,6 +72,7 @@ const currentFormatted = computed(() => {
     const formatted = JSON.stringify(jsonObj, null, 2);
     return hljs.highlight(formatted, { language: 'json' }).value;
   } catch (e) {
+    console.error('isJsonMode JSON解析失败:', e);
     // 如果解析失败，返回原始内容
     return currentContent.value;
   }
