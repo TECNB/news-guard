@@ -79,6 +79,8 @@ import defaultImageUrl from '../assets/images/CloudPic.jpg';
 import defaultPdfUrl from '../assets/pdf/2023中国生态环境状况公报.pdf';
 import { handleChartGeneration, handleFileUpload, typeEffect, autoResizeTextarea, DisplayMessage } from '../utils/chatViewUtils';
 import KnowledgeSelector from '../components/KnowledgeSelector.vue';
+import { ApiService } from '../utils/apiService';
+import { pythonStringToJson } from '@/utils/pythonJsonConverter';
 
 // Base variables
 const message = ref('');
@@ -88,6 +90,8 @@ const pdfUrl = ref('');
 const showSuggestions = ref(true); // 控制建议列表显示
 const displayedMessages = ref<DisplayMessage[]>([]); // 展示的消息列表
 const chatStore = useChatStore();
+// 存储当前会话ID
+const sessionId = ref<string | null>(null);
 
 // Knowledge base state
 const selectedKnowledges = ref<string[]>([]);
@@ -135,138 +139,88 @@ const autoResize = (event: any) => {
   autoResizeTextarea(event.target);
 };
 
-// 将web搜索函数修改为流式处理
+// 将web搜索函数修改为使用 ApiService
 const performWebSearch = async (query: string, updateUI: (type: string, content: string) => void) => {
   console.log('开始执行网络搜索:', query);
   
   try {
-    const response = await fetch('/search', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        search: true,
-        query: query
-      })
-    });
+    // 用于存储完整的LLM响应，以便检测增量内容
+    let fullLlmResponse = '';
     
-    if (!response.ok) {
-      throw new Error(`搜索请求失败: ${response.status}`);
-    }
-    
-    // 处理SSE流式响应
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error('无法获取响应流');
-    }
-    
-    let decoder = new TextDecoder();
-    let buffer = '';
-    let searchResult = '';
-    let llmResponse = '';
-    let inSearchOutput = false;
-    let inLLM = false;
-    let searchResultSent = false;
-    
-    // 流式处理SSE数据
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      
-      const chunk = decoder.decode(value, { stream: true });
-      buffer += chunk;
-      
-      // 按行处理缓冲区
-      let lines = buffer.split('\n');
-      buffer = lines.pop() || ''; // 保留最后一行（可能不完整）到下次处理
-      
-      for (const line of lines) {
-        // 处理每一行
-        let content = line.trim();
-        if (content.startsWith('data: ')) {
-          content = content.substring(6).trim();
-        }
-        
-        if (content === '<search_output>') {
-          inSearchOutput = true;
-          inLLM = false;
-          continue;
-        }
-        
-        if (content === '</search_output>') {
-          inSearchOutput = false;
-          // 搜索结果收集完毕，发送给UI
-          if (searchResult && !searchResultSent) {
-            console.log('原始搜索结果字符串:', searchResult);
+    // 使用 ApiService.chatWithLLM 代替 fetch('/search')
+    await ApiService.chatWithLLM(
+      query,
+      (tag, content) => {
+        // 处理不同类型的标签内容
+        if (tag === 'session_id') {
+          sessionId.value = content;
+          console.log('获取到会话ID:', content);
+        } else if (tag === 'search_output') {
+          console.log('原始搜索结果字符串:', content);
+          
+          try {
+            // 将Python风格的列表转换为标准JSON
+            const jsonString = pythonStringToJson(content);
+            const searchData = JSON.parse(jsonString);
             
-            try {
-              // 尝试解析JSON格式的搜索结果
-              let jsonStr = searchResult.trim();
-              // 确保字符串是有效的JSON格式
-              if (jsonStr.startsWith("'") || jsonStr.startsWith('"')) {
-                // 有时后端可能会返回带单引号的字符串，需要替换成双引号
-                jsonStr = jsonStr.replace(/'/g, '"');
-              }
+            // 提取搜索结果数组
+            if (searchData && Array.isArray(searchData)) {
+              // 格式化搜索结果为更易读的格式
+              const formattedResults = searchData.map((item: any) => ({
+                title: item.title || '无标题',
+                url: item.link || '#',
+                snippet: item.snippet || '无摘要'
+              }));
               
-              // 解析JSON
-              const searchData = JSON.parse(jsonStr);
+              console.log('格式化后的搜索结果:', formattedResults);
               
-              // 提取搜索结果数组
-              if (searchData && searchData.output && Array.isArray(searchData.output)) {
-                // 格式化搜索结果为更易读的格式
-                const formattedResults = searchData.output.map(item => ({
-                  title: item.title || '无标题',
-                  url: item.link || '#',
-                  snippet: item.snippet || '无摘要'
-                }));
-                
-                console.log('格式化后的搜索结果:', formattedResults);
-                
-                // 将格式化的搜索结果发送到UI
-                updateUI('searchResult', JSON.stringify(formattedResults));
-              } else {
-                // 如果无法提取结构化数据，直接发送原始文本
-                updateUI('searchResult', searchResult);
-              }
-            } catch (e) {
-              console.error('解析搜索结果时出错:', e);
-              // 解析失败时，直接发送原始文本
-              updateUI('searchResult', searchResult);
+              // 将格式化的搜索结果发送到UI
+              updateUI('searchResult', JSON.stringify(formattedResults));
+            } else if (searchData && searchData.output && Array.isArray(searchData.output)) {
+              // 处理可能的嵌套格式
+              const formattedResults = searchData.output.map((item: any) => ({
+                title: item.title || '无标题',
+                url: item.link || '#',
+                snippet: item.snippet || '无摘要'
+              }));
+              
+              console.log('格式化后的搜索结果:', formattedResults);
+              
+              // 将格式化的搜索结果发送到UI
+              updateUI('searchResult', JSON.stringify(formattedResults));
+            } else {
+              // 如果无法提取结构化数据，直接发送原始文本
+              updateUI('searchResult', content);
             }
-            
-            searchResultSent = true;
+          } catch (e) {
+            console.error('解析搜索结果时出错:', e);
+            // 解析失败时，直接发送原始文本
+            updateUI('searchResult', content);
           }
-          continue;
+        } else if (tag === 'llm') {
+          // 处理LLM流式内容
+          // 首先计算增量部分：新收到的内容是完整内容的哪些部分是新的
+          const newContent = content.length > fullLlmResponse.length ? 
+                            content.substring(fullLlmResponse.length) : 
+                            content;
+          
+          if (newContent) {
+            // 只发送增量部分到UI
+            updateUI('llm', newContent);
+            console.log('发送LLM增量片段到UI:', newContent);
+          }
+          
+          // 更新完整响应
+          fullLlmResponse = content;
         }
-        
-        if (content === '<llm>') {
-          inLLM = true;
-          inSearchOutput = false;
-          continue;
-        }
-        
-        if (content === '</llm>') {
-          inLLM = false;
-          continue;
-        }
-        
-        if (inSearchOutput && content) {
-          searchResult += ' ' + content;
-        }
-        
-        if (inLLM && content) {
-          // LLM内容直接流式发送
-          llmResponse += ' ' + content;
-          updateUI('llm', content);
-          console.log('发送LLM片段到UI:', content);
-        }
-      }
-    }
+      },
+      sessionId.value || undefined,  // 如果有会话ID则传入，否则创建新会话
+      2 // 使用默认能力级别
+    );
     
     return true;
   } catch (error) {
-    console.error('网络搜索失败:', error);
+    console.error('聊天请求失败:', error);
     updateUI('error', '发生错误，请稍后再试。');
     return false;
   }

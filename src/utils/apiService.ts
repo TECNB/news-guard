@@ -292,4 +292,30 @@ export class ApiService {
             ability_level: abilityLevel
         }, onChunk);
     }
+
+    /**
+     * 与 LLM 进行聊天
+     * @param prompt 用户输入的提示
+     * @param onChunk 回调函数，处理每个标签的内容
+     * @param sessionId 会话ID，如果不提供则创建新会话
+     * @param abilityLevel 能力级别
+     */
+    static async chatWithLLM(
+        prompt: string,
+        onChunk: (tag: string, content: string) => void,
+        sessionId?: string,
+        abilityLevel: number = 2
+    ) {
+        const requestData: any = {
+            prompt,
+            ability_level: abilityLevel
+        };
+
+        // 如果提供了 sessionId，则添加到请求中
+        if (sessionId) {
+            requestData.session_id = sessionId;
+        }
+
+        return this.postStream('http://llm.flyfishxu.com/chat', requestData, onChunk);
+    }
 } 
