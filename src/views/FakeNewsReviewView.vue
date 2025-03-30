@@ -144,8 +144,8 @@ const performWebSearch = async (query: string, updateUI: (type: string, content:
   console.log('开始执行网络搜索:', query);
   
   try {
-    // 用于存储完整的LLM响应，以便检测增量内容
-    let fullLlmResponse = '';
+    // 用于跟踪已处理的LLM内容长度
+    let processedLlmLength = 0;
     
     // 使用 ApiService.chatWithLLM 代替 fetch('/search')
     await ApiService.chatWithLLM(
@@ -176,18 +176,6 @@ const performWebSearch = async (query: string, updateUI: (type: string, content:
               
               // 将格式化的搜索结果发送到UI
               updateUI('searchResult', JSON.stringify(formattedResults));
-            } else if (searchData && searchData.output && Array.isArray(searchData.output)) {
-              // 处理可能的嵌套格式
-              const formattedResults = searchData.output.map((item: any) => ({
-                title: item.title || '无标题',
-                url: item.link || '#',
-                snippet: item.snippet || '无摘要'
-              }));
-              
-              console.log('格式化后的搜索结果:', formattedResults);
-              
-              // 将格式化的搜索结果发送到UI
-              updateUI('searchResult', JSON.stringify(formattedResults));
             } else {
               // 如果无法提取结构化数据，直接发送原始文本
               updateUI('searchResult', content);
@@ -199,19 +187,15 @@ const performWebSearch = async (query: string, updateUI: (type: string, content:
           }
         } else if (tag === 'llm') {
           // 处理LLM流式内容
-          // 首先计算增量部分：新收到的内容是完整内容的哪些部分是新的
-          const newContent = content.length > fullLlmResponse.length ? 
-                            content.substring(fullLlmResponse.length) : 
-                            content;
-          
-          if (newContent) {
-            // 只发送增量部分到UI
+          if (content.length > processedLlmLength) {
+            // 只发送新增的部分
+            const newContent = content.substring(processedLlmLength);
+            // 更新已处理的长度
+            processedLlmLength = content.length;
+            // 将新增内容发送到UI
             updateUI('llm', newContent);
-            console.log('发送LLM增量片段到UI:', newContent);
+            console.log('发送LLM新增片段到UI, 长度:', newContent.length);
           }
-          
-          // 更新完整响应
-          fullLlmResponse = content;
         }
       },
       sessionId.value || undefined,  // 如果有会话ID则传入，否则创建新会话
