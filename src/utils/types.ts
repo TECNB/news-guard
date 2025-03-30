@@ -21,5 +21,4 @@ export interface Analysis {
 
 export interface Summary {
     main_points: string[];
-    check_facts: string[];
 }

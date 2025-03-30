@@ -203,9 +203,7 @@ const analysis = ref<Analysis>({
 
 const summary = ref<Summary>({
     // 原本是：["观点1", "观点2"]
-    main_points: ["文章缺乏明确的论述重点", "论据支撑不足"],
-    // 原本是：["虚假内容1", "虚假内容2"]
-    check_facts: ["引用的统计数据未注明来源", "关键事实缺乏官方证实"]
+    main_points: ["文章缺乏明确的论述重点", "论据支撑不足"]
 });
 
 // 结果来源查看控制
@@ -247,10 +245,6 @@ const detectText = async () => {
             main_points: [
                 "详细分析了该公司最新的人工智能芯片架构及其技术优势",
                 "探讨了该技术在自动驾驶和智能制造领域的具体应用场景"
-            ],
-            check_facts: [
-                "芯片性能提升200%的数据缺乏第三方基准测试验证",
-                "行业市场预测数据未注明具体研究机构来源"
             ]
         };
         
@@ -415,8 +409,7 @@ const resetAnalysisResults = () => {
     };
     
     summary.value = {
-        main_points: [],
-        check_facts: []
+        main_points: []
     };
     
     aiSentences.value = [];

@@ -24,7 +24,79 @@
                     <div v-for="(result, idx) in sourceData.searchOutput" :key="idx" class="p-3 bg-gray-50 rounded-md border-l-4 border-green-400">
                         <h4 class="font-medium text-gray-800 mb-1">{{ result.title }}</h4>
                         <p class="text-gray-600">{{ result.snippet }}</p>
-                        <div class="text-xs text-gray-500 mt-1">来源: {{ result.source || '未知来源' }}</div>
+                        <div class="text-xs text-gray-500 mt-1">来源: {{ result.link || '未知来源' }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 深度分析 -->
+            <div v-if="parsedAnalysisData" class="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-100 w-full">
+                <div class="flex items-center mb-2">
+                    <el-tag type="primary" class="mr-2">深度分析</el-tag>
+                    <h3 class="text-gray-700 font-medium">内容可信度细分分析</h3>
+                </div>
+                <div class="space-y-4">
+                    <!-- 逻辑一致性 -->
+                    <div v-if="parsedAnalysisData.logical_consistency && parsedAnalysisData.logical_consistency.length > 0" class="mt-2">
+                        <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">逻辑一致性问题</h4>
+                        <div v-for="(item, idx) in parsedAnalysisData.logical_consistency" :key="`logic-${idx}`" 
+                             class="p-3 bg-gray-50 rounded-md border-l-4 border-purple-400 mb-2">
+                            <p class="text-gray-700">{{ item }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 事实准确性 -->
+                    <div v-if="parsedAnalysisData.factual_accuracy && parsedAnalysisData.factual_accuracy.length > 0" class="mt-2">
+                        <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">事实准确性问题</h4>
+                        <div v-for="(item, idx) in parsedAnalysisData.factual_accuracy" :key="`fact-${idx}`" 
+                             class="p-3 bg-gray-50 rounded-md border-l-4 border-blue-400 mb-2">
+                            <p class="text-gray-700">{{ item }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 主观和煽动性语言 -->
+                    <div v-if="parsedAnalysisData.subjectivity_and_inflammatory_language && parsedAnalysisData.subjectivity_and_inflammatory_language.length > 0" class="mt-2">
+                        <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">主观和煽动性语言</h4>
+                        <div v-for="(item, idx) in parsedAnalysisData.subjectivity_and_inflammatory_language" :key="`subj-${idx}`" 
+                             class="p-3 bg-gray-50 rounded-md border-l-4 border-red-400 mb-2">
+                            <p class="text-gray-700">{{ item }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 因果相关性 -->
+                    <div v-if="parsedAnalysisData.causal_relevance && parsedAnalysisData.causal_relevance.length > 0" class="mt-2">
+                        <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">因果相关性问题</h4>
+                        <div v-for="(item, idx) in parsedAnalysisData.causal_relevance" :key="`causal-${idx}`" 
+                             class="p-3 bg-gray-50 rounded-md border-l-4 border-yellow-400 mb-2">
+                            <p class="text-gray-700">{{ item }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 来源可信度 -->
+                    <div v-if="parsedAnalysisData.source_credibility && parsedAnalysisData.source_credibility.length > 0" class="mt-2">
+                        <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">来源可信度问题</h4>
+                        <div v-for="(item, idx) in parsedAnalysisData.source_credibility" :key="`source-${idx}`" 
+                             class="p-3 bg-gray-50 rounded-md border-l-4 border-orange-400 mb-2">
+                            <p class="text-gray-700">{{ item }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 辟谣结果 -->
+                    <div v-if="parsedAnalysisData.debunking_result && parsedAnalysisData.debunking_result.length > 0" class="mt-2">
+                        <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">辟谣结果</h4>
+                        <div v-for="(item, idx) in parsedAnalysisData.debunking_result" :key="`debunk-${idx}`" 
+                             class="p-3 bg-gray-50 rounded-md border-l-4 border-green-400 mb-2">
+                            <p class="text-gray-700">{{ item }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 外部佐证 -->
+                    <div v-if="parsedAnalysisData.external_corroboration && parsedAnalysisData.external_corroboration.length > 0" class="mt-2">
+                        <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">外部佐证信息</h4>
+                        <div v-for="(item, idx) in parsedAnalysisData.external_corroboration" :key="`extern-${idx}`" 
+                             class="p-3 bg-gray-50 rounded-md border-l-4 border-teal-400 mb-2">
+                            <p class="text-gray-700">{{ item }}</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -52,28 +124,7 @@
                     <pre v-else ref="llmContentRef" class="bg-gray-50 border border-gray-200 rounded-md m-0 p-4 font-mono text-xs leading-relaxed break-words break-all whitespace-pre-wrap" :class="{ 'typing': isStreaming, 'streaming-border': isStreaming }">{{ currentContent }}</pre>
                 </div>
             </div>
-            
-            <!-- 句子分析 -->
-            <div v-if="sourceData.sentences.length > 0" class="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-100 w-full">
-                <div class="flex items-center mb-2">
-                    <el-tag type="danger" class="mr-2">句子分析</el-tag>
-                    <h3 class="text-gray-700 font-medium">文章句子拆解分析</h3>
-                </div>
-                <div class="space-y-2">
-                    <div v-for="(sentence, idx) in sourceData.sentences" :key="idx" 
-                        class="p-3 bg-gray-50 rounded-md flex items-center gap-2"
-                        :class="{
-                            'border-l-4 border-red-400': sentence.importance === 3,
-                            'border-l-4 border-yellow-400': sentence.importance === 2,
-                            'border-l-4 border-blue-400': sentence.importance === 1
-                        }">
-                        <el-tag size="small" :type="sentence.importance === 3 ? 'danger' : sentence.importance === 2 ? 'warning' : 'info'">
-                            {{ sentence.importance === 3 ? '高' : sentence.importance === 2 ? '中' : '低' }}
-                        </el-tag>
-                        <p class="text-gray-700">{{ sentence.text }}</p>
-                    </div>
-                </div>
-            </div>
+        
         </el-scrollbar>
     </div>
 </template>
@@ -84,12 +135,26 @@ import { ref, watch, computed } from 'vue';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
 
+// 定义接口
+interface AnalysisData {
+    logical_consistency: string[];
+    factual_accuracy: string[];
+    subjectivity_and_inflammatory_language: string[];
+    causal_relevance: string[];
+    source_credibility: string[];
+    debunking_result: string[];
+    external_corroboration: string[];
+}
+
 // 定义组件的props
 interface SourceDataType {
     searchInput: string;
     searchOutput: any[];
     llm: string;
     sentences: Sentence[];
+    value?: {
+        sentences: AnalysisData;
+    };
 }
 
 const props = defineProps<{
@@ -100,6 +165,30 @@ const props = defineProps<{
 const isStreaming = ref(false);
 const llmContentRef = ref<HTMLElement | null>(null);
 const copied = ref(false);
+
+// 解析分析数据
+const parsedAnalysisData = computed(() => {
+    if (props.sourceData.value?.sentences) {
+        return props.sourceData.value.sentences;
+    }
+    // 作为示例，返回一个固定的数据结构
+    return {
+        logical_consistency: [],
+        factual_accuracy: [
+            "苹果iOS18beta5终于来了，带来了大量优化吗？这个版本也被广大果粉简称为iOS18.5，很多用户都在问这个版本到底值不值得升级，相比iOS18.4带来了哪些优化呢？",
+            "从iOS18.4升级到iOS18.5能明显感受到电池掉电的速度有所变慢，电池不会跳电了，而且电池健康没有下降，可能每个人的电池状态不同，可能有人会下降，这也正常，经过3小时的重度续航测试，iOS18.4剩余电量为44%，而iOS18.5剩余电量为53%，续航表现前所未有。",
+            "信号方面，在iOS18.4的时候总感觉网速很慢，实测玩网游也很卡，延迟大多在60毫秒以上，下载速度不到5兆，全天大部分时间信号都处在1-3格之间，升级到iOS18.5网速变快了，玩网游都在40毫秒以下，下载速度提升到每秒25-35兆，全天大部分时间信号都在3-4格之间。",
+            "目前这个版本修复了抖音直播的bug，相册bug也进行了修复，目前暂未遇到其他影响日常使用的bug。"
+        ],
+        subjectivity_and_inflammatory_language: [
+            "前所未有的更新"
+        ],
+        causal_relevance: [],
+        source_credibility: [],
+        debunking_result: [],
+        external_corroboration: []
+    } as AnalysisData;
+});
 
 // 检查是否处于JSON模式
 const isJsonMode = computed(() => {
@@ -243,4 +332,4 @@ pre.typing::after {
 .whitespace-pre-wrap {
   white-space: pre-wrap;
 }
-</style> 
+</style>
