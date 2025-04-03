@@ -19,7 +19,7 @@
                         <p>{{ menu.label }}</p>
 
                         <!-- 在这里插入图标和点击事件 -->
-                        <span v-if="menu.label === '虚假新闻盘点'"
+                        <span v-if="menu.label === '虚假新闻助手'" 
                             class="absolute right-4 top-[29px] transform -translate-y-1/2 cursor-pointer"
                             @click="handleReviewClick">
                             <el-icon>
@@ -78,7 +78,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { getSession } from '../api/fakeNewsReview';
+import { getSession, getSessionById } from '../api/fakeNewsReview';
 
 import { useChatStore } from '../stores/ChatStore.ts';
 
@@ -109,16 +109,9 @@ const menus = [
         children: [
             { label: '文字', path: '/verify-text' },
             { label: '图片', path: '/verify-image' },
-            { label: '音频', path: '/verify-audio' },
-            { label: '视频', path: '/' }
+            { label: '音频', path: '/verify-audio' }
 
         ],
-    },
-
-    {
-        label: '历史项目',
-        icon: 'ChatDotRound',
-        path: '/',
     },
     {
         label: '个人知识库',
@@ -126,7 +119,7 @@ const menus = [
         path: '/knowledge'
     },
     {
-        label: '虚假新闻盘点',
+        label: '虚假新闻助手',
         icon: 'Compass',
         path: '/review'
     },
@@ -167,35 +160,40 @@ onMounted(async () => {
     console.log("selectedMenu:" + selectedMenu.value)
 });
 
-const getSessionId = (index: number, sessionId: string) => {
+const getSessionId = async (index: number, sessionId: string) => {
     selectedMenu.value = index;
     selectedSubMenu.value = null; // 清除子菜单的选中状态
 
-    // 从响应数据中提取 messages 数组，并构建 displayedMessages
-    const session = Session.value.find((item: any) => item.id === sessionId);
+    try {
+        // 调用根据ID获取对话的API
+        const response = await getSessionById(sessionId);
+        const messages = response.data;
 
-    if (session) {
-        // 提取该会话中的消息，并构建 displayedMessages
-        displayedMessages.value = session.messages.map((message: any) => ({
-            type: message.role === 'assistant' ? 'ai' : 'user',
-            content: message.content
-        }));
+        if (messages && Array.isArray(messages)) {
+            // 构建displayedMessages，直接从API返回的消息数组中提取
+            displayedMessages.value = messages.map((message: any) => ({
+                type: message.role === 'ai' ? 'ai' : 'user',
+                content: message.content
+            }));
 
-        // 确保 currentConversationId 设置为该会话的 ID
-        const existingConversation = chatStore.conversations.find(conv => conv.id === session.id);
-        if (!existingConversation) {
-            // 如果没有找到会话，创建一个新会话
-            chatStore.startNewConversation();
-        } else {
-            // 如果找到了会话，设置为当前会话
-            chatStore.switchConversation(session.id);
+            // 确保currentConversationId设置为该会话的ID
+            const existingConversation = chatStore.conversations.find(conv => conv.id === Number(sessionId));
+            if (!existingConversation) {
+                // 如果没有找到会话，创建一个新会话
+                chatStore.startNewConversation();
+            } else {
+                // 如果找到了会话，设置为当前会话
+                chatStore.switchConversation(Number(sessionId));
+            }
+
+            // 保存消息到当前会话
+            chatStore.saveMessages(displayedMessages.value);
+
+            console.log("displayedMessages.value:", displayedMessages.value);
+            console.log("chatStore:", chatStore.getCurrentMessages().length);
         }
-
-        // 保存消息到当前会话
-        chatStore.saveMessages(displayedMessages.value);
-
-        console.log("displayedMessages.value:", displayedMessages.value); // 输出构建好的 displayedMessages
-        console.log("chatStore:", chatStore.getCurrentMessages().length); // 输出构建好的 displayedMessages
+    } catch (error) {
+        console.error("获取会话消息失败:", error);
     }
 };
 
@@ -219,21 +217,28 @@ const selectMenu = async(index: number, ifChildren: any, path: string) => {
         selectedMenu.value = index;
         selectedSubMenu.value = null; // 清除子菜单的选中状态
         router.push(path)
-        // 当 index 为 4 时，创建新的 chatStore 会话
-        if (index === 4) {
-            Session.value = (await getSession()).data.data;
+        // 当 index 为 3 时，创建新的 chatStore 会话
+        if (index === 3) {
+            try {
+                // 调用获取所有对话的API
+                const response = await getSession();
+                const sessions = response.data;
 
-            // 使用 map 函数遍历 res.data.data 数组并构建 chat 数组
-            chat.value = Session.value.map((item: any, index: any) => ({
-                label: item.name, // 根据索引生成 label
-                icon: 'ChatDotRound', // 图标
-                sessionId: item.id, // 会话 id
-            }));
+                if (sessions && Array.isArray(sessions)) {
+                    // 构建chat数组，从API返回的会话列表中提取信息
+                    chat.value = sessions.map((item: any, i: number) => ({
+                        label: item.summary || `对话 ${i + 1}`, // 使用summary作为标签，i是数字索引
+                        icon: 'ChatDotRound',
+                        sessionId: item.session_id, // 使用session_id作为会话ID
+                    }));
 
-            console.log(chat); // 输出构建好的 chat 数组
-            chatStore.startNewConversation();
+                    console.log("获取到的会话列表:", chat.value);
+                    chatStore.startNewConversation();
+                }
+            } catch (error) {
+                console.error("获取会话列表失败:", error);
+            }
         }
-
     } else {
         selectedMenu.value = null;
         selectedSubMenu.value = 0; // 清除子菜单的选中状态

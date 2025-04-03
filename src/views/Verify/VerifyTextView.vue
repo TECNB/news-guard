@@ -34,11 +34,14 @@
                 <div class="flex-1">
                     <el-input v-model="webUrl" placeholder="请输入网页地址（可选）" size="large">
                         <template #prefix>
-                            <el-icon><Link /></el-icon>
+                            <el-icon>
+                                <Link />
+                            </el-icon>
                         </template>
                     </el-input>
                 </div>
-                <div class="bg-[#49CFAD] rounded-lg px-4 py-3 cursor-pointer flex items-center" @click="detectWebContent">
+                <div class="bg-[#49CFAD] rounded-lg px-4 py-3 cursor-pointer flex items-center"
+                    @click="detectWebContent">
                     <p class="text-white font-bold">{{ isWebLoading ? '分析中...' : '检测网页' }}</p>
                 </div>
             </div>
@@ -79,34 +82,9 @@
             </div>
 
             <!-- Tab内容 -->
-            <div v-if="activeTab === 0" class="w-full h-[89%]">
-                <div class="flex justify-end items-center gap-1 cursor-pointer my-3" v-if="!showSourceView" @click="showSourceView = true">
-                    <p class="text-green-500 ">结果来源查看</p>
-                    <i class="fa-solid fa-magnifying-glass text-green-500"></i>
-                </div>
-                
-                <div class="flex justify-end my-3" v-else>
-                    <el-button 
-                        type="primary" 
-                        text 
-                        :icon="ArrowLeft" 
-                        @click="showSourceView = false"
-                        class="!text-[#49CFAD] hover:!text-[#3DB89A]"
-                    >
-                        返回分析结果
-                    </el-button>
-                </div>
-                
-                <template v-if="!showSourceView">
-                    <el-scrollbar height="100%">
-                        <AnalysisOverview :analysis="analysis" />
-                        <MainPointsSection :summary="summary" />
-                        <DetailedAnalysis :analysis="analysis" />
-                    </el-scrollbar>
-                </template>
-
-                <!-- 使用新的结果来源组件 -->
-                <SourceDataView v-else :sourceData="sourceData" />
+            <div v-if="activeTab === 0" class="w-full h-[98%]">
+                <!-- 使用新的合并组件 -->
+                <CombinedAnalysisView :sourceData="sourceData" />
             </div>
             <div v-else-if="activeTab === 1" class="h-[90%] mt-10">
                 <SentenceAnalysis :aiSentences="aiSentences" :humanSentences="humanSentences" />
@@ -121,16 +99,13 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Link, Download, Delete, ArrowLeft } from '@element-plus/icons-vue';
-import AnalysisOverview from '@/components/Analysis/AnalysisOverview.vue';
-import MainPointsSection from '@/components/Analysis/MainPointsSection.vue';
-import DetailedAnalysis from '@/components/Analysis/DetailedAnalysis.vue';
+import CombinedAnalysisView from '@/components/Analysis/CombinedAnalysisView.vue';
 import SentenceAnalysis from '@/components/Analysis/SentenceAnalysis.vue';
 import SourceAnalysis from '@/components/Analysis/SourceAnalysis.vue';
-import SourceDataView from '@/components/Analysis/SourceDataView.vue';
-import type { Analysis, Summary, Sentence } from '@/utils/types';
+import type { Sentence } from '@/utils/types';
 import { ApiService } from '@/utils/apiService';
 import { ElMessage } from 'element-plus';
-import { parsePartialJson, pythonStringToJson } from '@/utils/pythonJsonConverter';
+import JSON5 from 'json5';
 import { removeNewlinesRecursively, removeAllNewlines, cleanLlmContent } from '@/utils/stringCleaner';
 
 // 语言选项数据
@@ -182,37 +157,63 @@ const activeTab = ref(0);
 const isLoading = ref(false);
 const isWebLoading = ref(false);
 
-const analysis = ref<Analysis>({
-    // 标题相关性
-    title_relevance: { score: 0, deductions: ["标题缺乏新闻价值", "信息量不足"] },
-    // 逻辑一致性
-    logical_consistency: { score: 0, deductions: ["论述前后矛盾", "缺乏必要的过渡"] },
-    // 事实准确性
-    factual_accuracy: { score: 0, deductions: ["引用数据过时", "关键信息未核实"] },
-    // 主观和煽动性语言
-    subjectivity_and_inflammatory_language: { score: 0, deductions: ["使用带有偏见的词汇", "情绪化表达明显"] },
-    // 因果关联
-    causal_relevance: { score: 0, deductions: ["因果推导不合理", "缺乏必要的论证"] },
-    // 来源可信度
-    source_credibility: { score: 0, deductions: ["来源不明确", "平台存在发布不实信息的历史"] },
-    // 驳斥结果
-    debunking_result: { score: null, deductions: [] },
-    // 外部证实
-    external_corroboration: { score: null, deductions: [] }
-});
-
-const summary = ref<Summary>({
-    // 原本是：["观点1", "观点2"]
-    main_points: ["文章缺乏明确的论述重点", "论据支撑不足"]
-});
-
 // 结果来源查看控制
-const showSourceView = ref(false);
 const sourceData = ref({
     searchInput: '',
     searchOutput: [] as any[],
     llm: '',
-    sentences: [] as Sentence[]
+    sentences: [] as Sentence[],
+    analysis: {
+        // 标题相关性
+        title_relevance: { score: 0, deductions: [] },
+        // 逻辑一致性
+        logical_consistency: { score: 0, deductions: [] },
+        // 事实准确性
+        factual_accuracy: { score: 0, deductions: [] },
+        // 主观和煽动性语言
+        subjectivity_and_inflammatory_language: { score: 0, deductions: [] },
+        // 因果关联
+        causal_relevance: { score: 0, deductions: [] },
+        // 来源可信度
+        source_credibility: { score: 0, deductions: [] },
+        // 驳斥结果
+        debunking_result: { score: null, deductions: [] },
+        // 外部证实
+        external_corroboration: { score: null, deductions: [] }
+    },
+    summary: {
+        main_points: []
+    },
+    calculate: {
+        score: 0,
+        level: '中',
+        description: ''
+    },
+    value: undefined as {
+        sentences: {
+            logical_consistency: string[];
+            factual_accuracy: string[];
+            subjectivity_and_inflammatory_language: string[];
+            causal_relevance: string[];
+            source_credibility: string[];
+            debunking_result: string[];
+            external_corroboration: string[];
+        }
+    } | undefined,
+    loadingStates: {
+        searchInput: false,
+        searchOutput: false,
+        analysis: false,
+        sentences: false,
+        calculate: false
+    },
+    steps: {
+        searchInput: false,
+        searchOutput: false,
+        analysis: false,
+        sentences: false,
+        calculate: false
+    }
 });
 
 // 检测文本内容
@@ -223,58 +224,60 @@ const detectText = async () => {
     }
 
     isLoading.value = true;
-    
+
     try {
         // 去除文本内容中的换行符
         articleContent.value = removeAllNewlines(articleContent.value);
-        
-        // 更新分析数据，匹配新的Analysis结构
-        analysis.value = {
-            title_relevance: { score: 7, deductions: ["标题使用'颠覆性'等夸张词汇", "正文第三段完全偏离标题主题"] },
-            logical_consistency: { score: 8, deductions: ["第二段与第三段之间缺乏必要的逻辑连接"] },
-            factual_accuracy: { score: 6, deductions: ["市场份额数据未引用权威机构统计", "产品性能描述缺乏第三方测试支持"] },
-            subjectivity_and_inflammatory_language: { score: 7, deductions: ["使用'革命性'等主观评价词", "对竞品描述带有明显贬义"] },
-            causal_relevance: { score: 8, deductions: ["技术创新与市场份额增长的因果关系缺乏数据支持"] },
-            source_credibility: { score: 6, deductions: ["文章来源不明确"] },
-            debunking_result: { score: null, deductions: [] },
-            external_corroboration: { score: null, deductions: [] }
-        };
 
-        // 更新摘要数据
-        summary.value = {
-            main_points: [
-                "详细分析了该公司最新的人工智能芯片架构及其技术优势",
-                "探讨了该技术在自动驾驶和智能制造领域的具体应用场景"
-            ]
-        };
+        // 重置分析结果
+        resetAnalysisResults();
         
-        // 添加模拟的来源数据
-        sourceData.value = {
-            searchInput: articleTitle.value,
-            searchOutput: [
-                { title: '人工智能芯片发展最新报告', snippet: '市场研究表明，下一代AI芯片性能提升可能达到150%-180%，低于部分厂商宣称的200%提升。', source: 'AI研究中心' },
-                { title: '智能制造趋势分析', snippet: '智能制造领域正在快速整合AI技术，预计到2025年，有超过60%的制造企业将采用AI辅助系统。', source: '工业4.0协会' }
-            ],
-            llm: removeAllNewlines(JSON.stringify({
-                "main_point": ["详细分析了该公司最新的人工智能芯片架构及其技术优势", "探讨了该技术在自动驾驶和智能制造领域的具体应用场景"],
-                "details": {
-                    "analysis": {
-                        "title_relevance": { "score": 7, "deductions": ["标题使用'颠覆性'等夸张词汇", "正文第三段完全偏离标题主题"] }
-                    }
+        // 开始第一步加载 - 搜索输入
+        sourceData.value.loadingStates.searchInput = true;
+
+        // 构建提示词
+        const prompt = `标题：${articleTitle.value}\n\n内容：${articleContent.value}`;
+
+        // 使用API服务发送请求
+        await ApiService.chatWithLLM(
+            prompt,
+            handleApiTags,
+            (tag) => {
+                // 处理标签开始的事件
+                console.log(`开始接收 ${tag} 标签数据`);
+                
+                // 根据开始的标签设置相应的加载状态
+                if (tag === 'search_input') {
+                    sourceData.value.loadingStates.searchInput = true;
+                } else if (tag === 'search_output') {
+                    sourceData.value.loadingStates.searchInput = false;
+                    sourceData.value.steps.searchInput = true;
+                    sourceData.value.loadingStates.searchOutput = true;
+                } else if (tag === 'llm') {
+                    sourceData.value.loadingStates.searchOutput = false;
+                    sourceData.value.steps.searchOutput = true;
+                    sourceData.value.loadingStates.analysis = true;
+                } else if (tag === 'sentences') {
+                    sourceData.value.loadingStates.analysis = false;
+                    sourceData.value.steps.analysis = true;
+                    sourceData.value.loadingStates.sentences = true;
+                } else if (tag === 'calculate') {
+                    sourceData.value.loadingStates.sentences = false;
+                    sourceData.value.steps.sentences = true;
+                    sourceData.value.loadingStates.calculate = true;
                 }
-            }, null, 2)),
-            sentences: [
-                { text: '该公司最新的人工智能芯片采用了全新架构设计', importance: 3 },
-                { text: '芯片性能提升200%，远超行业平均水平', importance: 2 },
-                { text: '这将在自动驾驶领域带来突破性进展', importance: 1 }
-            ]
-        };
-        
-        // 切换到概述标签显示结果，并显示来源视图
+            }
+        );
+
+        // 切换到概述标签显示结果
         activeTab.value = 0;
-        showSourceView.value = true;
+    } catch (error) {
+        console.error('文本分析出错:', error);
+        ElMessage.error('文本分析失败，请稍后再试');
     } finally {
         isLoading.value = false;
+        // 确保所有加载状态都关闭
+        resetLoadingStates();
     }
 };
 
@@ -284,175 +287,302 @@ const detectWebContent = async () => {
         ElMessage.warning('请输入要分析的网页地址！');
         return;
     }
-    
+
     try {
         isWebLoading.value = true;
-        
+
         // 重置分析结果
         resetAnalysisResults();
         
-        // 处理从API返回的数据
-        await ApiService.analyzeWebContent(webUrl.value, 2, (tag, content) => {
-            console.log(`[${tag}] =>`, content);
-            
-            // 根据返回的标签处理不同类型的数据
-            if (tag === 'session_id') {
-                // 保存会话ID，可用于后续请求或跟踪
-                console.log('获取到会话ID:', content);
-                // 这里可以存储sessionId或进行其他处理
-            } else if (tag === 'article_title') {
-                // 获取到网页文章标题
-                articleTitle.value = content;
-                console.log("articleTitle.value",articleTitle.value)
-                // 这里可能需要处理文章正文，暂时不设置
-            } else if (tag === 'article_content') {
-                // 获取到网页文章内容
-                articleContent.value = removeAllNewlines(content);
-            } else if (tag === 'search_input') {
-                // 保存搜索输入到来源数据
-                sourceData.value.searchInput = content;
-            } else if (tag === 'search_output') {
-                // 处理搜索结果，可以用于来源分析
-                try {
-                    // 将Python风格的列表转换为标准JSON
-                    const jsonString = pythonStringToJson(content);
-                    const searchResults = JSON.parse(jsonString);
-                    updateSourceAnalysisFromSearch(searchResults);
-                    // 更新来源数据
-                    sourceData.value.searchOutput = searchResults;
-                    console.log('searchResults',searchResults)
-                } catch (error) {
-                    console.error('解析搜索结果出错:', error);
-                }
-            } else if (tag === 'llm') {
-                // 处理LLM分析结果
-                try {
-                    // 保存原始LLM输出，支持流式显示
-                    // 这里直接更新 sourceData.llm 实现流式显示效果
-                    // 确保移除可能存在的外层 llm 标签和所有换行符
-                    let cleanContent = cleanLlmContent(content);
-                    
-                    sourceData.value.llm = cleanContent;
-                    
-                    // 尝试解析当前收到的内容（可能是部分内容）
-                    try {
-                        // 检查内容是否是可能完整的JSON（包含结尾花括号）
-                        if (cleanContent.trim().endsWith('}')) {
-                            const jsonData = parsePartialJson(cleanContent);
-                            console.log('llm 部分解析:', jsonData);
-                            
-                            // 清理解析后的JSON对象中的所有换行符
-                            const cleanJsonData = removeNewlinesRecursively(jsonData);
-                            
-                            // 只有包含有效数据时才更新分析结果
-                            if (cleanJsonData.main_point && cleanJsonData.main_point.length > 0) {
-                                summary.value.main_points = cleanJsonData.main_point;
-                            }
-                            
-                            if (cleanJsonData.details && cleanJsonData.details.analysis) {
-                                // 更新分析数据
-                                updateAnalysisFromApi(cleanJsonData.details.analysis);
-                            }
-                            
-                            // 向流添加结束标记，再次更新llm值以触发isStreaming状态的重置
-                            setTimeout(() => {
-                                // 再次赋值相同的内容，触发结束判定
-                                sourceData.value.llm = cleanContent;
-                            }, 200);
-                        } else {
-                            // 不完整的JSON，仅用于显示
-                            console.log('LLM数据流式传输中...');
-                        }
-                    } catch (parseError) {
-                        // 忽略解析错误，因为流式传输时可能会收到不完整的JSON
-                        console.log('解析中的LLM数据尚未完成');
-                    }
-                } catch (error) {
-                    console.error('处理LLM数据出错:', error);
-                }
-            } else if (tag === 'sentences') {
-                // 处理句子分析结果
-                try {
-                    const sentencesData = JSON.parse(content);
-                    sourceData.value.sentences = sentencesData.map((sentence: any) => ({
-                        text: sentence.text,
-                        importance: sentence.importance || Math.floor(Math.random() * 3) + 1
-                    }));
-                } catch (error) {
-                    console.error('解析句子数据出错:', error);
+        // 开始第一步加载 - 搜索输入
+        sourceData.value.loadingStates.searchInput = true;
+
+        // 处理从API返回的数据 - 使用新的API结构
+        await ApiService.analyzeWebContent(
+            webUrl.value,
+            2,
+            handleApiTags,
+            (tag) => {
+                // 处理标签开始的事件
+                console.log(`开始接收 ${tag} 标签数据`);
+                
+                // 根据开始的标签设置相应的加载状态
+                if (tag === 'search_input') {
+                    sourceData.value.loadingStates.searchInput = true;
+                } else if (tag === 'search_output') {
+                    sourceData.value.loadingStates.searchInput = false;
+                    sourceData.value.steps.searchInput = true;
+                    sourceData.value.loadingStates.searchOutput = true;
+                } else if (tag === 'llm') {
+                    sourceData.value.loadingStates.searchOutput = false;
+                    sourceData.value.steps.searchOutput = true;
+                    sourceData.value.loadingStates.analysis = true;
+                } else if (tag === 'sentences') {
+                    sourceData.value.loadingStates.analysis = false;
+                    sourceData.value.steps.analysis = true;
+                    sourceData.value.loadingStates.sentences = true;
+                } else if (tag === 'calculate') {
+                    sourceData.value.loadingStates.sentences = false;
+                    sourceData.value.steps.sentences = true;
+                    sourceData.value.loadingStates.calculate = true;
                 }
             }
-        });
-        
-        // 切换到概述标签显示结果，并显示来源视图
+        );
+
+        // 切换到概述标签显示结果
         activeTab.value = 0;
-        showSourceView.value = true;
-        
     } catch (error) {
         console.error('网页分析出错:', error);
         ElMessage.error('网页分析失败，请检查URL是否正确');
     } finally {
         isWebLoading.value = false;
+        // 确保所有加载状态都关闭
+        resetLoadingStates();
     }
 };
 
+/**
+ * 处理API返回的标签和内容
+ * @param tag 标签名称
+ * @param content 标签内容
+ */
+const handleApiTags = (tag: string, content: string) => {
+    console.log(`[${tag}] =>`, content);
+
+    switch (tag) {
+        case 'session_id':
+            console.log('获取到会话ID:', content);
+            break;
+        case 'article_title':
+            articleTitle.value = content;
+            break;
+        case 'article_content':
+            articleContent.value = removeAllNewlines(content);
+            break;
+        case 'search_input':
+            // 完成搜索输入
+            sourceData.value.searchInput = content;
+            sourceData.value.steps.searchInput = true;
+            sourceData.value.loadingStates.searchInput = false;
+            // 下一步加载搜索结果
+            sourceData.value.loadingStates.searchOutput = true;
+            break;
+        case 'search_output':
+            try {
+                // 直接使用JSON5解析
+                const searchResults = JSON5.parse(content);
+                updateSourceAnalysisFromSearch(searchResults);
+                sourceData.value.searchOutput = searchResults;
+                // 完成搜索结果
+                sourceData.value.steps.searchOutput = true;
+                sourceData.value.loadingStates.searchOutput = false;
+                // 下一步加载详细分析
+                sourceData.value.loadingStates.analysis = true;
+            } catch (error) {
+                console.error('解析搜索结果出错:', error);
+                sourceData.value.loadingStates.searchOutput = false;
+            }
+            break;
+        case 'llm':
+            try {
+                // 完整的LLM输出
+                let cleanContent = cleanLlmContent(content);
+                sourceData.value.llm = cleanContent;
+
+                // 使用JSON5解析
+                if (cleanContent && cleanContent.trim()) {
+                    const jsonData = JSON5.parse(cleanContent);
+                    const cleanJsonData = removeNewlinesRecursively(jsonData);
+
+                    // 新版JSON结构中，main_point可能为空数组
+                    if (cleanJsonData.main_point) {
+                        sourceData.value.summary.main_points = cleanJsonData.main_point;
+                    } else {
+                        sourceData.value.summary.main_points = [];
+                    }
+
+                    // 如果存在details.analysis结构，则使用它
+                    if (cleanJsonData.details && cleanJsonData.details.analysis) {
+                        updateAnalysisFromApi(cleanJsonData.details.analysis);
+                    }
+                }
+                // 完成详细分析
+                sourceData.value.steps.analysis = true;
+                sourceData.value.loadingStates.analysis = false;
+                // 下一步加载深度分析
+                sourceData.value.loadingStates.sentences = true;
+            } catch (error) {
+                console.error('处理LLM数据出错:', error);
+                sourceData.value.loadingStates.analysis = false;
+            }
+            break;
+        case 'sentences':
+            try {
+                // 使用JSON5解析
+                const sentencesData = JSON5.parse(content);
+
+                // 将各分类下的所有句子合并到一个数组中
+                const allSentences: Sentence[] = [];
+
+                // 遍历对象的所有属性
+                Object.entries(sentencesData).forEach(([category, sentences]) => {
+                    if (Array.isArray(sentences)) {
+                        sentences.forEach((text: string) => {
+                            // 为每个句子分配一个重要性级别（1-3）
+                            allSentences.push({
+                                text: text,
+                                importance: Math.floor(Math.random() * 3) + 1
+                            });
+                        });
+                    }
+                });
+
+                sourceData.value.sentences = allSentences;
+                
+                // 设置深度分析数据
+                if (!sourceData.value.value) {
+                    sourceData.value.value = {
+                        sentences: sentencesData
+                    };
+                } else {
+                    sourceData.value.value.sentences = sentencesData;
+                }
+                
+                // 完成深度分析
+                sourceData.value.steps.sentences = true;
+                sourceData.value.loadingStates.sentences = false;
+                // 下一步加载总体评分
+                sourceData.value.loadingStates.calculate = true;
+            } catch (error) {
+                console.error('解析句子数据出错:', error);
+                sourceData.value.loadingStates.sentences = false;
+            }
+            break;
+        case 'calculate':
+            try {
+                // 直接解析为数字
+                const score = parseFloat(content);
+                
+                if (!isNaN(score)) {
+                    // 根据分数确定可信度级别
+                    let level = '中';
+                    if (score < 60) {
+                        level = '低';
+                    } else if (score >= 75) {
+                        level = '高';
+                    }
+                    
+                    // 设置分数数据
+                    sourceData.value.calculate = {
+                        score: score,
+                        level: level,
+                        description: `内容可信度评分为${score.toFixed(1)}分，属于${level}可信度内容`
+                    };
+                }
+                
+                // 完成总体评分
+                sourceData.value.steps.calculate = true;
+                sourceData.value.loadingStates.calculate = false;
+            } catch (error) {
+                console.error('解析总体评分数据出错:', error);
+                sourceData.value.loadingStates.calculate = false;
+            }
+            break;
+        case 'done':
+            console.log('分析完成');
+            // 确保所有加载状态都关闭
+            resetLoadingStates();
+            break;
+    }
+};
+
+// 重置所有加载状态
+const resetLoadingStates = () => {
+    sourceData.value.loadingStates = {
+        searchInput: false,
+        searchOutput: false,
+        analysis: false,
+        sentences: false,
+        calculate: false
+    };
+    // 不重置步骤状态，保持已完成部分的显示
+};
+
+// 重置分析结果 - 只在开始新分析时调用
 const resetAnalysisResults = () => {
-    analysis.value = {
-        title_relevance: { score: 0, deductions: [] },
-        logical_consistency: { score: 0, deductions: [] },
-        factual_accuracy: { score: 0, deductions: [] },
-        subjectivity_and_inflammatory_language: { score: 0, deductions: [] },
-        causal_relevance: { score: 0, deductions: [] },
-        source_credibility: { score: 0, deductions: [] },
-        debunking_result: { score: null, deductions: [] },
-        external_corroboration: { score: null, deductions: [] }
-    };
-    
-    summary.value = {
-        main_points: []
-    };
-    
-    aiSentences.value = [];
-    humanSentences.value = [];
-    sourceSentences.value = [];
-    
-    // 重置来源数据
     sourceData.value = {
         searchInput: '',
         searchOutput: [],
         llm: '',
-        sentences: []
+        sentences: [],
+        analysis: {
+            title_relevance: { score: 0, deductions: [] },
+            logical_consistency: { score: 0, deductions: [] },
+            factual_accuracy: { score: 0, deductions: [] },
+            subjectivity_and_inflammatory_language: { score: 0, deductions: [] },
+            causal_relevance: { score: 0, deductions: [] },
+            source_credibility: { score: 0, deductions: [] },
+            debunking_result: { score: null, deductions: [] },
+            external_corroboration: { score: null, deductions: [] }
+        },
+        summary: {
+            main_points: []
+        },
+        calculate: {
+            score: 0,
+            level: '中',
+            description: ''
+        },
+        value: undefined,
+        loadingStates: {
+            searchInput: false,
+            searchOutput: false,
+            analysis: false,
+            sentences: false,
+            calculate: false
+        },
+        steps: {
+            searchInput: false,
+            searchOutput: false,
+            analysis: false,
+            sentences: false,
+            calculate: false
+        }
     };
+
+    aiSentences.value = [];
+    humanSentences.value = [];
+    sourceSentences.value = [];
 };
 
 const updateAnalysisFromApi = (apiAnalysis: any) => {
     // 清理apiAnalysis中的所有换行符
     const cleanApiAnalysis = removeNewlinesRecursively(apiAnalysis);
-    
+
     // 更新所有分析结果，以LLM输出为准
     if (cleanApiAnalysis.title_relevance) {
-        analysis.value.title_relevance = cleanApiAnalysis.title_relevance;
+        sourceData.value.analysis.title_relevance = cleanApiAnalysis.title_relevance;
     }
     if (cleanApiAnalysis.logical_consistency) {
-        analysis.value.logical_consistency = cleanApiAnalysis.logical_consistency;
+        sourceData.value.analysis.logical_consistency = cleanApiAnalysis.logical_consistency;
     }
     if (cleanApiAnalysis.factual_accuracy) {
-        analysis.value.factual_accuracy = cleanApiAnalysis.factual_accuracy;
+        sourceData.value.analysis.factual_accuracy = cleanApiAnalysis.factual_accuracy;
     }
     if (cleanApiAnalysis.subjectivity_and_inflammatory_language) {
-        analysis.value.subjectivity_and_inflammatory_language = cleanApiAnalysis.subjectivity_and_inflammatory_language;
+        sourceData.value.analysis.subjectivity_and_inflammatory_language = cleanApiAnalysis.subjectivity_and_inflammatory_language;
     }
     if (cleanApiAnalysis.causal_relevance) {
-        analysis.value.causal_relevance = cleanApiAnalysis.causal_relevance;
+        sourceData.value.analysis.causal_relevance = cleanApiAnalysis.causal_relevance;
     }
     if (cleanApiAnalysis.source_credibility) {
-        analysis.value.source_credibility = cleanApiAnalysis.source_credibility;
+        sourceData.value.analysis.source_credibility = cleanApiAnalysis.source_credibility;
     }
     if (cleanApiAnalysis.debunking_result) {
-        analysis.value.debunking_result = cleanApiAnalysis.debunking_result;
+        sourceData.value.analysis.debunking_result = cleanApiAnalysis.debunking_result;
     }
     if (cleanApiAnalysis.external_corroboration) {
-        analysis.value.external_corroboration = cleanApiAnalysis.external_corroboration;
+        sourceData.value.analysis.external_corroboration = cleanApiAnalysis.external_corroboration;
     }
 };
 

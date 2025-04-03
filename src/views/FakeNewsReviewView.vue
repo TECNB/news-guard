@@ -163,10 +163,8 @@ const performWebSearch = async (query: string, updateUI: (type: string, content:
             const jsonString = pythonStringToJson(content);
             const searchData = JSON.parse(jsonString);
             
-            // 提取搜索结果数组
-            if (searchData && Array.isArray(searchData)) {
-              // 格式化搜索结果为更易读的格式
-              const formattedResults = searchData.map((item: any) => ({
+            // 格式化搜索结果为更易读的格式
+            const formattedResults = searchData.map((item: any) => ({
                 title: item.title || '无标题',
                 url: item.link || '#',
                 snippet: item.snippet || '无摘要'
@@ -175,11 +173,7 @@ const performWebSearch = async (query: string, updateUI: (type: string, content:
               console.log('格式化后的搜索结果:', formattedResults);
               
               // 将格式化的搜索结果发送到UI
-              updateUI('searchResult', JSON.stringify(formattedResults));
-            } else {
-              // 如果无法提取结构化数据，直接发送原始文本
-              updateUI('searchResult', content);
-            }
+              updateUI('searchOutput', JSON.stringify(formattedResults));
           } catch (e) {
             console.error('解析搜索结果时出错:', e);
             // 解析失败时，直接发送原始文本
@@ -257,7 +251,7 @@ const handleEnter = async () => {
         displayedMessages.value.pop();
       }
       
-      if (type === 'searchResult') {
+      if (type === 'searchOutput') {
         // 检查内容是否已经是JSON字符串
         try {
           // 尝试解析内容，如果成功则表示它已经是JSON格式
@@ -276,6 +270,7 @@ const handleEnter = async () => {
           content: JSON.stringify(searchResults)
         });
       } else if (type === 'llm') {
+        console.log('接收到LLM输出:', content);
         // LLM回答
         if (llmContent === '') {
           // 第一次添加AI消息

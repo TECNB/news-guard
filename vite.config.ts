@@ -59,7 +59,7 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/ask_fake_news/, ""),
       },
       '/search': {
-        target: 'http://172.31.0.16:8000/chat_stream',
+        target: 'http://llm.flyfishxu.com/chat_stream',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/search/, ""),
       }

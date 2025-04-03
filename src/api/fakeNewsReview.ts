@@ -21,5 +21,10 @@ export const generateChart = (userContent: string, chartType: string): Promise<a
 
 // 获取聊天记录
 export const getSession = (): Promise<any> => {
-    return axios.get('api/get_session');
+    return axios.get('http://llm.flyfishxu.com/chat');
+};
+
+// 根据ID获取对话
+export const getSessionById = (sessionId: string): Promise<any> => {
+    return axios.get(`http://llm.flyfishxu.com/chat/${sessionId}`);
 };

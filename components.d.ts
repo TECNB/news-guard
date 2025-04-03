@@ -12,6 +12,7 @@ declare module 'vue' {
     BarContainer: typeof import('./src/components/Container/BarContainer.vue')['default']
     ChatWindow: typeof import('./src/components/Chat/ChatWindow.vue')['default']
     CodeCopyButton: typeof import('./src/components/Workflow/utils/CodeCopyButton.vue')['default']
+    CombinedAnalysisView: typeof import('./src/components/Analysis/CombinedAnalysisView.vue')['default']
     ConditionalProperties: typeof import('./src/components/Workflow/NodeProperties/ConditionalProperties.vue')['default']
     ConnectionHitboxes: typeof import('./src/components/Workflow/ConnectionHitboxes.vue')['default']
     ContextMenu: typeof import('./src/components/Workflow/ContextMenu.vue')['default']
