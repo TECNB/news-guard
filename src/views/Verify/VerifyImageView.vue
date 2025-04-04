@@ -43,7 +43,7 @@
             <div class="h-[20%] p-4 border-t border-gray-100 mt-4">
                 <div class="mb-4">
                     <div class="flex justify-between items-center mb-1">
-                        <span class="text-sm font-medium text-gray-700">量化参数 (Quantization)</span>
+                        <span class="text-sm font-medium text-gray-700">最小相似度 (Quantization)</span>
                         <span class="text-sm font-medium" style="color: #49CFAD;">{{ quantization.toFixed(2) }}</span>
                     </div>
                     <el-slider v-model="quantization" :min="0" :max="1" :step="0.01" />
@@ -134,7 +134,7 @@
                     </p>
                     <div class="text-gray-600 text-sm mt-2 bg-white p-3 rounded-lg shadow-sm">
                         <p class="flex justify-between items-center">
-                            <span>量化参数:</span>
+                            <span>最小相似度:</span>
                             <span class="font-medium">{{ quantization.toFixed(2) }}</span>
                         </p>
                         <p class="flex justify-between items-center mt-1">

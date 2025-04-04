@@ -139,60 +139,73 @@ const autoResize = (event: any) => {
   autoResizeTextarea(event.target);
 };
 
+// 处理流式API回调的独立函数
+const handleStreamCallback = (
+  tag: string, 
+  content: string, 
+  updateUI: (type: string, content: string) => void,
+  state: { hasProcessedSearchResults: boolean }
+) => {
+  // 处理不同类型的标签内容
+  if (tag === 'session_id') {
+    sessionId.value = content;
+    console.log('获取到会话ID:', content);
+  } else if (tag === 'search_output') {
+    console.log('原始搜索结果字符串:', content);
+    state.hasProcessedSearchResults = true;
+    
+    try {
+      // 使用JSON5解析Python风格的数据
+      const searchData = JSON5.parse(content);
+      
+      // 格式化搜索结果为更易读的格式
+      const formattedResults = searchData.map((item: any) => ({
+          title: item.title || '无标题',
+          url: item.link || '#',
+          snippet: item.snippet || '无摘要'
+        }));
+        
+        console.log('格式化后的搜索结果:', formattedResults);
+        
+        // 将格式化的搜索结果发送到UI
+        updateUI('searchOutput', JSON.stringify(formattedResults));
+    } catch (e) {
+      console.error('解析搜索结果时出错:', e);
+      // 解析失败时，直接发送原始文本
+      updateUI('searchResult', content);
+    }
+  } else if (tag === 'llm') {
+    // 处理LLM流式内容 - 由于使用了chatWithLLMStream，
+    // 这里每次收到的content都是截至目前的完整内容，不需要拼接
+    console.log('收到LLM实时流内容，长度:', content.length);
+    
+    // 只有在处理过搜索结果后，或者内容长度超过一定阈值时才更新UI
+    // 这可以避免在搜索结果出现前就显示少量LLM内容
+    if (state.hasProcessedSearchResults || content.length > 50) {
+      updateUI('llm', content);
+    } else {
+      console.log('延迟显示LLM内容，等待搜索结果先处理');
+    }
+  }
+};
+
 // 将web搜索函数修改为使用 ApiService
 const performWebSearch = async (query: string, updateUI: (type: string, content: string) => void) => {
   console.log('开始执行网络搜索:', query);
   
+  // 使用对象引用，使回调函数可以修改状态
+  const state = {
+    hasProcessedSearchResults: false
+  };
+  
   try {
-    // 用于跟踪已处理的LLM内容长度
-    let processedLlmLength = 0;
-    
-    // 使用 ApiService.chatWithLLM 代替 fetch('/search')
-    await ApiService.chatWithLLM(
+    // 使用 ApiService.chatWithLLMStream 代替 ApiService.chatWithLLM
+    await ApiService.chatWithLLMStream(
       query,
-      (tag, content) => {
-        // 处理不同类型的标签内容
-        if (tag === 'session_id') {
-          sessionId.value = content;
-          console.log('获取到会话ID:', content);
-        } else if (tag === 'search_output') {
-          console.log('原始搜索结果字符串:', content);
-          
-          try {
-            // 使用JSON5解析Python风格的数据
-            const searchData = JSON5.parse(content);
-            
-            // 格式化搜索结果为更易读的格式
-            const formattedResults = searchData.map((item: any) => ({
-                title: item.title || '无标题',
-                url: item.link || '#',
-                snippet: item.snippet || '无摘要'
-              }));
-              
-              console.log('格式化后的搜索结果:', formattedResults);
-              
-              // 将格式化的搜索结果发送到UI
-              updateUI('searchOutput', JSON.stringify(formattedResults));
-          } catch (e) {
-            console.error('解析搜索结果时出错:', e);
-            // 解析失败时，直接发送原始文本
-            updateUI('searchResult', content);
-          }
-        } else if (tag === 'llm') {
-          // 处理LLM流式内容
-          if (content.length > processedLlmLength) {
-            // 只发送新增的部分
-            const newContent = content.substring(processedLlmLength);
-            // 更新已处理的长度
-            processedLlmLength = content.length;
-            // 将新增内容发送到UI
-            updateUI('llm', newContent);
-            console.log('发送LLM新增片段到UI, 长度:', newContent.length);
-          }
-        }
-      },
+      (tag, content) => handleStreamCallback(tag, content, updateUI, state),
       undefined, // 使用undefined来避免类型错误
-      "2" // 能力级别需要是字符串类型
+      sessionId.value || undefined, // 传递当前会话ID，处理可能为null的情况
+      2 // 能力级别应为数字类型
     );
     
     return true;
@@ -242,6 +255,8 @@ const handleEnter = async () => {
     // 创建一个临时变量来保存LLM回答的内容
     let llmContent = '';
     let searchResults: any[] = [];
+    // 添加一个标志变量，用于跟踪是否已显示AI消息
+    let hasAddedAiMessage = false;
     
     // 定义UI更新函数
     const updateUI = (type: string, content: string) => {
@@ -270,17 +285,23 @@ const handleEnter = async () => {
         });
       } else if (type === 'llm') {
         console.log('接收到LLM输出:', content);
+        // 确保内容非空再显示
+        if (!content || content.trim() === '') {
+          console.log('收到空LLM内容，跳过更新');
+          return;
+        }
+        
         // LLM回答
-        if (llmContent === '') {
+        if (!hasAddedAiMessage) {
           // 第一次添加AI消息
           displayedMessages.value.push({ type: 'ai', content: content });
           llmContent = content;
+          hasAddedAiMessage = true;
         } else {
-          // 更新现有AI消息
-          llmContent += content;
+          // 更新现有AI消息 - 直接使用API提供的完整内容
           const lastMessage = displayedMessages.value[displayedMessages.value.length - 1];
           if (lastMessage && lastMessage.type === 'ai') {
-            lastMessage.content = llmContent;
+            lastMessage.content = content;
           }
         }
       } else if (type === 'error') {
