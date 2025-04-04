@@ -12,7 +12,7 @@ const pieOption = (seriesData: { value: number; name: string;}[],seriesName:stri
             orient: 'vertical',
             left: '70%',
             y: 'center',
-            itemGap: 30,
+            itemGap: 10,
             itemHeight: 15,
         },
         series: [

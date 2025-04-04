@@ -2,6 +2,16 @@ import { ECBasicOption } from 'echarts/types/dist/shared';
 
 const lineOptions = (xAxisData: string[], seriesData: number[], yAxisLabel: string): ECBasicOption => {
     return {
+        tooltip: {
+            trigger: 'axis',  // 'axis' 触发类型，显示整个坐标轴上的数据
+            axisPointer: {
+                type: 'line',  // 可选 'line', 'shadow'
+            },
+            formatter: (params: any) => {
+                const [param] = params;
+                return `${param.name}<br/>${yAxisLabel}: ${param.value}`;
+            },
+        },
         xAxis: {
             type: 'category',
             data: xAxisData,
@@ -11,7 +21,7 @@ const lineOptions = (xAxisData: string[], seriesData: number[], yAxisLabel: stri
             position: 'left',
             name: yAxisLabel,  // 添加 y 轴标签
             nameTextStyle: {
-                padding: [0, 0, 10, -30],  // 调整 AQI 标签位置
+                padding: [0, 0, 10, 0],  // 调整 AQI 标签位置
             },
         },
         grid: {
@@ -28,11 +38,6 @@ const lineOptions = (xAxisData: string[], seriesData: number[], yAxisLabel: stri
                 symbolSize: 6,
                 data: seriesData,
                 color: ['#5DB1FF'],
-                markLine: {
-                    symbol: ['none', 'none'],
-                    label: { show: false },
-                    data: [{ xAxis: 8 }, { xAxis: 11 }]
-                },
                 areaStyle: {
                     color: {
                         type: 'linear',

@@ -1,8 +1,8 @@
 <template>
     <div class="Sidebar rounded-none md:rounded-3xl z-[10000]">
         <div class="sidebar-logo-container">
-            <img class="w-9 h-9 rounded-full object-cover aspect-square" src="../assets/images/logo.png">
-            <p>NEWS-GUARD</p>
+            <img class="w-9 h-9 rounded-full object-cover aspect-square mr-2" src="../assets/images/logo.png">
+            <p>DeepNews</p>
         </div>
         <el-scrollbar height="90%" v-if="!ifReviewClick">
             <ul>

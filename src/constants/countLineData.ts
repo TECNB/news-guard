@@ -1,6 +1,6 @@
 // countLineData.ts
 
 export const countLineData = {
-    xAxisData: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-    seriesData: [45, 50, 55, 60, 65, 70, 75, 80, 70, 65, 55, 50]
+    xAxisData: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+    seriesData: [11, 14, 13, 10, 0, 0, 0, 0, 0, 0, 0, 0]
 };
