@@ -3,12 +3,14 @@
         <el-scrollbar height="95%" class="w-full">
             <!-- 默认欢迎界面 -->
             <div v-if="showWelcomeScreen" class="flex flex-col justify-center items-center h-[80vh]">
-                <div class="text-center p-8 rounded-lg bg-gray-50 shadow-sm border border-gray-100 max-w-lg">
-                    <el-icon :size="40" class="text-[#49CFAD] mb-4"><Search /></el-icon>
-                    <h2 class="text-xl font-bold text-gray-700 mb-3">欢迎使用内容分析工具</h2>
-                    <p class="text-gray-600 mb-2">请在左侧输入文本内容或网址，点击"检测文字"或"检测网页"按钮开始分析。</p>
-                    <p class="text-gray-500 text-sm">分析结果将在此处实时显示</p>
+                <div class="w-24 h-24 rounded-full bg-gray-100 flex justify-center items-center mb-6">
+                    <el-icon class="text-[#49CFAD] text-4xl"><Search /></el-icon>
                 </div>
+                <h2 class="text-xl font-bold text-gray-700 mb-3">欢迎使用内容分析工具</h2>
+                <p class="text-gray-500 text-center max-w-md">
+                    请在左侧输入文本内容或网址，<br/>点击"检测文字"或"检测网页"按钮开始分析。
+                </p>
+                <p class="text-gray-400 text-sm mt-2">分析结果将在此处实时显示</p>
             </div>
 
             <!-- 当有数据时展示的内容 - 顺序从新到旧 -->

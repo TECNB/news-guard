@@ -4,7 +4,7 @@
             class="flex-[2] h-full shadow-lg border border-gray-100 rounded-2xl p-6 bg-white transition-all duration-300">
             <div class="flex justify-between items-center border-b border-gray-100 pb-5 mb-4">
                 <p class="text-xl font-bold text-gray-800">图片分析</p>
-                <span class="text-sm text-gray-500">支持多种图片格式</span>
+                <span class="text-sm text-gray-500">像素克隆情况分析</span>
             </div>
 
             <!-- 图片上传区域 -->
