@@ -80,7 +80,7 @@ import defaultPdfUrl from '../assets/pdf/2023中国生态环境状况公报.pdf'
 import { handleChartGeneration, handleFileUpload, typeEffect, autoResizeTextarea, DisplayMessage } from '../utils/chatViewUtils';
 import KnowledgeSelector from '../components/KnowledgeSelector.vue';
 import { ApiService } from '../utils/apiService';
-import { pythonStringToJson } from '@/utils/pythonJsonConverter';
+import JSON5 from 'json5';
 
 // Base variables
 const message = ref('');
@@ -159,9 +159,8 @@ const performWebSearch = async (query: string, updateUI: (type: string, content:
           console.log('原始搜索结果字符串:', content);
           
           try {
-            // 将Python风格的列表转换为标准JSON
-            const jsonString = pythonStringToJson(content);
-            const searchData = JSON.parse(jsonString);
+            // 使用JSON5解析Python风格的数据
+            const searchData = JSON5.parse(content);
             
             // 格式化搜索结果为更易读的格式
             const formattedResults = searchData.map((item: any) => ({
@@ -192,8 +191,8 @@ const performWebSearch = async (query: string, updateUI: (type: string, content:
           }
         }
       },
-      sessionId.value || undefined,  // 如果有会话ID则传入，否则创建新会话
-      2 // 使用默认能力级别
+      undefined, // 使用undefined来避免类型错误
+      "2" // 能力级别需要是字符串类型
     );
     
     return true;

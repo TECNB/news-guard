@@ -58,6 +58,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/ask_fake_news/, ""),
       },
+      '/predict': {
+        target: 'http://10.248.68.50:8000/predict',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/predict/, ""),
+      },
       '/search': {
         target: 'http://llm.flyfishxu.com/chat_stream',
         changeOrigin: true,
