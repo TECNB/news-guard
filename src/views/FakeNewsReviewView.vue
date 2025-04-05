@@ -50,6 +50,7 @@
 
         <!-- Web Search Toggle -->
         <div 
+          v-if="!chatStore.isVerifyMode"
           class="flex items-center gap-2 mt-2 px-3 py-1 cursor-pointer hover:opacity-80 transition-opacity border rounded-lg w-fit"
           :class="{'border-green-400': enableWebSearch, 'border-gray-300': !enableWebSearch}"
           @click="enableWebSearch = !enableWebSearch"
@@ -62,6 +63,17 @@
             :class="{'text-green-400': enableWebSearch, 'text-gray-600': !enableWebSearch}"
           >
             联网搜索
+          </span>
+        </div>
+        
+        <!-- 如果在检验模式下，显示当前文章标题和得分 -->
+        <div 
+          v-if="chatStore.isVerifyMode"
+          class="flex items-center gap-2 mt-2 px-3 py-1 border rounded-lg border-gray-300 w-fit"
+        >
+          <i class="fa-solid fa-file-alt text-gray-500"></i>
+          <span class="text-sm text-gray-600">
+            {{ chatStore.selectedTaskTitle }} ({{ chatStore.selectedTaskScore?.toFixed(1) }})
           </span>
         </div>
       </div>
@@ -81,6 +93,7 @@ import { handleChartGeneration, handleFileUpload, typeEffect, autoResizeTextarea
 import KnowledgeSelector from '../components/KnowledgeSelector.vue';
 import { ApiService } from '../utils/apiService';
 import JSON5 from 'json5';
+import ChatWindow from '../components/Chat/ChatWindow.vue';
 
 // Base variables
 const message = ref('');
@@ -199,12 +212,23 @@ const performWebSearch = async (query: string, updateUI: (type: string, content:
   };
   
   try {
+    // 确定使用哪个会话ID
+    // 1. 优先使用chatStore中的currentConversationId（如果是字符串类型）
+    // 2. 其次使用sessionId变量（从API回调中获取）
+    // 3. 如果都没有，则不传递sessionId参数，让API创建新会话
+    const effectiveSessionId = 
+      typeof chatStore.currentConversationId === 'string' 
+        ? chatStore.currentConversationId 
+        : sessionId.value;
+    
+    console.log('使用会话ID:', effectiveSessionId);
+    
     // 使用 ApiService.chatWithLLMStream 代替 ApiService.chatWithLLM
     await ApiService.chatWithLLMStream(
       query,
       (tag, content) => handleStreamCallback(tag, content, updateUI, state),
       undefined, // 使用undefined来避免类型错误
-      sessionId.value || undefined, // 传递当前会话ID，处理可能为null的情况
+      effectiveSessionId || undefined, // 传递有效的会话ID，处理可能为null的情况
       2 // 能力级别应为数字类型
     );
     
@@ -247,6 +271,81 @@ const handleEnter = async () => {
   displayedMessages.value.push({ type: 'user', content: userContent });
   message.value = '';
   showSuggestions.value = false;
+  
+  // 检验模式处理
+  if (chatStore.isVerifyMode && chatStore.selectedTaskId) {
+    displayedMessages.value.push({ type: 'loading', content: '' });
+    
+    // 创建一个临时变量来保存LLM回答的内容
+    let llmContent = '';
+    // 添加一个标志变量，用于跟踪是否已显示AI消息
+    let hasAddedAiMessage = false;
+    
+    // 定义UI更新函数
+    const updateUI = (type: string, content: string) => {
+      // 移除loading消息（如果还存在）
+      if (displayedMessages.value[displayedMessages.value.length - 1]?.type === 'loading') {
+        displayedMessages.value.pop();
+      }
+      
+      if (type === 'llm') {
+        console.log('接收到LLM输出:', content);
+        // 确保内容非空再显示
+        if (!content || content.trim() === '') {
+          console.log('收到空LLM内容，跳过更新');
+          return;
+        }
+        
+        // LLM回答
+        if (!hasAddedAiMessage) {
+          // 第一次添加AI消息
+          displayedMessages.value.push({ type: 'ai', content: content });
+          llmContent = content;
+          hasAddedAiMessage = true;
+        } else {
+          // 更新现有AI消息 - 直接使用API提供的完整内容
+          const lastMessage = displayedMessages.value[displayedMessages.value.length - 1];
+          if (lastMessage && lastMessage.type === 'ai') {
+            lastMessage.content = content;
+          }
+        }
+      } else if (type === 'error') {
+        // 错误消息
+        displayedMessages.value.push({ type: 'ai', content: content });
+      }
+    };
+    
+    try {
+      // 使用 ApiService.sendVerifyQuestion 发送检验问题
+      await ApiService.sendVerifyQuestion(
+        chatStore.selectedTaskId,
+        userContent,
+        (tag, content) => {
+          if (tag === 'llm') {
+            updateUI('llm', content);
+          } else if (tag === 'done') {
+            console.log('问答完成');
+          }
+        },
+        undefined, // 使用undefined来避免类型错误
+        2 // 能力级别
+      );
+      
+      // 保存消息到当前会话
+      chatStore.saveMessages(displayedMessages.value);
+      
+      // 确保loading状态已被移除
+      if (displayedMessages.value[displayedMessages.value.length - 1]?.type === 'loading') {
+        displayedMessages.value.pop();
+      }
+    } catch (error) {
+      console.error('检验问答请求失败:', error);
+      displayedMessages.value.pop(); // 移除loading
+      displayedMessages.value.push({ type: 'ai', content: '发生错误，请稍后再试。' });
+    }
+    
+    return; // 检验模式处理完毕，不再调用其他API
+  }
   
   // 网络搜索处理
   if (enableWebSearch.value) {
@@ -321,16 +420,29 @@ const handleEnter = async () => {
     return; // 搜索处理完毕，不再调用常规聊天API
   }
   
-  // 常规聊天API调用逻辑保持不变
+  // 常规聊天API调用
   displayedMessages.value.push({ type: 'loading', content: '' });
 
   try {
-    const response = await chat(userContent);
+    // 获取有效的会话ID
+    const effectiveSessionId = 
+      typeof chatStore.currentConversationId === 'string' 
+        ? chatStore.currentConversationId 
+        : sessionId.value;
+    
+    // 根据是否有会话ID决定调用方式
+    const response = effectiveSessionId 
+      ? await chat(userContent, effectiveSessionId)
+      : await chat(userContent);
+    
     const completeMessage = response.data.answer;
-
+    
     displayedMessages.value.pop(); // Remove loading
     displayedMessages.value.push({ type: 'ai', content: '' });
     await typeEffect(displayedMessages, completeMessage, 50);
+    
+    // 保存消息到当前会话
+    chatStore.saveMessages(displayedMessages.value);
   } catch (error) {
     console.error('Chat request failed:', error);
     displayedMessages.value.pop();

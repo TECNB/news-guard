@@ -1,10 +1,15 @@
 import axios from 'axios';
 
 // 发送用户内容
-export const chat = (userContent: string): Promise<any> => {
-    const data = {
+export const chat = (userContent: string, sessionId?: string): Promise<any> => {
+    const data: any = {
         user_content: userContent
     };
+    
+    // 如果提供了sessionId，则添加到请求数据中
+    if (sessionId) {
+        data.session_id = sessionId;
+    }
 
     return axios.post('api/ask_fake_news', data);
 };
@@ -21,10 +26,15 @@ export const generateChart = (userContent: string, chartType: string): Promise<a
 
 // 获取聊天记录
 export const getSession = (): Promise<any> => {
-    return axios.get('http://llm.flyfishxu.com/chat');
+    return axios.get('http://127.0.0.1:8000/chat');
 };
 
 // 根据ID获取对话
 export const getSessionById = (sessionId: string): Promise<any> => {
-    return axios.get(`http://llm.flyfishxu.com/chat/${sessionId}`);
+    return axios.get(`http://127.0.0.1:8000/chat/${sessionId}`);
+};
+
+// 获取任务列表
+export const getTasks = (): Promise<any> => {
+    return axios.get('http://127.0.0.1:8000/tasks');
 };

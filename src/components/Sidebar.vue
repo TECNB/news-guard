@@ -56,18 +56,36 @@
                 </el-icon>
                 <p class="font-bold">返回</p>
             </div>
-            <ul>
-                <!-- 遍历菜单项 -->
-                <li v-for="(menu, index) in chat" :key="index">
-                    <div class="menu-item w-52 relative" @click="getSessionId(index, menu.sessionId)"
-                        :class="{ 'active-menu': selectedMenu === index }">
+            
+            <!-- 对话/检验切换选项 -->
+            <div class="flex justify-center my-3">
+                <el-radio-group v-model="viewMode" size="large" @change="handleViewModeChange">
+                    <el-radio-button label="chat">对话</el-radio-button>
+                    <el-radio-button label="verify">检验</el-radio-button>
+                </el-radio-group>
+            </div>
+            
+            <!-- 添加加载中状态显示 -->
+            <div v-if="isLoading" class="flex justify-center items-center py-10">
+                <el-icon class="is-loading mr-2"><Loading /></el-icon>
+                <span>加载中...</span>
+            </div>
+            <ul v-else>
+                <!-- 遍历聊天记录或检验任务 -->
+                <li v-for="(item, index) in viewMode === 'chat' ? chat : tasks" :key="index">
+                    <div class="menu-item w-52 relative" 
+                         @click="viewMode === 'chat' ? getSessionId(index, item.sessionId) : getTaskDetail(index, item.session_id)"
+                         :class="{ 'active-menu': selectedMenu === index }">
                         <el-icon color="#000000" v-if="selectedMenu === index">
-                            <component :is="menu.icon"></component>
+                            <component :is="item.icon || 'ChatDotRound'"></component>
                         </el-icon>
                         <el-icon v-else>
-                            <component :is="menu.icon"></component>
+                            <component :is="item.icon || 'ChatDotRound'"></component>
                         </el-icon>
-                        <p class="text-nowrap text-ellipsis overflow-hidden">{{ menu.label }}</p>
+                        <p class="text-nowrap text-ellipsis overflow-hidden">
+                            {{ viewMode === 'chat' ? item.label : item.title }}
+                            <span v-if="viewMode === 'verify'" class="text-xs ml-1">({{ item.score.toFixed(1) }})</span>
+                        </p>
                     </div>
                 </li>
             </ul>
@@ -78,7 +96,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { getSession, getSessionById } from '../api/fakeNewsReview';
+import { getSession, getSessionById, getTasks } from '../api/fakeNewsReview';
+import { Loading } from '@element-plus/icons-vue';
 
 import { useChatStore } from '../stores/ChatStore.ts';
 
@@ -94,6 +113,8 @@ const selectedSubMenu = ref<number | null>(null);
 // ifShowSubMenu
 const ifShowSubMenu = ref<boolean>(false);
 const ifReviewClick = ref<boolean>(false);
+const isLoading = ref<boolean>(false); // 添加加载状态变量
+const viewMode = ref<'chat' | 'verify'>('chat'); // 添加视图模式，默认为对话模式
 
 const menus = [
     {
@@ -147,6 +168,7 @@ const menus = [
 
 
 let chat = ref<any[]>([]);
+let tasks = ref<any[]>([]); // 添加任务列表
 const displayedMessages = ref<{ type: string; content: string }[]>([]); // 展示的消息列表
 let Session = ref<any[]>([]);
 
@@ -160,9 +182,104 @@ onMounted(async () => {
     console.log("selectedMenu:" + selectedMenu.value)
 });
 
+// 处理视图模式变更
+const handleViewModeChange = async (newMode: 'chat' | 'verify') => {
+    isLoading.value = true;
+    
+    // 更新chatStore的模式
+    chatStore.setVerifyMode(newMode === 'verify');
+    
+    try {
+        if (newMode === 'chat' && chat.value.length === 0) {
+            await loadChatSessions();
+        } else if (newMode === 'verify' && tasks.value.length === 0) {
+            await loadTasks();
+        }
+    } catch (error) {
+        console.error(`加载${newMode === 'chat' ? '对话' : '检验'}列表失败:`, error);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// 加载任务列表
+const loadTasks = async () => {
+    try {
+        const response = await getTasks();
+        if (response && response.data) {
+            tasks.value = response.data;
+            console.log("获取到的任务列表:", tasks.value);
+        } else {
+            console.error("获取任务列表失败: 响应数据为空");
+            tasks.value = [];
+        }
+    } catch (error) {
+        console.error("获取任务列表失败:", error);
+        tasks.value = [];
+    }
+};
+
+// 加载对话列表
+const loadChatSessions = async () => {
+    try {
+        const response = await getSession();
+        if (response && response.data && Array.isArray(response.data)) {
+            chat.value = response.data.map((item: any, i: number) => ({
+                label: item.summary || `对话 ${i + 1}`,
+                icon: 'ChatDotRound',
+                sessionId: item.session_id,
+            }));
+            
+            console.log("获取到的会话列表:", chat.value);
+        } else {
+            console.error("获取会话列表失败: 响应数据无效");
+            chat.value = [];
+        }
+    } catch (error) {
+        console.error("获取会话列表失败:", error);
+        chat.value = [];
+    }
+};
+
+// 获取任务详情
+const getTaskDetail = async (index: number, sessionId: string) => {
+    selectedMenu.value = index;
+    selectedSubMenu.value = null;
+    
+    // 只设置当前选中的任务，不发送请求获取详情
+    const selectedTask = tasks.value[index];
+    if (selectedTask) {
+        // 设置当前选中的任务
+        chatStore.setSelectedTask(
+            selectedTask.session_id,
+            selectedTask.title,
+            selectedTask.score
+        );
+        
+        // 设置为检验模式
+        chatStore.setVerifyMode(true);
+        
+        // 创建或切换到相应的会话
+        const existingConversation = chatStore.conversations.find(conv => conv.id === selectedTask.session_id);
+        if (!existingConversation) {
+            chatStore.startNewConversation(selectedTask.session_id);
+        } else {
+            chatStore.switchConversation(selectedTask.session_id);
+        }
+        
+        // 在这里不需要调用getSessionById获取消息
+        console.log("已选择任务:", selectedTask.title);
+    } else {
+        console.error("无法找到选中的任务");
+    }
+};
+
 const getSessionId = async (index: number, sessionId: string) => {
     selectedMenu.value = index;
     selectedSubMenu.value = null; // 清除子菜单的选中状态
+
+    // 设置为非检验模式
+    chatStore.setVerifyMode(false);
 
     try {
         // 调用根据ID获取对话的API
@@ -177,13 +294,13 @@ const getSessionId = async (index: number, sessionId: string) => {
             }));
 
             // 确保currentConversationId设置为该会话的ID
-            const existingConversation = chatStore.conversations.find(conv => conv.id === Number(sessionId));
+            const existingConversation = chatStore.conversations.find(conv => conv.id === sessionId);
             if (!existingConversation) {
                 // 如果没有找到会话，创建一个新会话
-                chatStore.startNewConversation();
+                chatStore.startNewConversation(sessionId);
             } else {
                 // 如果找到了会话，设置为当前会话
-                chatStore.switchConversation(Number(sessionId));
+                chatStore.switchConversation(sessionId);
             }
 
             // 保存消息到当前会话
@@ -200,6 +317,24 @@ const getSessionId = async (index: number, sessionId: string) => {
 const handleReviewClick = async () => {
     console.log("handleReviewClick");
     ifReviewClick.value = !ifReviewClick.value;
+    
+    // 当切换到虚假新闻助手界面时
+    if (ifReviewClick.value) {
+        isLoading.value = true;
+        
+        try {
+            // 根据当前视图模式加载数据
+            if (viewMode.value === 'chat' && chat.value.length === 0) {
+                await loadChatSessions();
+            } else if (viewMode.value === 'verify' && tasks.value.length === 0) {
+                await loadTasks();
+            }
+        } catch (error) {
+            console.error(`加载${viewMode.value === 'chat' ? '对话' : '检验'}列表失败:`, error);
+        } finally {
+            isLoading.value = false;
+        }
+    }
 };
 
 
@@ -220,23 +355,22 @@ const selectMenu = async(index: number, ifChildren: any, path: string) => {
         // 当 index 为 3 时，创建新的 chatStore 会话
         if (index === 3) {
             try {
-                // 调用获取所有对话的API
-                const response = await getSession();
-                const sessions = response.data;
-
-                if (sessions && Array.isArray(sessions)) {
-                    // 构建chat数组，从API返回的会话列表中提取信息
-                    chat.value = sessions.map((item: any, i: number) => ({
-                        label: item.summary || `对话 ${i + 1}`, // 使用summary作为标签，i是数字索引
-                        icon: 'ChatDotRound',
-                        sessionId: item.session_id, // 使用session_id作为会话ID
-                    }));
-
-                    console.log("获取到的会话列表:", chat.value);
-                    chatStore.startNewConversation();
+                // 设置加载状态为true
+                isLoading.value = true;
+                // 根据当前视图模式加载数据
+                if (viewMode.value === 'chat' && chat.value.length === 0) {
+                    await loadChatSessions();
+                } else if (viewMode.value === 'verify' && tasks.value.length === 0) {
+                    await loadTasks();
                 }
+                
+                // 创建新的会话
+                chatStore.startNewConversation();
             } catch (error) {
-                console.error("获取会话列表失败:", error);
+                console.error(`加载${viewMode.value === 'chat' ? '对话' : '检验'}列表失败:`, error);
+            } finally {
+                // 无论成功还是失败，都设置加载状态为false
+                isLoading.value = false;
             }
         }
     } else {
