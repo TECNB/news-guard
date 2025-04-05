@@ -75,6 +75,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     RunPanel: typeof import('./src/components/Workflow/RunPanel.vue')['default']
+    SearchProperties: typeof import('./src/components/Workflow/NodeProperties/SearchProperties.vue')['default']
     SentenceAnalysis: typeof import('./src/components/Analysis/SentenceAnalysis.vue')['default']
     SettingChart: typeof import('./src/components/Pipeline/SettingChart.vue')['default']
     SettingDataSource: typeof import('./src/components/Pipeline/SettingDataSource.vue')['default']

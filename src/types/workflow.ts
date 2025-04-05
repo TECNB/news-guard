@@ -37,12 +37,22 @@ export interface ConditionalConfig {
 }
 
 /**
+ * 搜索节点配置接口
+ */
+export interface SearchConfig {
+  searchEngine: string;
+  maxResults: number;
+  queryPrompt: string;
+}
+
+/**
  * 节点配置接口
  * 包含不同类型节点的所有可能配置项
  */
 export interface NodeConfig extends Partial<LLMConfig>, 
   Partial<KnowledgeConfig>, 
-  Partial<ConditionalConfig> {
+  Partial<ConditionalConfig>,
+  Partial<SearchConfig> {
   variableValues?: Record<string, any>;
   trueSystemPrompt?: string;
   trueExpression?: string;  // 条件节点的实际执行表达式（替换变量后）
@@ -156,6 +166,16 @@ export const NODE_TYPES = [
     }
   },
   { 
+    type: 'search', 
+    name: '联网搜索节点', 
+    colorClass: 'bg-blue-400',
+    defaultConfig: {
+      searchEngine: 'google',
+      maxResults: 5,
+      queryPrompt: ''
+    }
+  },
+  { 
     type: 'end', 
     name: '输出节点', 
     colorClass: 'bg-red-500',
@@ -168,9 +188,11 @@ export const NODE_TYPES = [
  * 工厂函数，用于创建指定类型的新节点
  */
 export function createNode(type: string, x: number, y: number): Node {
+  console.log(`尝试创建节点类型: ${type}`, NODE_TYPES.map(nt => nt.type));
   const nodeType = NODE_TYPES.find(nt => nt.type === type);
   
   if (!nodeType) {
+    console.error(`找不到节点类型: ${type}，可用类型:`, NODE_TYPES.map(nt => nt.type));
     throw new Error(`不支持的节点类型: ${type}`);
   }
   
@@ -198,6 +220,9 @@ export function createNode(type: string, x: number, y: number): Node {
   } else if (type === 'conditional') {
     node.inputs = ['condition'];
     node.outputs = ['true', 'false'];
+  } else if (type === 'search') {
+    node.inputs = ['query'];
+    node.outputs = ['results'];
   }
   
   return node;

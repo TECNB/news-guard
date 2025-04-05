@@ -50,10 +50,14 @@
           v-else-if="selectedNode.type === 'conditional'"
           v-model="conditionalConfig"
         />
+        <search-properties
+          v-else-if="selectedNode.type === 'search'"
+          v-model="searchConfig"
+        />
       </div>
       
       <!-- 输入/输出配置 -->
-      <div class="mb-6" v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end'&& selectedNode.type !== 'conditional'">
+      <div class="mb-6" v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end' && selectedNode.type !== 'conditional'">
         <IOEditor
           v-model="ioValue"
         />
@@ -87,7 +91,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { NODE_TYPES, LLMConfig, KnowledgeConfig, ConditionalConfig, StartConfig } from '../../types/workflow';
+import { NODE_TYPES, LLMConfig, KnowledgeConfig, ConditionalConfig, StartConfig, SearchConfig } from '../../types/workflow';
 import IOEditor from './NodeProperties/IOEditor.vue';
 import LLMProperties from './NodeProperties/LLMProperties.vue';
 import KnowledgeProperties from './NodeProperties/KnowledgeProperties.vue';
@@ -95,6 +99,7 @@ import ConditionalProperties from './NodeProperties/ConditionalProperties.vue';
 import StartProperties from './NodeProperties/StartProperties.vue';
 import { useWorkflowStore } from '../../stores/workflowStore';
 import OutputProperties from './NodeProperties/OutputProperties.vue';
+import SearchProperties from './NodeProperties/SearchProperties.vue';
 
 // 使用工作流store
 const workflowStore = useWorkflowStore();
@@ -167,6 +172,7 @@ const getNodeConfig = <T>(nodeType: string, configProp: string = 'config', defau
 
 // 更新配置（对所有节点类型通用）
 const updateNodeConfig = <T>(nodeType: string, configProp: string, value: T): void => {
+  console.log('更新节点配置', nodeType, configProp, value);
   if (!selectedNode.value || selectedNode.value.type !== nodeType) return;
   localNodeChanges.value[configProp] = value;
 };
@@ -192,9 +198,15 @@ const knowledgeConfig = computed<KnowledgeConfig>({
 });
 
 // 计算属性：条件配置
-const conditionalConfig = computed<ConditionalConfig>({
-  get: () => getNodeConfig<ConditionalConfig>('conditional', 'config'),
+const conditionalConfig = computed<any>({
+  get: () => getNodeConfig<any>('conditional', 'config'),
   set: (value) => updateNodeConfig('conditional', 'config', value)
+});
+
+// 计算属性：搜索配置
+const searchConfig = computed<SearchConfig>({
+  get: () => getNodeConfig<SearchConfig>('search', 'config'),
+  set: (value) => updateNodeConfig('search', 'config', value)
 });
 
 // 计算属性：IO值

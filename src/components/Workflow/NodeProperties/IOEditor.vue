@@ -1,8 +1,7 @@
 <template>
-  <div class="space-y-5">
-    <h4 class="text-md font-medium text-gray-700">输入/输出配置</h4>
-    
-    <div>
+  <div class="space-y-5">    
+    <!-- 输入变量区域 - 只对非LLM和非search节点显示 -->
+    <div v-if="!isSpecialNode">
       <label class="block text-sm font-medium text-gray-700 mb-1">输入变量</label>
       <div class="space-y-2">
         <div 
@@ -34,7 +33,7 @@
       </div>
     </div>
     
-    <!-- LLM节点显示固定输出格式 -->
+    <!-- LLM节点固定输出格式 -->
     <div v-if="isLLMNode">
       <label class="block text-sm font-medium text-gray-700 mb-1">输出变量</label>
       <div class="p-3 bg-gray-50 border border-gray-200 rounded-md">
@@ -48,7 +47,21 @@
       </div>
     </div>
     
-    <!-- 非LLM节点允许自定义输出变量 -->
+    <!-- 搜索节点固定输出格式 -->
+    <div v-else-if="isSearchNode">
+      <label class="block text-sm font-medium text-gray-700 mb-1">输出变量</label>
+      <div class="p-3 bg-gray-50 border border-gray-200 rounded-md">
+        <div class="flex items-center">
+          <span class="text-blue-500 w-5 text-center mr-2">
+            <i class="fa-solid fa-bracket-curly text-xs"></i>
+          </span>
+          <span class="text-sm font-medium">results</span>
+          <span class="text-xs text-gray-500 ml-2">(Array) 搜索结果</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 普通节点允许自定义输出变量 -->
     <div v-else>
       <label class="block text-sm font-medium text-gray-700 mb-1">输出变量</label>
       <div class="space-y-2">
@@ -117,6 +130,12 @@ watch(() => props.modelValue, (newValue) => {
 // 判断是否为LLM节点
 const isLLMNode = computed(() => props.modelValue.nodeType === 'llm');
 
+// 判断是否为搜索节点
+const isSearchNode = computed(() => props.modelValue.nodeType === 'search');
+
+// 判断是否是特殊处理的节点（LLM或Search）
+const isSpecialNode = computed(() => isLLMNode.value || isSearchNode.value);
+
 // 更新父组件的值
 const updateModelValue = () => {
   emit('update:modelValue', {
@@ -127,26 +146,32 @@ const updateModelValue = () => {
 };
 
 const addInput = () => {
+  // 如果是特殊节点，不允许添加输入
+  if (isSpecialNode.value) return;
+  
   localIO.value.inputs.push('');
   updateModelValue();
 };
 
 const removeInput = (index: number) => {
+  // 如果是特殊节点，不允许删除输入
+  if (isSpecialNode.value) return;
+  
   localIO.value.inputs.splice(index, 1);
   updateModelValue();
 };
 
 const addOutput = () => {
-  // 如果是LLM节点，不允许添加输出
-  if (isLLMNode.value) return;
+  // 如果是特殊节点，不允许添加输出
+  if (isSpecialNode.value) return;
   
   localIO.value.outputs.push('');
   updateModelValue();
 };
 
 const removeOutput = (index: number) => {
-  // 如果是LLM节点，不允许删除输出
-  if (isLLMNode.value) return;
+  // 如果是特殊节点，不允许删除输出
+  if (isSpecialNode.value) return;
   
   localIO.value.outputs.splice(index, 1);
   updateModelValue();

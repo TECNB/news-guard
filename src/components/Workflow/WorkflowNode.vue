@@ -1,19 +1,12 @@
 <template>
-  <div 
-    class="absolute" 
-    :style="{ left: `${node.x}px`, top: `${node.y}px` }"
-    @contextmenu.prevent="showContextMenu"
-  >
-    <div 
+  <div class="absolute" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @contextmenu.prevent="showContextMenu">
+    <div
       class="node bg-white rounded-2xl shadow-md border border-gray-200 p-3 cursor-move relative min-w-[240px] transition duration-200"
-      :class="{ 'border-blue-500 ring-2 ring-blue-200': isSelected }"
-      @mousedown.stop="onNodeDragStart"
-      @click.stop="onNodeClick"
-      @mouseenter="showControls = true"
-      @mouseleave="showControls = false"
-    >
+      :class="{ 'border-blue-500 ring-2 ring-blue-200': isSelected }" @mousedown.stop="onNodeDragStart"
+      @click.stop="onNodeClick" @mouseenter="showControls = true" @mouseleave="showControls = false">
       <!-- 控制栏 -->
-      <div v-if="showControls || isSelected" class="node-controls absolute -top-5 -right-1 bg-white rounded-lg shadow-md z-20">
+      <div v-if="showControls || isSelected"
+        class="node-controls absolute -top-5 -right-1 bg-white rounded-lg shadow-md z-20">
         <div class="inline-block text-blue-500 hover:bg-blue-50 rounded px-2 py-[0.5px]" @click.stop="runNode">
           <i class="fa-solid fa-play fa-2xs"></i>
         </div>
@@ -23,16 +16,16 @@
       </div>
 
       <!-- 右键菜单 -->
-      <div v-if="contextMenuVisible" class="context-menu fixed bg-white shadow-lg rounded-lg border border-gray-200 z-[100] px-2 py-1 min-w-[160px]"
-        :style="{ 
-          left: `${contextMenuX}px`, 
+      <div v-if="contextMenuVisible"
+        class="context-menu fixed bg-white shadow-lg rounded-lg border border-gray-200 z-[100] px-2 py-1 min-w-[160px]"
+        :style="{
+          left: `${contextMenuX}px`,
           top: `${contextMenuY}px`,
           transform: 'translate(0, 0)',
           maxHeight: '80vh',
           overflowY: 'auto',
           minWidth: '220px'
-        }"
-      >
+        }">
         <div class="p-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between" @click="runNode">
           <span class="text-gray-500">运行此步骤</span>
         </div>
@@ -49,15 +42,19 @@
           <span class="text-xs text-gray-400">⌘C</span>
         </div>
         <div class="border-t border-gray-200 my-1"></div>
-        <div class="p-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between text-red-500" @click="onDeleteNode">
+        <div class="p-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between text-red-500"
+          @click="onDeleteNode">
           <span class="text-gray-500">删除</span>
           <span class="text-xs text-gray-400">⌫</span>
         </div>
         <div class="border-t border-gray-200 my-1"></div>
         <div class="flex flex-col p-2 hover:bg-gray-50 cursor-pointer">
           <span class="text-left text-gray-500">关于</span>
-          <span v-if="node.type === '开始' || node.type === 'start'" class="text-left text-xs text-gray-500 mt-1">定义一个 workflow 流程启动的初始参数</span>
-          <span v-else-if="node.type === 'LLM' || node.type === 'llm' || node.type === 'deepseek-chat'" class="text-left text-xs text-gray-500 mt-1">调用大语言模型回答问题或者对自然语言进行处理</span>
+          <span v-if="node.type === '开始' || node.type === 'start'" class="text-left text-xs text-gray-500 mt-1">定义一个
+            workflow 流程启动的初始参数</span>
+          <span v-else-if="node.type === 'LLM' || node.type === 'llm' || node.type === 'deepseek-chat'"
+            class="text-left text-xs text-gray-500 mt-1">调用大语言模型回答问题或者对自然语言进行处理</span>
+          <span v-else-if="node.type === 'search'" class="text-left text-xs text-gray-500 mt-1">联网搜索并获取最新信息</span>
         </div>
       </div>
 
@@ -69,17 +66,18 @@
           <i v-else-if="node.type === 'conditional'" class="fa-regular fa-code-branch text-yellow-500"></i>
           <i v-else-if="node.type === 'end'" class="fa-regular fa-file-export text-red-500"></i>
           <i v-else-if="node.type === 'knowledge'" class="fa-regular fa-database text-purple-500"></i>
+          <i v-else-if="node.type === 'search'" class="fa-solid fa-globe text-blue-400"></i>
           <i v-else class="fa-solid fa-cube text-gray-500"></i>
         </div>
         <div>
           <div class="font-medium text-gray-800">{{ node.name }}</div>
         </div>
       </div>
-      
+
       <!-- 开始节点变量展示 -->
       <div v-if="node.type === 'start' && hasVariables" class="">
-        <div v-for="(value, key) in extractedVariables" :key="key" 
-             class="bg-gray-50 rounded-md px-1 py-1 flex items-center justify-between">
+        <div v-for="(value, key) in extractedVariables" :key="key"
+          class="bg-gray-50 rounded-md px-1 py-1 flex items-center justify-between">
           <div class="flex items-center">
             <span class="text-blue-500 mr-1">{x}</span>
             <span class="text-gray-700">{{ key }}</span>
@@ -93,10 +91,10 @@
 
       <!-- LLM节点模型名称 -->
       <div v-if="isModelNode" class="mt-2">
-        <div v-if="node.config && node.config.model" 
-             class="bg-gray-50 rounded-md px-3 py-2 flex items-center justify-between">
+        <div v-if="node.config && node.config.model"
+          class="bg-gray-50 rounded-md px-3 py-2 flex items-center justify-between">
           <div class="flex items-center">
-            <i  class="fa-solid fa-microchip text-blue-400"></i>
+            <i class="fa-solid fa-microchip text-blue-400"></i>
             <span class="text-gray-700">{{ node.config.model }}</span>
           </div>
           <div>
@@ -104,28 +102,39 @@
           </div>
         </div>
       </div>
-      
+
+      <!-- 搜索节点配置展示 -->
+      <div v-if="node.type === 'search' && node.config" class="mt-2">
+        <div class="bg-gray-50 rounded-md px-3 py-2 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-magnifying-glass text-blue-400"></i>
+            <span class="text-gray-700">{{ getSearchEngineName(node.config.searchEngine) }}</span>
+          </div>
+          <div>
+            <span class="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-md">{{ node.config.maxResults }}条结果</span>
+          </div>
+        </div>
+      </div>
+
       <!-- 条件节点配置显示 -->
       <div v-if="node.type === 'conditional' && node.config" class="mt-2 space-y-2">
         <!-- IF 条件显示 -->
-        <div v-if="node.config.conditions && node.config.conditions.length > 0" 
-             class="">
+        <div v-if="node.config.conditions && node.config.conditions.length > 0" class="">
           <div class="flex justify-between items-baseline mb-1">
             <div class="text-xs text-gray-500">CASE 1</div>
             <div class="text-sm font-medium mr-2">IF</div>
           </div>
-          <div v-for="(condition, index) in node.config.conditions" :key="`condition-${index}`" 
-               class="text-xs py-1 flex items-center bg-gray-50 rounded-md">
+          <div v-for="(condition, index) in node.config.conditions" :key="`condition-${index}`"
+            class="text-xs py-1 flex items-center bg-gray-50 rounded-md">
             <span class="text-blue-500">[x] {{ condition.field || '选择变量' }}</span>
             <span class="text-gray-600 ml-1">
               {{ getOperatorText(condition.operator) }} {{ condition.value }}
             </span>
           </div>
         </div>
-        
+
         <!-- ELIF 分支显示 -->
-        <div v-for="(branch, branchIndex) in node.config.branches" :key="`branch-${branchIndex}`" 
-             class="">
+        <div v-for="(branch, branchIndex) in node.config.branches" :key="`branch-${branchIndex}`" class="">
           <div class="flex justify-between items-baseline mb-1">
             <div class="text-xs text-gray-500">CASE {{ branchIndex + 2 }}</div>
             <div class="text-sm font-medium mr-2">ELIF</div>
@@ -137,53 +146,48 @@
             </span>
           </div>
         </div>
-        
+
         <!-- ELSE 显示 -->
         <div v-if="hasConditions" class="">
           <div class="text-right text-sm font-medium mr-2">ELSE</div>
         </div>
       </div>
-      
+
       <!-- 节点连接点 -->
       <!-- 输入连接点，对所有节点都显示 -->
-      <div 
+      <div
         class="connector-in absolute -left-2 top-[27px] w-4 h-4 bg-green-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
-        @mousedown.stop="onStartConnection($event, 'input')"
-      ></div>
-      
+        @mousedown.stop="onStartConnection($event, 'input')"></div>
+
       <!-- 条件节点的多个输出连接点 -->
       <template v-if="node.type === 'conditional'">
         <!-- IF 分支输出 -->
         <div v-if="node.config && node.config.conditions && node.config.conditions.length > 0"
-             class="connector-out absolute -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
-             :style="{ top: `${getIfConnectorPosition()}px` }"
-             @mousedown.stop="onStartConnection($event, 'output', 'if')"
-             title="IF 分支">
+          class="connector-out absolute -right-2 w-4 h-4 bg-blue-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
+          :style="{ top: `${getIfConnectorPosition()}px` }" @mousedown.stop="onStartConnection($event, 'output', 'if')"
+          title="IF 分支">
         </div>
-        
+
         <!-- ELIF 分支输出 -->
-        <div v-for="(branch, branchIndex) in node.config?.branches || []" 
-             :key="`branch-output-${branchIndex}`"
-             class="connector-out absolute -right-2 w-4 h-4 bg-yellow-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
-             :style="{ top: `${getElifConnectorPosition(branchIndex)}px` }"
-             @mousedown.stop="onStartConnection($event, 'output', `elif-${branchIndex}`)"
-             :title="`ELIF ${branchIndex + 1} 分支`">
+        <div v-for="(branch, branchIndex) in node.config?.branches || []" :key="`branch-output-${branchIndex}`"
+          class="connector-out absolute -right-2 w-4 h-4 bg-yellow-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
+          :style="{ top: `${getElifConnectorPosition(branchIndex)}px` }"
+          @mousedown.stop="onStartConnection($event, 'output', `elif-${branchIndex}`)"
+          :title="`ELIF ${branchIndex + 1} 分支`">
         </div>
-        
+
         <!-- ELSE 分支输出 -->
         <div v-if="hasConditions"
-             class="connector-out absolute -right-2 w-4 h-4 bg-gray-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
-             :style="{ top: `${getElseConnectorPosition()}px` }"
-             @mousedown.stop="onStartConnection($event, 'output', 'else')"
-             title="ELSE 分支">
+          class="connector-out absolute -right-2 w-4 h-4 bg-gray-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
+          :style="{ top: `${getElseConnectorPosition()}px` }"
+          @mousedown.stop="onStartConnection($event, 'output', 'else')" title="ELSE 分支">
         </div>
       </template>
-      
+
       <!-- 非条件节点的标准输出连接点 -->
       <div v-else
         class="connector-out absolute -right-2 top-[27px] w-4 h-4 bg-blue-500 rounded-full cursor-crosshair z-10 transition duration-200 hover:scale-[1.2] hover:ring-2 hover:ring-blue-300/30"
-        @mousedown.stop="onStartConnection($event, 'output')"
-      ></div>
+        @mousedown.stop="onStartConnection($event, 'output')"></div>
     </div>
   </div>
 </template>
@@ -212,6 +216,9 @@ declare module '../../types/workflow' {
     model?: string;
     conditions?: Condition[];
     branches?: Condition[];
+    searchEngine?: string;
+    maxResults?: number;
+    timeout?: number;
   }
 }
 
@@ -252,35 +259,35 @@ const showContextMenu = (event?: MouseEvent) => {
   if (event && props.canvasRef) {
     event.preventDefault();
     event.stopPropagation();
-    
+
     // 获取画布的位置信息
     const canvasRect = props.canvasRef.getBoundingClientRect();
-    
+
     // 获取画布的缩放和平移值
     const scale = props.scale || 1;
     const translateX = props.translateX || 0;
     const translateY = props.translateY || 0;
-    
+
     // 将全局坐标转换为相对于画布的坐标，考虑缩放和平移
     contextMenuX.value = (event.clientX - canvasRect.left) / scale - translateX;
     contextMenuY.value = (event.clientY - canvasRect.top) / scale - translateY;
-    
+
     // 获取菜单的预计尺寸
     const menuWidth = 200;
     const menuHeight = 250;
-    
+
     // 确保菜单不会超出画布，考虑缩放
     const canvasWidth = canvasRect.width / scale;
     const canvasHeight = canvasRect.height / scale;
-    
+
     if (contextMenuX.value + menuWidth > canvasWidth) {
       contextMenuX.value = canvasWidth - menuWidth;
     }
-    
+
     if (contextMenuY.value + menuHeight > canvasHeight) {
       contextMenuY.value = canvasHeight - menuHeight;
     }
-    
+
     contextMenuVisible.value = true;
   }
 };
@@ -312,6 +319,18 @@ const onDeleteNode = () => {
   workflowStore.deleteNode(props.node.id);
 };
 
+// 获取搜索引擎显示名称
+const getSearchEngineName = (engine: string | undefined) => {
+  if (!engine) return '默认搜索';
+
+  const searchEngines: Record<string, string> = {
+    'google': '谷歌搜索',
+    'bing': '必应搜索',
+    'default': '默认搜索'
+  };
+  return searchEngines[engine] || searchEngines['default'];
+};
+
 // 计算属性：检查是否有变量可以显示
 const hasVariables = computed(() => {
   // 仅对开始节点检查是否有输入变量
@@ -338,10 +357,10 @@ const isModelNode = computed(() => {
 
 // 计算属性：检查是否为条件节点且有条件或分支
 const hasConditions = computed(() => {
-  return props.node.type === 'conditional' && 
-         props.node.config && 
-         ((props.node.config.conditions && props.node.config.conditions.length > 0) ||
-          (props.node.config.branches && props.node.config.branches.length > 0));
+  return props.node.type === 'conditional' &&
+    props.node.config &&
+    ((props.node.config.conditions && props.node.config.conditions.length > 0) ||
+      (props.node.config.branches && props.node.config.branches.length > 0));
 });
 
 // 计算属性：获取操作符文本
@@ -377,7 +396,7 @@ const getElifConnectorPosition = (branchIndex: number) => {
   const ifSpace = props.node.config?.conditions?.length ? 30 + props.node.config.conditions.length * 20 : 0;
   // 计算之前的 ELIF 分支所占的空间
   const previousElifSpace = branchIndex > 0 ? branchIndex * 50 : 0;
-  
+
   return basePosition + ifSpace + previousElifSpace + 30;
 };
 
@@ -389,7 +408,7 @@ const getElseConnectorPosition = () => {
   const ifSpace = props.node.config?.conditions?.length ? 30 + props.node.config.conditions.length * 20 : 0;
   // 计算所有 ELIF 分支所占的空间
   const elifSpace = props.node.config?.branches?.length ? props.node.config.branches.length * 50 : 0;
-  
+
   return basePosition + ifSpace + elifSpace + 30;
 };
 </script>
@@ -404,6 +423,7 @@ const getElseConnectorPosition = () => {
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);

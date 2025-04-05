@@ -55,6 +55,8 @@ export function getNodeIcon(nodeType: string): string {
       return 'fa-file-export';
     case 'start':
       return 'fa-home';
+    case 'search':
+      return 'fa-globe';
     default:
       return 'fa-circle-nodes';
   }
