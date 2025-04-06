@@ -58,11 +58,23 @@
             </div>
             
             <!-- 对话/检验切换选项 -->
-            <div class="flex justify-center my-3">
-                <el-radio-group v-model="viewMode" size="large" @change="handleViewModeChange">
-                    <el-radio-button label="chat">对话</el-radio-button>
-                    <el-radio-button label="verify">检验</el-radio-button>
-                </el-radio-group>
+            <div class="switch-container my-5 px-4">
+                <div class="toggle-wrapper">
+                    <div class="toggle-buttons" :class="viewMode">
+                        <button class="toggle-button chat" 
+                                :class="{ 'active': viewMode === 'chat' }" 
+                                @click="viewMode = 'chat'; handleViewModeChange('chat')">
+                            <el-icon class="mr-2"><ChatDotRound /></el-icon>
+                            对话
+                        </button>
+                        <button class="toggle-button verify" 
+                                :class="{ 'active': viewMode === 'verify' }" 
+                                @click="viewMode = 'verify'; handleViewModeChange('verify')">
+                            <el-icon class="mr-2"><Search /></el-icon>
+                            检验
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <!-- 添加加载中状态显示 -->
@@ -97,7 +109,7 @@
 import { onMounted, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { getSession, getSessionById, getTasks } from '../api/fakeNewsReview';
-import { Loading } from '@element-plus/icons-vue';
+import { Loading, ChatDotRound, Search } from '@element-plus/icons-vue';
 
 import { useChatStore } from '../stores/ChatStore.ts';
 
@@ -410,6 +422,66 @@ const selectSubMenu = (parentIndex: number, childIndex: number, path: string) =>
             font-weight: 800;
             color: var(--text-100);
             font-size: 18px;
+        }
+    }
+
+    .switch-container {
+        .toggle-wrapper {
+            border-radius: 16px;
+            background-color: #f4f4f6;
+            padding: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .toggle-buttons {
+            position: relative;
+            display: flex;
+            height: 40px;
+            border-radius: 12px;
+            overflow: hidden;
+            
+            &::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                height: 100%;
+                width: 50%;
+                background-color: white;
+                border-radius: 12px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                transition: transform 0.3s ease-in-out;
+                z-index: 0;
+            }
+            
+            &.verify::before {
+                transform: translateX(100%);
+            }
+            
+            .toggle-button {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 14px;
+                font-weight: 500;
+                position: relative;
+                z-index: 1;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                transition: color 0.3s ease;
+                color: #888;
+                
+                &.active {
+                    color: var(--text-100);
+                    font-weight: 600;
+                }
+                
+                &:focus {
+                    outline: none;
+                }
+            }
         }
     }
 
