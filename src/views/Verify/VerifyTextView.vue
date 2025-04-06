@@ -3,10 +3,10 @@
         <!-- 输入部分 -->
         <div class="w-[55%] h-full shadow-xl border rounded-xl p-5">
             <div class="flex justify-between items-center border-b pb-5">
-                <!-- 语言选择 -->
+                <!-- 分析能力等级选择 -->
                 <div class="w-52">
-                    <el-select v-model="category" placeholder="请点击选择语言" size="large" clearable :teleported="false">
-                        <el-option v-for="item in allType" :key="item.objectId" :label="item.name" :value="item.name" />
+                    <el-select v-model="abilityLevel" placeholder="请选择分析能力等级" size="large" clearable :teleported="false">
+                        <el-option v-for="item in abilityLevels" :key="item.value" :label="item.label" :value="item.value" />
                     </el-select>
                 </div>
                 <!-- 功能按钮 -->
@@ -83,11 +83,14 @@
 
             <!-- Tab内容 -->
             <div v-if="activeTab === 0" class="w-full h-[98%]">
-                <!-- 使用新的合并组件 -->
-                <CombinedAnalysisView :sourceData="sourceData" />
+                <!-- 使用新的合并组件，传递abilityLevel -->
+                <CombinedAnalysisView :sourceData="sourceData" :abilityLevel="abilityLevel" />
             </div>
             <div v-else-if="activeTab === 1" class="h-[90%] mt-10">
-                <SentenceAnalysis :aiSentences="aiSentences" :humanSentences="humanSentences" />
+                <SentenceAnalysis 
+                    :sentencesData="sourceData.value?.sentences"
+                    :loadingStates="{ sentences: sourceData.loadingStates.sentences }" 
+                />
             </div>
             <div v-else-if="activeTab === 2" class="h-[90%] mt-10">
                 <SourceAnalysis :sourceSentences="sourceSentences" />
@@ -108,37 +111,11 @@ import { ElMessage } from 'element-plus';
 import JSON5 from 'json5';
 import { removeNewlinesRecursively, removeAllNewlines, cleanLlmContent } from '@/utils/stringCleaner';
 
-// 语言选项数据
-const allType = ref([
-    { name: "简体中文", objectId: "1" },
-    { name: "英文", objectId: "2" },
-    { name: "日文", objectId: "3" },
-    { name: "韩文", objectId: "4" },
-    { name: "法文", objectId: "5" },
-    { name: "德文", objectId: "6" },
-    { name: "俄文", objectId: "7" },
-    { name: "西班牙文", objectId: "8" },
-    { name: "葡萄牙文", objectId: "9" },
-    { name: "意大利文", objectId: "10" },
-    { name: "荷兰文", objectId: "11" },
-    { name: "瑞典文", objectId: "12" },
-    { name: "丹麦文", objectId: "13" },
-    { name: "芬兰文", objectId: "14" },
-]);
-
-const aiSentences = ref<Sentence[]>([
-    { text: '更多信息，请访问推特官网或联系新闻部门。', importance: 3 },
-    { text: '埃隆•马斯克是特斯拉、SpaceX、Neuralinx...', importance: 3 },
-    { text: '全球扩展与本地化：针对不同地区推出...', importance: 3 },
-    { text: '此次收购引发了业界广泛讨论。支持者认为...', importance: 3 },
-    { text: '愿景与目标', importance: 2 },
-]);
-
-const humanSentences = ref<Sentence[]>([
-    { text: '马斯克完成推特收购，引领社交媒体新时代...', importance: 3 },
-    { text: '马斯克曾公开强调，他的收购目标是推动...', importance: 3 },
-    { text: '此次收购引发了业界广泛讨论...', importance: 2 },
-    { text: '经过多轮谈判，最终尘埃落定', importance: 3 },
+// 分析能力等级选项
+const abilityLevels = ref([
+    { label: "L1 (基础分析)", value: 1 },
+    { label: "L2 (标准分析)", value: 2 },
+    { label: "L3 (高级分析)", value: 3 },
 ]);
 
 const sourceSentences = ref<Sentence[]>([
@@ -147,8 +124,8 @@ const sourceSentences = ref<Sentence[]>([
     { text: '马斯克曾公开强调，他的收购目标是推动行业进步', importance: 3 },
 ]);
 
-// 文本输入、选中语言、分析类型
-const category = ref('简体中文');
+// 文本输入、选中分析能力等级、分析类型
+const abilityLevel = ref(2); // 默认为L2标准分析
 const articleTitle = ref('');
 const articleContent = ref('');
 const webUrl = ref('');
@@ -232,13 +209,14 @@ const detectText = async () => {
         // 重置分析结果
         resetAnalysisResults();
         
-        // 开始第一步加载 - 搜索输入
+        // 在 API 请求开始时设置所有需要的加载状态
         sourceData.value.loadingStates.searchInput = true;
+        sourceData.value.loadingStates.sentences = true; // 立即设置句子分析的加载状态
 
         // 构建提示词
         const prompt = `标题：${articleTitle.value}\n\n内容：${articleContent.value}`;
 
-        // 使用API服务发送请求
+        // 使用API服务发送请求，传递abilityLevel
         await ApiService.chatWithLLM(
             prompt,
             handleApiTags,
@@ -257,20 +235,19 @@ const detectText = async () => {
                     sourceData.value.loadingStates.searchOutput = false;
                     sourceData.value.steps.searchOutput = true;
                     sourceData.value.loadingStates.analysis = true;
-                } else if (tag === 'sentences') {
-                    sourceData.value.loadingStates.analysis = false;
-                    sourceData.value.steps.analysis = true;
-                    sourceData.value.loadingStates.sentences = true;
-                } else if (tag === 'calculate') {
+                }  else if (tag === 'calculate') {
                     sourceData.value.loadingStates.sentences = false;
                     sourceData.value.steps.sentences = true;
                     sourceData.value.loadingStates.calculate = true;
+                } else if (tag === 'sentences') {
+                    sourceData.value.loadingStates.analysis = false;
+                    sourceData.value.steps.analysis = true;
+                    // 注意：这里不需要再次设置 sentences=true，因为我们在请求开始时就已经设置了
                 }
-            }
+            },
+            undefined,
+            abilityLevel.value
         );
-
-        // 切换到概述标签显示结果
-        activeTab.value = 0;
     } catch (error) {
         console.error('文本分析出错:', error);
         ElMessage.error('文本分析失败，请稍后再试');
@@ -294,13 +271,14 @@ const detectWebContent = async () => {
         // 重置分析结果
         resetAnalysisResults();
         
-        // 开始第一步加载 - 搜索输入
+        // 在 API 请求开始时设置所有需要的加载状态
         sourceData.value.loadingStates.searchInput = true;
+        sourceData.value.loadingStates.sentences = true; // 立即设置句子分析的加载状态
 
-        // 处理从API返回的数据 - 使用新的API结构
+        // 处理从API返回的数据 - 使用新的API结构，传递abilityLevel
         await ApiService.analyzeWebContent(
             webUrl.value,
-            2,
+            abilityLevel.value,
             handleApiTags,
             (tag) => {
                 // 处理标签开始的事件
@@ -320,17 +298,13 @@ const detectWebContent = async () => {
                 } else if (tag === 'sentences') {
                     sourceData.value.loadingStates.analysis = false;
                     sourceData.value.steps.analysis = true;
-                    sourceData.value.loadingStates.sentences = true;
+                    // 注意：这里不需要再次设置 sentences=true，因为我们在请求开始时就已经设置了
                 } else if (tag === 'calculate') {
-                    sourceData.value.loadingStates.sentences = false;
                     sourceData.value.steps.sentences = true;
                     sourceData.value.loadingStates.calculate = true;
                 }
             }
         );
-
-        // 切换到概述标签显示结果
-        activeTab.value = 0;
     } catch (error) {
         console.error('网页分析出错:', error);
         ElMessage.error('网页分析失败，请检查URL是否正确');
@@ -450,7 +424,9 @@ const handleApiTags = (tag: string, content: string) => {
                 
                 // 完成深度分析
                 sourceData.value.steps.sentences = true;
-                sourceData.value.loadingStates.sentences = false;
+                // 注意：此处不再将 loadingStates.sentences 设为 false
+                // 而是等到 calculate 标签处理后才关闭句子加载状态
+                
                 // 下一步加载总体评分
                 sourceData.value.loadingStates.calculate = true;
             } catch (error) {
@@ -483,14 +459,17 @@ const handleApiTags = (tag: string, content: string) => {
                 // 完成总体评分
                 sourceData.value.steps.calculate = true;
                 sourceData.value.loadingStates.calculate = false;
+                // 注意：此处不关闭 sentences 的加载状态，因为 sentences 是最后一个输出的数据
+                // sentences 的加载状态将在 done 标签处理或 API 请求完全完成时关闭
             } catch (error) {
                 console.error('解析总体评分数据出错:', error);
                 sourceData.value.loadingStates.calculate = false;
+                // 即使出错也不关闭 sentences 加载状态
             }
             break;
         case 'done':
             console.log('分析完成');
-            // 确保所有加载状态都关闭
+            // 确保所有加载状态都关闭，包括 sentences
             resetLoadingStates();
             break;
     }
@@ -549,9 +528,6 @@ const resetAnalysisResults = () => {
             calculate: false
         }
     };
-
-    aiSentences.value = [];
-    humanSentences.value = [];
     sourceSentences.value = [];
 };
 

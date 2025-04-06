@@ -40,7 +40,7 @@
                                     'text-red-500': sourceData.calculate.score < 60,
                                     'text-yellow-500': sourceData.calculate.score >= 60 && sourceData.calculate.score < 75,
                                     'text-green-500': sourceData.calculate.score >= 75
-                                }">{{ sourceData.calculate.score }}分</span>
+                                }">{{ (sourceData.calculate.score).toFixed(2) }}/100</span>
                                 <span class="ml-3 px-2 py-1 text-xs rounded-full" :class="{
                                     'bg-red-100 text-red-800': sourceData.calculate.level === '低',
                                     'bg-yellow-100 text-yellow-800': sourceData.calculate.level === '中',
@@ -52,100 +52,7 @@
                     </div>
                 </div>
                 
-                <!-- 注释掉的深度分析部分 -->
-                <!--
-                <div v-if="sourceData.loadingStates.sentences" class="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-100 w-full">
-                    <div class="flex items-center mb-2">
-                        <el-tag type="primary" class="mr-2">深度分析</el-tag>
-                        <h3 class="text-gray-700 font-medium">加载中...</h3>
-                        <div class="ml-2 flex items-center">
-                            <span class="loading-spinner"></span>
-                        </div>
-                    </div>
-                    <div class="space-y-4">
-                        <div class="mt-2">
-                            <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">分析细节</h4>
-                            <div class="p-3 bg-gray-50 rounded-md border-l-4 border-blue-400 mb-2 h-16 animate-pulse"></div>
-                            <div class="p-3 bg-gray-50 rounded-md border-l-4 border-red-400 mb-2 h-16 animate-pulse"></div>
-                            <div class="p-3 bg-gray-50 rounded-md border-l-4 border-yellow-400 mb-2 h-16 animate-pulse"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div v-if="sourceData.steps.sentences && hasSentenceData" class="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-100 w-full">
-                    <div class="flex items-center mb-2">
-                        <el-tag type="primary" class="mr-2">深度分析</el-tag>
-                        <h3 class="text-gray-700 font-medium">内容可信度细分分析</h3>
-                    </div>
-                    <div class="space-y-4">
-                        <div v-if="parsedAnalysisData.logical_consistency && parsedAnalysisData.logical_consistency.length > 0" class="mt-2">
-                            <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">逻辑一致性问题</h4>
-                            <div v-for="(item, idx) in parsedAnalysisData.logical_consistency" :key="`logic-${idx}`" 
-                                class="p-3 bg-gray-50 rounded-md border-l-4 border-purple-400 mb-2">
-                                <p class="text-gray-700">{{ item }}</p>
-                            </div>
-                        </div>
-                        
-                        <div v-if="parsedAnalysisData.factual_accuracy && parsedAnalysisData.factual_accuracy.length > 0" class="mt-2">
-                            <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">事实准确性问题</h4>
-                            <div v-for="(item, idx) in parsedAnalysisData.factual_accuracy" :key="`fact-${idx}`" 
-                                class="p-3 bg-gray-50 rounded-md border-l-4 border-blue-400 mb-2">
-                                <p class="text-gray-700">{{ item }}</p>
-                            </div>
-                        </div>
-                        
-                        <div v-if="parsedAnalysisData.subjectivity_and_inflammatory_language && parsedAnalysisData.subjectivity_and_inflammatory_language.length > 0" class="mt-2">
-                            <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">主观和煽动性语言</h4>
-                            <div v-for="(item, idx) in parsedAnalysisData.subjectivity_and_inflammatory_language" :key="`subj-${idx}`" 
-                                class="p-3 bg-gray-50 rounded-md border-l-4 border-red-400 mb-2">
-                                <p class="text-gray-700">{{ item }}</p>
-                            </div>
-                        </div>
-                        
-                        <div v-if="parsedAnalysisData.causal_relevance && parsedAnalysisData.causal_relevance.length > 0" class="mt-2">
-                            <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">因果相关性问题</h4>
-                            <div v-for="(item, idx) in parsedAnalysisData.causal_relevance" :key="`causal-${idx}`" 
-                                class="p-3 bg-gray-50 rounded-md border-l-4 border-yellow-400 mb-2">
-                                <p class="text-gray-700">{{ item }}</p>
-                            </div>
-                        </div>
-                        
-                        <div v-if="parsedAnalysisData.source_credibility && parsedAnalysisData.source_credibility.length > 0" class="mt-2">
-                            <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">来源可信度问题</h4>
-                            <div v-for="(item, idx) in parsedAnalysisData.source_credibility" :key="`source-${idx}`" 
-                                class="p-3 bg-gray-50 rounded-md border-l-4 border-orange-400 mb-2">
-                                <p class="text-gray-700">{{ item }}</p>
-                            </div>
-                        </div>
-                        
-                        <div v-if="parsedAnalysisData.debunking_result && parsedAnalysisData.debunking_result.length > 0" class="mt-2">
-                            <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">辟谣结果</h4>
-                            <div v-for="(item, idx) in parsedAnalysisData.debunking_result" :key="`debunk-${idx}`" 
-                                class="p-3 bg-gray-50 rounded-md border-l-4 border-green-400 mb-2">
-                                <p class="text-gray-700">{{ item }}</p>
-                            </div>
-                        </div>
-                        
-                        <div v-if="parsedAnalysisData.external_corroboration && parsedAnalysisData.external_corroboration.length > 0" class="mt-2">
-                            <h4 class="text-sm font-medium text-gray-700 mb-1 px-3">外部佐证信息</h4>
-                            <div v-for="(item, idx) in parsedAnalysisData.external_corroboration" :key="`extern-${idx}`" 
-                                class="p-3 bg-gray-50 rounded-md border-l-4 border-teal-400 mb-2">
-                                <p class="text-gray-700">{{ item }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="sourceData.steps.sentences && !hasSentenceData" class="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-100 w-full">
-                    <div class="flex items-center mb-2">
-                        <el-tag type="primary" class="mr-2">深度分析</el-tag>
-                        <h3 class="text-gray-700 font-medium">内容可信度细分分析</h3>
-                    </div>
-                    <div class="p-4 text-gray-500 text-center">
-                        <p>未发现需要特别注意的问题</p>
-                    </div>
-                </div>
-                -->
+                <!-- 已移除深度分析部分，该部分已转移到SentenceAnalysis.vue中实现 -->
                 
                 <!-- 详细分析加载状态 -->
                 <div v-if="sourceData.loadingStates.analysis" class="DetailedAnalysis mb-6">
@@ -184,8 +91,8 @@
                     </div>
                 </div>
                 
-                <!-- 搜索结果加载状态 -->
-                <div v-if="sourceData.loadingStates.searchOutput" class="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-100 w-full">
+                <!-- 搜索结果加载状态 - 仅在非L1级别显示 -->
+                <div v-if="abilityLevel !== 1 && sourceData.loadingStates.searchOutput" class="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-100 w-full">
                     <div class="flex items-center mb-2">
                         <el-tag type="success" class="mr-2">搜索结果</el-tag>
                         <h3 class="text-gray-700 font-medium">加载中...</h3>
@@ -199,8 +106,8 @@
                     </div>
                 </div>
                 
-                <!-- 搜索结果内容 - 只要步骤已完成就一直显示 -->
-                <div v-if="sourceData.steps.searchOutput && sourceData.searchOutput && sourceData.searchOutput.length > 0" class="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-100 w-full">
+                <!-- 搜索结果内容 - 仅在非L1级别显示 -->
+                <div v-if="abilityLevel !== 1 && sourceData.steps.searchOutput && sourceData.searchOutput && sourceData.searchOutput.length > 0" class="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-100 w-full">
                     <div class="flex items-center mb-2">
                         <el-tag type="success" class="mr-2">搜索结果</el-tag>
                         <h3 class="text-gray-700 font-medium">网络搜索发现的相关信息</h3>
@@ -214,8 +121,8 @@
                     </div>
                 </div>
                 
-                <!-- 搜索输入加载状态 - 最后显示 -->
-                <div v-if="sourceData.loadingStates.searchInput" class="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-100 w-full">
+                <!-- 搜索输入加载状态 - 仅在非L1级别显示 -->
+                <div v-if="abilityLevel !== 1 && sourceData.loadingStates.searchInput" class="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-100 w-full">
                     <div class="flex items-center mb-2">
                         <el-tag type="info" class="mr-2">搜索输入</el-tag>
                         <h3 class="text-gray-700 font-medium">加载中...</h3>
@@ -226,8 +133,8 @@
                     <div class="bg-gray-50 p-3 rounded-md h-8 animate-pulse"></div>
                 </div>
                 
-                <!-- 搜索输入内容 - 只要步骤已完成就一直显示 -->
-                <div v-if="sourceData.steps.searchInput" class="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-100 w-full">
+                <!-- 搜索输入内容 - 仅在非L1级别显示 -->
+                <div v-if="abilityLevel !== 1 && sourceData.steps.searchInput" class="mb-6 bg-white rounded-lg p-4 shadow-sm border border-gray-100 w-full">
                     <div class="flex items-center mb-2">
                         <el-tag type="info" class="mr-2">搜索输入</el-tag>
                         <h3 class="text-gray-700 font-medium">用于验证的搜索条件</h3>
@@ -291,6 +198,7 @@ interface SourceDataType {
 
 const props = defineProps<{
     sourceData: SourceDataType;
+    abilityLevel: number;
 }>();
 
 // 判断是否显示欢迎屏幕
@@ -306,18 +214,6 @@ const showWelcomeScreen = computed(() => {
            !props.sourceData.steps.analysis && 
            !props.sourceData.steps.sentences &&
            !props.sourceData.steps.calculate;
-});
-
-// 判断是否有句子数据
-const hasSentenceData = computed(() => {
-    return props.sourceData.value?.sentences && 
-          (props.sourceData.value.sentences.logical_consistency?.length > 0 ||
-           props.sourceData.value.sentences.factual_accuracy?.length > 0 ||
-           props.sourceData.value.sentences.subjectivity_and_inflammatory_language?.length > 0 ||
-           props.sourceData.value.sentences.causal_relevance?.length > 0 ||
-           props.sourceData.value.sentences.source_credibility?.length > 0 ||
-           props.sourceData.value.sentences.debunking_result?.length > 0 ||
-           props.sourceData.value.sentences.external_corroboration?.length > 0);
 });
 
 const categoryTitles: Record<string, string> = {
@@ -340,23 +236,6 @@ const formatScore = (score: number | null): string => {
     if (score === null) return '无数据';
     return `${score}分`;
 };
-
-// 解析分析数据
-const parsedAnalysisData = computed(() => {
-    if (props.sourceData.value?.sentences) {
-        return props.sourceData.value.sentences;
-    }
-    // 返回空数据结构以避免默认显示
-    return {
-        logical_consistency: [],
-        factual_accuracy: [],
-        subjectivity_and_inflammatory_language: [],
-        causal_relevance: [],
-        source_credibility: [],
-        debunking_result: [],
-        external_corroboration: []
-    } as AnalysisData;
-});
 </script>
 
 <style scoped>
