@@ -67,6 +67,16 @@ export default defineConfig({
         target: 'http://llm.flyfishxu.com/chat_stream',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/search/, ""),
+      },
+      '/chat': {
+        target: 'http://llm.flyfishxu.com/chat',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/chat/, ""),
+      },
+      '/tasks': {
+        target: 'http://llm.flyfishxu.com/tasks',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/tasks/, ""),
       }
     }
   },

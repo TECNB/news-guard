@@ -96,7 +96,8 @@
                         </el-icon>
                         <p class="text-nowrap text-ellipsis overflow-hidden">
                             {{ viewMode === 'chat' ? item.label : item.title }}
-                            <span v-if="viewMode === 'verify'" class="text-xs ml-1">({{ item.score.toFixed(1) }})</span>
+                            <span v-if="viewMode === 'verify' && item.score !== null && item.score !== undefined" class="text-xs ml-1">({{ item.score.toFixed(1) }})</span>
+                            <span v-else-if="viewMode === 'verify'" class="text-xs ml-1">(暂无评分)</span>
                         </p>
                     </div>
                 </li>
