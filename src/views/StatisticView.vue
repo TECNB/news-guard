@@ -9,7 +9,7 @@
                     <div class="absolute -bottom-1 -right-1 bg-[#49CFAD] h-4 w-4 rounded-full border-2 border-white"></div>
                 </div>
                 <div class="flex flex-col justify-between items-start">
-                    <p class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#49CFAD] to-indigo-600">早安，TEC，欢迎使用DeppNews！</p>
+                    <p class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#49CFAD] to-indigo-600">早安，TEC，欢迎使用DeepNews！</p>
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></div>
                         <p class="text-gray-600 text-sm">今日热点：雄安集团大规模招聘数万人，请及时关注！</p>
