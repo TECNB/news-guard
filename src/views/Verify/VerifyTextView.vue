@@ -110,6 +110,7 @@ import { ApiService } from '@/utils/apiService';
 import { ElMessage } from 'element-plus';
 import JSON5 from 'json5';
 import { removeNewlinesRecursively, removeAllNewlines, cleanLlmContent } from '@/utils/stringCleaner';
+import { mapLlmDataToAnalysis } from '@/utils/llmDataMapper';
 
 // 分析能力等级选项
 const abilityLevels = ref([
@@ -366,19 +367,11 @@ const handleApiTags = (tag: string, content: string) => {
                 // 使用JSON5解析
                 if (cleanContent && cleanContent.trim()) {
                     const jsonData = JSON5.parse(cleanContent);
-                    const cleanJsonData = removeNewlinesRecursively(jsonData);
-
-                    // 新版JSON结构中，main_point可能为空数组
-                    if (cleanJsonData.main_point) {
-                        sourceData.value.summary.main_points = cleanJsonData.main_point;
-                    } else {
-                        sourceData.value.summary.main_points = [];
-                    }
-
-                    // 如果存在details.analysis结构，则使用它
-                    if (cleanJsonData.details && cleanJsonData.details.analysis) {
-                        updateAnalysisFromApi(cleanJsonData.details.analysis);
-                    }
+                    // 使用工具函数处理LLM数据
+                    mapLlmDataToAnalysis(jsonData, {
+                        analysis: sourceData.value.analysis,
+                        summary: sourceData.value.summary
+                    });
                 }
                 // 完成详细分析
                 sourceData.value.steps.analysis = true;
@@ -529,37 +522,6 @@ const resetAnalysisResults = () => {
         }
     };
     sourceSentences.value = [];
-};
-
-const updateAnalysisFromApi = (apiAnalysis: any) => {
-    // 清理apiAnalysis中的所有换行符
-    const cleanApiAnalysis = removeNewlinesRecursively(apiAnalysis);
-
-    // 更新所有分析结果，以LLM输出为准
-    if (cleanApiAnalysis.title_relevance) {
-        sourceData.value.analysis.title_relevance = cleanApiAnalysis.title_relevance;
-    }
-    if (cleanApiAnalysis.logical_consistency) {
-        sourceData.value.analysis.logical_consistency = cleanApiAnalysis.logical_consistency;
-    }
-    if (cleanApiAnalysis.factual_accuracy) {
-        sourceData.value.analysis.factual_accuracy = cleanApiAnalysis.factual_accuracy;
-    }
-    if (cleanApiAnalysis.subjectivity_and_inflammatory_language) {
-        sourceData.value.analysis.subjectivity_and_inflammatory_language = cleanApiAnalysis.subjectivity_and_inflammatory_language;
-    }
-    if (cleanApiAnalysis.causal_relevance) {
-        sourceData.value.analysis.causal_relevance = cleanApiAnalysis.causal_relevance;
-    }
-    if (cleanApiAnalysis.source_credibility) {
-        sourceData.value.analysis.source_credibility = cleanApiAnalysis.source_credibility;
-    }
-    if (cleanApiAnalysis.debunking_result) {
-        sourceData.value.analysis.debunking_result = cleanApiAnalysis.debunking_result;
-    }
-    if (cleanApiAnalysis.external_corroboration) {
-        sourceData.value.analysis.external_corroboration = cleanApiAnalysis.external_corroboration;
-    }
 };
 
 const updateSourceAnalysisFromSearch = (searchResults: any[]) => {
