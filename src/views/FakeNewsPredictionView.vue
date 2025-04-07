@@ -1,84 +1,121 @@
 <template>
-  <div class="h-[85%] p-5">
-    <div class="flex justify-between items-center pb-3 border-b">
-      <p class="text-lg font-bold">虚假新闻预测</p>
-      <img class="w-9 h-9 rounded-full object-cover aspect-square" src="../assets/images/avatar.png">
-    </div>
-    <div class="mt-5 flex justify-between items-center flex-wrap ">
-      <div v-for="(category, index) in categories" :key="index"
-        :class="['w-fit rounded-lg px-4 py-2 cursor-pointer', { 'bg-green-500': selectedCategory === category, '': selectedCategory !== category }]"
-        @click="selectedCategory = category">
-        <p
-          :class="['font-bold', { 'text-white': selectedCategory === category, 'text-gray-500': selectedCategory !== category }]">
-          {{ category }}</p>
+  <div class="main-container h-[100%] p-6">
+    <!-- 标题栏 -->
+    <div class="header-section flex justify-between items-center pb-4 border-b mb-6">
+      <div class="flex items-center">
+        <div class="w-1 h-6 bg-green-500 rounded-full mr-3"></div>
+        <p class="text-xl font-bold text-gray-800">虚假新闻预测</p>
       </div>
-      <div class="flex justify-center items-center gap-3 rounded-lg bg-green-400 cursor-pointer px-4 py-2">
-        <el-icon color="#fff">
-          <Document />
-        </el-icon>
-        <p class="text-nowrap text-white">上传文件</p>
+      <div class="avatar-container">
+        <img class="w-10 h-10 rounded-full object-cover aspect-square shadow-sm border-2 border-green-100" src="../assets/images/avatar.png">
       </div>
     </div>
 
-    <!-- 下面为具体当天的虚假新闻列表 -->
-    <div class="h-[80%]">
-      <div class="Table h-[100%] mt-5">
+    <!-- 分类导航 -->
+    <div class="category-section mt-5 flex items-center flex-wrap gap-3 mb-6">
+      <div v-for="(category, index) in categories" :key="index"
+        :class="['category-item w-fit rounded-full px-5 py-2 cursor-pointer transition-all duration-300 ease-in-out', 
+          { 'bg-gradient-to-r from-green-400 to-green-500 shadow-md': selectedCategory === category, 
+            'bg-gray-100 hover:bg-gray-200': selectedCategory !== category }]"
+        @click="selectedCategory = category">
+        <p :class="['font-medium text-sm', 
+          { 'text-white': selectedCategory === category, 
+            'text-gray-600': selectedCategory !== category }]">
+          {{ category }}
+        </p>
+      </div>
+      <div class="upload-btn flex justify-center items-center gap-2 rounded-full bg-gradient-to-r from-green-400 to-green-500 cursor-pointer px-5 py-2 ml-auto shadow-md hover:shadow-lg transition-all duration-300 ease-in-out">
+        <el-icon color="#fff">
+          <Document />
+        </el-icon>
+        <p class="text-nowrap text-white text-sm font-medium">上传文件</p>
+      </div>
+    </div>
+
+    <!-- 虚假新闻列表 -->
+    <div class="news-content h-[83%] bg-white rounded-xl shadow-sm p-5">
+      <div class="Table h-[76%]">
         <!-- 顶部搜索栏 -->
-        <div class="tableBar flex justify-between items-center mb-4">
-          <div class="SearchInput flex justify-between items-center">
-            <div class="">
-              <el-icon :size="16">
+        <div class="tableBar flex justify-between items-center mb-5">
+          <div class="SearchInput flex justify-between items-center shadow-sm hover:shadow-md transition-all duration-300">
+            <div class="flex items-center w-full">
+              <el-icon :size="18" class="text-gray-400 ml-2">
                 <Search />
               </el-icon>
-              <input type="text" class="ml-2" placeholder="请输入文字进行搜索" v-model="input" @keyup.enter="filterData" />
+              <input type="text" class="search-input ml-2" placeholder="请输入文字进行搜索" v-model="input" @keyup.enter="filterData" />
             </div>
-            <div class="!block md:!hidden" @click="toggleFilter">
-              <el-icon :size="16">
+            <div class="!block md:!hidden mr-2" @click="toggleFilter">
+              <el-icon :size="18" class="text-gray-500">
                 <Operation />
               </el-icon>
             </div>
           </div>
-          <div class="FilterBox md:!flex items-center cursor-pointer !hidden" @click="toggleFilter">
-            <el-icon>
+          <div class="FilterBox md:!flex items-center cursor-pointer !hidden hover:bg-gray-200 transition-all duration-300" @click="toggleFilter">
+            <el-icon class="text-gray-500">
               <Operation />
             </el-icon>
-            <p class="ml-2">筛选</p>
+            <p class="ml-2 text-gray-600 font-medium">筛选</p>
           </div>
         </div>
 
         <!-- 筛选选项 -->
-        <div class="flex justify-start items-center gap-8 mb-5" v-if="filterVisible">
-          <p v-for="(option, index) in filterOptions" :key="index" :class="[
-            selectedFilter === option.value ? 'text-green-400 p-2 bg-green-50 rounded-md cursor-pointer whitespace-nowrap' : 'text-gray-500 cursor-pointer whitespace-nowrap'
-          ]" @click="selectFilter(option.value)">
+        <div class="filter-options flex justify-start items-center gap-8 mb-5 overflow-x-auto pb-2" v-if="filterVisible">
+          <p v-for="(option, index) in filterOptions" :key="index" 
+            :class="[
+              'transition-all duration-300 py-2 px-4',
+              selectedFilter === option.value 
+                ? 'text-green-500 bg-green-50 rounded-full shadow-sm cursor-pointer whitespace-nowrap font-medium' 
+                : 'text-gray-500 cursor-pointer whitespace-nowrap hover:text-green-400'
+            ]" 
+            @click="selectFilter(option.value)">
             {{ option.label }}
           </p>
         </div>
 
         <!-- 表格数据 -->
-        <el-scrollbar>
-          <el-table :data="tableData" class="tableBox" table-layout="fixed" @selection-change="handleSelectionChange"
-            v-loading="loading" :row-style="{ height: '80px' }">
-            <el-table-column prop="date" label="事件日期">
+        <el-scrollbar class="custom-scrollbar">
+          <el-table 
+            :data="tableData" 
+            class="tableBox rounded-lg" 
+            table-layout="fixed" 
+            @selection-change="handleSelectionChange"
+            v-loading="loading" 
+            :row-style="{ height: '70px' }"
+            :header-cell-style="{ backgroundColor: '#f9fafb', color: '#4b5563', fontWeight: 'bold' }">
+            <el-table-column prop="date" label="事件日期" min-width="140">
               <template #default="{ row }">
-                <span>{{ new Date(row.date).toLocaleString() }}</span>
+                <span class="text-gray-700">{{ formatDate(row.date) }}</span>
               </template>
             </el-table-column>
-            <el-table-column prop="headline" label="事件主题" />
-            <el-table-column prop="field" label="分类">
+            <el-table-column prop="headline" label="事件主题" min-width="200">
               <template #default="{ row }">
-                <div class="w-fit bg-gray-100 rounded-md px-2 py-1">
-                  <p class="font-bold text-gray-500">{{ row.field }}</p>
+                <span class="text-gray-800 font-medium">{{ row.headline }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="field" label="分类" min-width="120">
+              <template #default="{ row }">
+                <div class="w-fit bg-gray-100 rounded-full px-3 py-1.5">
+                  <p class="font-medium text-sm text-gray-600">{{ row.field }}</p>
                 </div>
-
               </template>
             </el-table-column>
-            <el-table-column prop="predicted_fake_headline" label="虚假新闻预测结果" />
-
-
-            <el-table-column label="操作" width="200" align="center">
+            <el-table-column prop="predicted_fake_headline" label="虚假新闻预测结果" min-width="200">
               <template #default="{ row }">
-                <el-button text bg type="success" size="small" @click="">
+                <div class="flex items-center">
+                  <div class="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                  <span class="text-gray-700">{{ row.predicted_fake_headline }}</span>
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="操作" width="120" align="center">
+              <template #default="{ row }">
+                <el-button 
+                  class="view-btn"
+                  text 
+                  type="success" 
+                  size="small" 
+                  @click="toUpdateActivity(row.id)">
                   查看
                 </el-button>
               </template>
@@ -86,17 +123,21 @@
           </el-table>
         </el-scrollbar>
 
-
         <!-- 分页 -->
         <el-config-provider :locale="zhCn">
-          <el-pagination class="pageList" :page-sizes="[10, 20, 30]" :page-size="pageSize"
+          <el-pagination 
+            class="pageList"
+            :page-sizes="[10, 20, 30]" 
+            :page-size="pageSize"
             :layout="isMediumScreen ? 'total, sizes, prev, pager, next, jumper' : 'sizes, prev, pager, next'"
-            :total="counts" :current-page.sync="page" @size-change="handleSizeChange"
-            @current-change="handleCurrentChange"></el-pagination>
+            :total="counts" 
+            v-model:current-page="page" 
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange">
+          </el-pagination>
         </el-config-provider>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -273,107 +314,162 @@ const toUpdateActivity = (id: string) => {
   console.log('toUpdateActivity')
   router.push('/updatePlace/' + id)
 }
+
+// 格式化日期，将日期显示为2025年格式
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  
+  // 假设row.date格式为"04-07 07:05"
+  const [datePart, timePart] = dateStr.split(' ');
+  const [month, day] = datePart.split('-');
+  
+  // 使用2025年和原始的月日时间
+  return `2025/${month}/${day} ${timePart}:00`;
+};
 </script>
 
 <style lang="scss" scoped>
-.el-input {
+.main-container {
+  background-color: #f9fafb;
   border-radius: 12px;
-  border: 0.5px solid var(--text-200);
-  border: 0;
-  background-color: var(--bg-200);
+}
 
-  font-size: 16px;
-  font-weight: bold;
-
-
-
-
-  :deep(.el-input__wrapper) {
-    border-radius: 12px;
-    background-color: #fff;
-
-    padding: 6px;
-  }
-
-
-  :deep(.is-focus) {
-    box-shadow: 0 0 0 1px #000
+.category-item {
+  border: 1px solid transparent;
+  &:hover {
+    transform: translateY(-2px);
   }
 }
 
-:deep(.el-tag) {
-  border-radius: 9px;
+.upload-btn {
+  &:hover {
+    transform: translateY(-2px);
+  }
 }
 
-.Table {
-  width: auto;
-
-  .tableBar {
-    display: flex;
-    justify-content: space-between;
-    align-content: center;
-    gap: 20px;
-
-    /* 输入框样式 */
-    .SearchInput {
-      flex: 1;
-
-      background-color: rgba(250, 250, 250, 1);
-      border-radius: 12px;
-
-
-      padding: 12px;
-      margin-bottom: 10px;
-
-      input {
-        outline: none;
-        padding-left: 10px;
-        font-size: 16px;
-        width: 200px;
-        /* 调整输入框的宽度 */
-        border: 0px;
-        color: rgba(160, 174, 192, 1);
-        background-color: rgba(250, 250, 250, 1);
-      }
-    }
-
-    /* 筛选框样式 */
-    .FilterBox {
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      gap: 10px;
-
-
-      color: rgba(160, 174, 192, 1);
-      background-color: rgba(250, 250, 250, 1);
-      border-radius: 12px;
-
-
-      padding: 12px;
-      margin-bottom: 10px;
+.SearchInput {
+  flex: 1;
+  background-color: rgba(250, 250, 250, 1);
+  border: 1px solid #f0f0f0;
+  border-radius: 40px;
+  padding: 10px 16px;
+  margin-bottom: 10px;
+  
+  input.search-input {
+    outline: none;
+    padding-left: 10px;
+    font-size: 15px;
+    width: 100%;
+    border: 0px;
+    color: #4b5563;
+    background-color: transparent;
+    
+    &::placeholder {
+      color: #9ca3af;
     }
   }
 }
 
+.FilterBox {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  color: #6b7280;
+  background-color: rgba(250, 250, 250, 1);
+  border: 1px solid #f0f0f0;
+  border-radius: 40px;
+  padding: 10px 16px;
+  margin-bottom: 10px;
+}
 
 .tableBox {
   width: 100%;
-  // 表格的外部是否有边框
-  // border: solid 2px #f3f4f7;
-  border-radius: 2px;
+  border-radius: 12px;
+  overflow: hidden;
+  
+  // 添加表格行悬停效果
+  :deep(.el-table__row) {
+    transition: all 0.2s;
+    
+    &:hover {
+      background-color: #f0fdf4 !important;
+    }
+  }
+  
+  // 调整表格内边距
+  :deep(.el-table__cell) {
+    padding: 12px 16px;
+  }
+}
+
+.view-btn {
+  &:deep(.el-button) {
+    background: linear-gradient(to right, #10b981, #059669);
+    color: white;
+    border-radius: 20px;
+    font-weight: 500;
+    padding: 6px 16px;
+    transition: all 0.3s;
+    
+    &:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+  }
 }
 
 .pageList {
   text-align: center;
   margin-top: 30px;
+  
+  :deep(.el-pagination__sizes) {
+    margin-right: 15px;
+  }
+  
+  :deep(.el-pagination button) {
+    background-color: white;
+    border-radius: 8px;
+    margin: 0 3px;
+  }
+  
+  :deep(.el-pager li) {
+    border-radius: 8px;
+    margin: 0 3px;
+    
+    &.is-active {
+      background: linear-gradient(to right, #10b981, #059669);
+      color: white;
+    }
+  }
 }
 
+.custom-scrollbar {
+  :deep(.el-scrollbar__bar) {
+    opacity: 0.4;
+    
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+}
 
 :deep(.el-checkbox__inner) {
   width: 19px;
   height: 19px;
   border-radius: 22.5px;
+  border-color: #d1d5db;
+  transition: all 0.3s;
+  
+  &:hover {
+    border-color: #10b981;
+  }
+}
+
+:deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+  background: linear-gradient(to right, #10b981, #059669);
+  border-color: #10b981;
 }
 
 :deep(.el-checkbox__inner::after) {
@@ -386,5 +482,27 @@ const toUpdateActivity = (id: string) => {
 
 :deep(.el-checkbox__input.is-checked .el-checkbox__inner::after) {
   transform: rotate(50deg) scaleY(1.5);
+}
+
+.filter-options {
+  scrollbar-width: thin;
+  
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 10px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: #10b981;
+  }
 }
 </style>
