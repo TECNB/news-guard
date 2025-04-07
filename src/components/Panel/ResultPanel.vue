@@ -33,7 +33,6 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { formatJsonContent } from '../../utils/jsonFormatter';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
 import { useWorkflowStore } from '../../stores/workflowStore';

@@ -108,7 +108,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, defineProps, defineEmits, watch, onMounted, nextTick } from 'vue';
+import { ref, defineProps, defineEmits, watch, nextTick } from 'vue';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
 

@@ -48,7 +48,6 @@ import { SearchConfig } from '../../../types/workflow';
 import LLMPromptEditor from './LLMPromptEditor.vue';
 import VariableSuggestions from './VariableSuggestions.vue';
 import { useCursorPosition } from '@/utils/workflow/cursorUtils';
-import { useWorkflowStore } from '@/stores/workflowStore';
 
 // 使用 defineModel() 宏实现双向绑定
 const config = defineModel<SearchConfig>({
@@ -58,9 +57,6 @@ const config = defineModel<SearchConfig>({
         queryPrompt: ''
     })
 });
-
-// 使用工作流 store
-const workflowStore = useWorkflowStore();
 
 // 变量建议相关
 const showVariableSuggestions = ref(false);

@@ -232,7 +232,7 @@
 
 <script setup lang="ts">
 import type { Sentence, Analysis } from '@/utils/types';
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { Search, Link } from '@element-plus/icons-vue';
 
 // 定义接口
@@ -319,14 +319,6 @@ const getCategoryTitle = (key: string): string => {
 const formatScore = (score: number | null): string => {
     if (score === null) return '无数据';
     return `${score}分`;
-};
-
-// 根据分数返回对应的颜色类名
-const getScoreColorClass = (score: number | null): string => {
-    if (score === null) return 'text-slate-500';
-    if (score < 6) return 'text-red-500';
-    if (score >= 6 && score < 7.5) return 'text-yellow-500';
-    return 'text-green-500';
 };
 
 const openLink = (url: string) => {

@@ -148,7 +148,6 @@ import { showHotNews } from '../api/fakeNewsPrediction';
 const categories = ref<string[]>(['最新', '经济', '社会', '文化', '科技', '体育', '健康', '教育', '娱乐', '国际', '政治', '环境', '旅游'])
 const selectedCategory = ref<string>('最新')
 
-const searchQuery = ref<string>('')
 // ElConfigProvider 组件
 import { ElConfigProvider } from 'element-plus';
 // 引入中文包
@@ -180,7 +179,6 @@ const pageSize = ref(10);
 const counts = ref(tableData.value.length);
 const page = ref(1);
 const allData = ref<[]>([]);
-const multipleSelection = ref<[]>([])
 
 // 是否搜索
 const isSearch = ref(false)

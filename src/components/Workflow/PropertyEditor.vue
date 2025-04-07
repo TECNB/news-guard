@@ -91,7 +91,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { NODE_TYPES, LLMConfig, KnowledgeConfig, ConditionalConfig, StartConfig, SearchConfig } from '../../types/workflow';
+import { NODE_TYPES, LLMConfig, KnowledgeConfig, StartConfig, SearchConfig } from '../../types/workflow';
 import IOEditor from './NodeProperties/IOEditor.vue';
 import LLMProperties from './NodeProperties/LLMProperties.vue';
 import KnowledgeProperties from './NodeProperties/KnowledgeProperties.vue';

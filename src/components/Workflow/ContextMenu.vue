@@ -24,11 +24,6 @@ const props = defineProps<{
 
 // 定义事件
 const emit = defineEmits(['add-node', 'add-comment', 'run-workflow']);
-
-// 运行工作流
-const onRunWorkflow = () => {
-  emit('run-workflow');
-};
 </script>
 
 <style lang="scss" scoped>

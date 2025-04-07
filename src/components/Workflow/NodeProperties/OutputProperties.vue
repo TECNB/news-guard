@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted,Ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import VariableSuggestions from './VariableSuggestions.vue';
 
 // 使用defineModel创建双向绑定

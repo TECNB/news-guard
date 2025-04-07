@@ -31,10 +31,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, nextTick, watch, onMounted } from 'vue';
 import { useCursorPosition } from '@/utils/workflow/cursorUtils';
 import { adjustTextareaHeight, getTextPositionFromClick } from '@/utils/workflow/editor/textareaUtils';
-import { parseTextVariables, getAllValidVariableNames, type NodeVariables } from '@/utils/workflow/editor/variableHighlighter';
+import { parseTextVariables, type NodeVariables } from '@/utils/workflow/editor/variableHighlighter';
 import { useWorkflowStore } from '@/stores/workflowStore';
 
 // 使用 defineModel() 宏实现双向绑定，提供默认值确保不为 undefined

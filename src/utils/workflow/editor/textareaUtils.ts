@@ -38,7 +38,7 @@ export const getTextPositionFromClick = (
   try {
     // 获取点击的相对坐标
     const rect = container.getBoundingClientRect();
-    const x = event.clientX - rect.left;
+    // const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
     
     // 创建一个range来获取点击位置

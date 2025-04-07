@@ -256,7 +256,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { fakeNewsRecords, mediaTypeNewsRecords, keywordMapping, EXAMPLE_BLOCKCHAIN_ADDRESS } from '@/constants/blockchainForensicsData';
 // 导入新创建的组件
 import WelcomeGuide from '@/components/BlockchainForensics/WelcomeGuide.vue';

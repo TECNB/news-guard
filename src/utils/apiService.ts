@@ -2,7 +2,7 @@
  * API服务类，用于处理与后端的通信
  */
 
-import type { ChunkCallback, StartCallback, StreamTag, Tag, TagType } from '../types/api';
+import type { ChunkCallback, StartCallback, StreamTag, Tag } from '../types/api';
 
 const API_BASE_URL = "http://llm.flyfishxu.com/";
 // const API_BASE_URL = "http://127.0.0.1:8001/";

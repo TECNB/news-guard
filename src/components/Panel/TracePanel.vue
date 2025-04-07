@@ -109,15 +109,6 @@ const toggleExpand = (index: number) => {
   }
 };
 
-// 格式化数据用于显示
-const formatData = (data: Record<string, any>) => {
-  try {
-    return JSON.stringify(data, null, 2);
-  } catch (e) {
-    return String(data);
-  }
-};
-
 // 高亮 JSON 数据
 const highlightJson = (data: Record<string, any>) => {
   try {

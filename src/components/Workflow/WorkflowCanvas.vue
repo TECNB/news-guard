@@ -443,7 +443,6 @@ const tryCreateConnection = (nodeId: string, type: 'input' | 'output', branchTyp
     // 创建新连线
     const source = connectionStartType.value === 'output' ? connectionStartNodeId.value! : nodeId;
     const target = connectionStartType.value === 'output' ? nodeId : connectionStartNodeId.value!;
-    const sourceBranch = connectionStartType.value === 'output' ? connectionBranch.value : branchType;
     
     // 检查源节点和目标节点是否存在
     const sourceNode = workflowStore.nodes.find(n => n.id === source);

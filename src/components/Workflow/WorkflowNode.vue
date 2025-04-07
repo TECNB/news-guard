@@ -204,12 +204,6 @@ interface Condition {
   value: string | number;
 }
 
-interface ConditionalConfig {
-  conditions: Condition[];
-  branches: Condition[];
-  elseAction?: string;
-}
-
 // 更新 Node 类型上的 config 属性，使其能够接受 ConditionalConfig
 declare module '../../types/workflow' {
   interface NodeConfig {

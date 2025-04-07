@@ -101,7 +101,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Link, Download, Delete, ArrowLeft } from '@element-plus/icons-vue';
+import { Link, Download, Delete } from '@element-plus/icons-vue';
 import CombinedAnalysisView from '@/components/Analysis/CombinedAnalysisView.vue';
 import SentenceAnalysis from '@/components/Analysis/SentenceAnalysis.vue';
 import SourceAnalysis from '@/components/Analysis/SourceAnalysis.vue';

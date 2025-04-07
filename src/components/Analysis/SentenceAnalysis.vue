@@ -158,7 +158,6 @@
 </template>
 
 <script setup lang="ts">
-import type { Sentence } from '@/utils/types';
 import { computed } from 'vue';
 
 interface SentencesData {

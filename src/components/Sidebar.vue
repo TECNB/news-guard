@@ -183,7 +183,6 @@ const menus = [
 let chat = ref<any[]>([]);
 let tasks = ref<any[]>([]); // 添加任务列表
 const displayedMessages = ref<{ type: string; content: string }[]>([]); // 展示的消息列表
-let Session = ref<any[]>([]);
 
 
 onMounted(async () => {

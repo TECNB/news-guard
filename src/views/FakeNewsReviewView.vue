@@ -84,7 +84,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from "vue";
 import { suggestions } from '../constants/suggestions';
-import { Chat } from '../utils/AIChat';
+
 import { chat } from '../api/fakeNewsReview';
 import { useChatStore } from '../stores/ChatStore';
 import defaultImageUrl from '../assets/images/CloudPic.jpg';
