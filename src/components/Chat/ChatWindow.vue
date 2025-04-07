@@ -51,22 +51,23 @@
           <div class="skeleton-line"></div>
         </div>
 
-        <div v-if="msg.type === 'webSearch'" class="w-full mx-auto">
-          <WebSearchResult :searchResults="JSON.parse(msg.content)" />
-        </div>
-
-        <div v-if="msg.type === 'ai'" class="flex gap-3 items-start">
+        <div v-if="msg.type === 'ai'" class="flex gap-3 items-start w-full">
           <img src="../../assets/images/logo.png" alt="AI Avatar"
-            class="w-6 h-6 rounded-full border border-gray-300 object-cover" />
-          <div class="flex flex-col">
+            class="w-6 h-6 rounded-full border border-gray-300 object-cover flex-shrink-0" />
+          <div class="flex flex-col w-full max-w-full overflow-hidden">
             <!-- Static Title -->
             <div class="flex items-center">
               <p class="font-bold mb-0.5">虚假新闻鉴别助手</p>
             </div>
 
+            <!-- Web Search Results (if available) -->
+            <div v-if="msg.webSearchContent" class="w-full mb-2">
+              <WebSearchResult :searchResults="JSON.parse(msg.webSearchContent)" />
+            </div>
+
             <!-- Dynamic Content -->
-            <div class="markdown-body text-start">
-              <div v-html="msg.safeContent" class="prose max-w-none" />
+            <div class="markdown-body text-start w-full">
+              <div v-html="msg.safeContent" class="prose max-w-full" />
             </div>
 
             <!-- Action Icons -->
@@ -97,7 +98,6 @@
 import { ref, onMounted, watch } from 'vue';
 import { computed } from 'vue';
 import { marked } from 'marked';
-import DOMPurify from 'dompurify';
 import WebSearchResult from '../WebSearchResult.vue';
 
 import lineOptions from '../../utils/lineOptions';
@@ -141,6 +141,14 @@ const props = defineProps<{
   displayedMessages: { type: string; content: string }[];
 }>();
 
+// 定义扩展的消息类型
+type SafeMessage = {
+  type: string;
+  content: string;
+  safeContent: string;
+  webSearchContent?: string | null;
+};
+
 let barData: { xAxisData: string[]; seriesData: number[] } = { xAxisData: [], seriesData: [] };
 let barYAxisLabel = "";
 
@@ -150,15 +158,31 @@ let lineYAxisLabel = "";
 let pieData = { seriesData: [] };
 let pieSeriesName = "";
 
-// 安全渲染管道（网页4的安全方案）
-const safeMessages = computed(() => {
-  return props.displayedMessages.map(msg => ({
-    ...msg,
-    safeContent: DOMPurify.sanitize(String(marked.parse(preprocessContent(msg.content))), {
-      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'code', 'pre'],
-      FORBID_ATTR: ['style', 'onerror']
-    })
-  }));
+// 安全渲染管道（简化版，不使用DOMPurify）
+const safeMessages = computed<SafeMessage[]>(() => {
+  // 首先将所有webSearch类型的消息提取出来
+  const webSearchMessages = props.displayedMessages.filter(msg => msg.type === 'webSearch');
+  
+  // 然后处理所有消息
+  return props.displayedMessages.filter(msg => msg.type !== 'webSearch').map(msg => {
+    // 普通AI消息处理
+    if (msg.type === 'ai') {
+      // 查找是否有对应的webSearch消息可以合并
+      const webSearchContent = webSearchMessages.length > 0 ? webSearchMessages[0].content : null;
+      
+      return {
+        ...msg,
+        webSearchContent, // 将搜索结果添加到AI消息中
+        safeContent: String(marked.parse(preprocessContent(msg.content)))
+      };
+    }
+    
+    // 其他类型消息处理
+    return {
+      ...msg,
+      safeContent: msg.type === 'ai' ? String(marked.parse(preprocessContent(msg.content))) : ''
+    };
+  });
 });
 
 watch(
