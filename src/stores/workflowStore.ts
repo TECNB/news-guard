@@ -3,6 +3,7 @@ import { Node, Edge, NODE_TYPES, Workflow } from '../types/workflow';
 import {
   createWorkflowUtils 
 } from '../utils/workflow/store';
+import { initialWorkflowData } from '../constants/initialWorkflowData';
 
 // 创建工作流工具实例
 const workflowUtils = createWorkflowUtils();
@@ -17,9 +18,9 @@ const {
 export const useWorkflowStore = defineStore('workflow', {
   state: () => ({
     // 工作流节点
-    nodes: [] as Node[],
+    nodes: initialWorkflowData.nodes as Node[],
     // 工作流连线
-    edges: [] as Edge[],
+    edges: initialWorkflowData.edges as Edge[],
     // 当前选中的节点ID
     selectedNodeId: null as string | null,
     // 工作流基本信息

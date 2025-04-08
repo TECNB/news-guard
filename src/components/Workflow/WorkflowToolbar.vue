@@ -53,15 +53,15 @@
       </button>
       
       <button 
-        @click="$emit('debug')" 
+        @click="$emit('reset')" 
         class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 flex items-center transition-all duration-200 shadow-sm"
       >
-        <i class="fa-solid fa-bug mr-1.5"></i>
-        调试
+        <i class="fa-solid fa-rotate-left mr-1.5"></i>
+        重置
       </button>
       
       <button 
-        @click="$emit('publish')" 
+        @click="showPublishDialog" 
         class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-500 rounded-lg text-sm font-medium text-white hover:from-green-700 hover:to-green-600 flex items-center transition-all duration-200 shadow-sm"
       >
         <i class="fa-solid fa-circle-check mr-1.5"></i>
@@ -69,10 +69,18 @@
       </button>
     </div>
   </div>
+
+  <!-- 使用独立的发布确认对话框组件 -->
+  <PublishDialog 
+    :visible="publishDialogVisible" 
+    @close="onPublishConfirm" 
+    @view-docs="onViewDocs"
+  />
 </template>
 
 <script setup lang="ts">
-import { defineEmits, defineProps } from 'vue';
+import { defineEmits, defineProps, ref } from 'vue';
+import PublishDialog from './PublishDialog.vue';
 
 // 定义属性
 const props = defineProps<{
@@ -80,7 +88,10 @@ const props = defineProps<{
 }>();
 
 // 定义事件
-const emit = defineEmits(['zoom-in', 'zoom-out', 'reset-zoom', 'save', 'run', 'debug', 'publish']);
+const emit = defineEmits(['zoom-in', 'zoom-out', 'reset-zoom', 'save', 'run', 'reset', 'publish']);
+
+// 发布对话框相关状态
+const publishDialogVisible = ref(false);
 
 // 缩放控制
 const zoomIn = () => {
@@ -102,6 +113,28 @@ const onRunClick = () => {
     timestamp: new Date().toISOString(),
     source: 'toolbar'
   });
+};
+
+// 显示发布对话框
+const showPublishDialog = () => {
+  publishDialogVisible.value = true;
+};
+
+// 发布确认处理
+const onPublishConfirm = (confirmed: boolean) => {
+  publishDialogVisible.value = false;
+  if (confirmed) {
+    emit('publish', {
+      timestamp: new Date().toISOString(),
+      source: 'toolbar-dialog'
+    });
+  }
+};
+
+// 查看接口文档
+const onViewDocs = () => {
+  // 实现查看接口文档的逻辑，可以打开新页面或跳转
+  window.open('/api/docs', '_blank');
 };
 </script>
 

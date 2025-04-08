@@ -25,6 +25,11 @@
         <el-scrollbar height="73vh" wrap-style="width:100%; padding: 10px 0;" class="flex justify-center"
             @scroll="onScroll">
             <div class="space-y-6 w-full max-w-3xl">
+                <!-- 虚假新闻概率评分 -->
+                <div class="p-6 bg-white border-l-4 border-red-600 rounded-lg shadow-md">
+                    <p class="text-xl font-semibold text-gray-800">虚假新闻概率评分</p>
+                    <p class="text-4xl font-bold text-red-600">{{ props.fakeNewsData?.fake_news_probability_score }}%</p>
+                </div>
                 <!-- 虚假新闻类型 -->
                 <div class="p-6 bg-white border-l-4 border-blue-600 rounded-lg shadow-md">
                     <p class="text-xl font-semibold text-gray-800">虚假新闻类型</p>
@@ -56,12 +61,6 @@
                     </p>
                     <p><strong class="text-gray-700">证据：</strong> {{ props.fakeNewsData?.restoration_basis.evidence }}
                     </p>
-                </div>
-
-                <!-- 虚假新闻概率评分 -->
-                <div class="p-6 bg-white border-l-4 border-red-600 rounded-lg shadow-md">
-                    <p class="text-xl font-semibold text-gray-800">虚假新闻概率评分</p>
-                    <p class="text-4xl font-bold text-red-600">{{ props.fakeNewsData?.fake_news_probability_score }}%</p>
                 </div>
             </div>
         </el-scrollbar>

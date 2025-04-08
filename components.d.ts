@@ -51,6 +51,7 @@ declare module 'vue' {
     PipelineMainData: typeof import('./src/components/Pipeline/PipelineMainData.vue')['default']
     PipelineMainTask: typeof import('./src/components/Pipeline/PipelineMainTask.vue')['default']
     PropertyEditor: typeof import('./src/components/Workflow/PropertyEditor.vue')['default']
+    PublishDialog: typeof import('./src/components/Workflow/PublishDialog.vue')['default']
     RadarContainer: typeof import('./src/components/Container/RadarContainer.vue')['default']
     ResultPanel: typeof import('./src/components/Panel/ResultPanel.vue')['default']
     ResultsDisplay: typeof import('./src/components/BlockchainForensics/ResultsDisplay.vue')['default']

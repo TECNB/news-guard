@@ -51,7 +51,7 @@
   },
   "build": {
     "appId": "com.newsguard.app",
-    "productName": "News Guard",
+    "productName": "DeepNews",
     "directories": {
       "output": "release",
       "buildResources": "resources"
@@ -92,7 +92,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "News Guard"
+      "shortcutName": "DeepNews"
     },
     "asar": true,
     "electronVersion": "29.1.0"

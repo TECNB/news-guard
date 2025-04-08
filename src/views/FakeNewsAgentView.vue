@@ -2,7 +2,7 @@
     <div class="fake-news-agent-view h-screen flex flex-col">
         <!-- 工具栏 -->
         <WorkflowToolbar :scale="scale" @zoom-in="handleZoomIn" @zoom-out="handleZoomOut" @reset-zoom="handleResetZoom"
-            @save="saveWorkflow" @run="runWorkflow" @debug="debugWorkflow" @publish="publishWorkflow" />
+            @save="saveWorkflow" @run="runWorkflow" @reset="resetWorkflow" @publish="publishWorkflow" />
 
         <!-- 主要内容区域 -->
         <div class="flex-1 flex overflow-hidden">
@@ -88,9 +88,10 @@ const runWorkflow = () => {
     canvasRef.value?.openRunPanel();
 };
 
-const debugWorkflow = () => {
-    console.log('调试工作流');
-    // TODO: 实现调试工作流的逻辑
+const resetWorkflow = () => {
+    console.log('重置工作流');
+    // 调用workflowStore的resetWorkflow方法
+    workflowStore.resetWorkflow();
 };
 
 const publishWorkflow = () => {

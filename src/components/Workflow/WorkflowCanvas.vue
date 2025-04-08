@@ -176,12 +176,12 @@ const temporaryConnectionPath = computed(() => {
   
   if (connectionStartType.value === 'output') {
     // 输出连接点在节点右侧
-    startX = startNode.x + 240; // 节点宽度
+    startX = startNode.position.x + 240; // 节点宽度
     
     // 检查是否是条件节点，并根据分支类型确定连接点位置
     if (startNode.type === 'conditional' && connectionBranch.value) {
       if (connectionBranch.value === 'if') {
-        startY = startNode.y + 60; // IF 连接点位置
+        startY = startNode.position.y + 60; // IF 连接点位置
       } else if (connectionBranch.value.startsWith('elif-')) {
         const branchIndex = parseInt(connectionBranch.value.replace('elif-', ''));
         // 基础位置
@@ -191,7 +191,7 @@ const temporaryConnectionPath = computed(() => {
         // 计算之前的 ELIF 分支所占的空间
         const previousElifSpace = branchIndex > 0 ? branchIndex * 50 : 0;
         
-        startY = startNode.y + basePosition + ifSpace + previousElifSpace + 30;
+        startY = startNode.position.y + basePosition + ifSpace + previousElifSpace + 30;
       } else if (connectionBranch.value === 'else') {
         // 基础位置
         const basePosition = 40;
@@ -200,17 +200,17 @@ const temporaryConnectionPath = computed(() => {
         // 计算所有 ELIF 分支所占的空间
         const elifSpace = startNode.config?.branches?.length ? startNode.config.branches.length * 50 : 0;
         
-        startY = startNode.y + basePosition + ifSpace + elifSpace + 30;
+        startY = startNode.position.y + basePosition + ifSpace + elifSpace + 30;
       } else {
-        startY = startNode.y + 34; // 默认位置
+        startY = startNode.position.y + 34; // 默认位置
       }
     } else {
-      startY = startNode.y + 34; // 默认连接点位置
+      startY = startNode.position.y + 34; // 默认连接点位置
     }
   } else {
     // 输入连接点在节点左侧中心
-    startX = startNode.x;
-    startY = startNode.y + 34;
+    startX = startNode.position.x;
+    startY = startNode.position.y + 34;
   }
 
   // 计算控制点 (为了创建贝塞尔曲线)
@@ -330,8 +330,8 @@ const onNodeDragStart = (event: MouseEvent, nodeId: string) => {
   // 保存初始位置
   const node = workflowStore.nodes.find(n => n.id === nodeId);
   if (node) {
-    nodeStartX.value = event.clientX - node.x;
-    nodeStartY.value = event.clientY - node.y;
+    nodeStartX.value = event.clientX - node.position.x;
+    nodeStartY.value = event.clientY - node.position.y;
     
     // 在鼠标按下时，标记该节点为选中
     if (workflowStore.selectedNodeId !== nodeId) {
