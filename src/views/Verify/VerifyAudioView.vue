@@ -257,7 +257,7 @@ const resetAudio = () => {
         }
     };
     // 重置雷达图数据
-    radarData.value.seriesData = [0, 0, 0, 0];
+    radarData.seriesData = [0, 0, 0, 0];
 }
 
 // 定义音频分析结果类型
@@ -370,7 +370,7 @@ const handleUploadSuccess = async (response: any, file: UploadFile) => {
         audioResult.value = verifyResponse.data;
         
         // 更新雷达图数据
-        radarData.value.seriesData = [
+        radarData.seriesData = [
             audioResult.value.feature_scores.mfcc_score || 0,
             audioResult.value.feature_scores.spectrogram_score || 0,
             audioResult.value.feature_scores.prosody_score || 0,
