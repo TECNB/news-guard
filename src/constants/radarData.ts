@@ -1,10 +1,9 @@
 export const radarData = {
     indicatorData: [
-        { name: '', max: 100 },
-        { name: '', max: 100 },
-        { name: '', max: 100 },
-        { name: '', max: 100 },
-        { name: '', max: 100 },
+        { name: 'MFCC', max: 100 },
+        { name: '频谱', max: 100 },
+        { name: '过零率', max: 100 },
+        { name: '韵律', max: 100 },
     ],
-    seriesData: [100, 80, 60, 30, 30],  // 各个绿化维度的实际值
+    seriesData: [0, 0, 0, 0],  // 各个特征维度的实际值
 };
