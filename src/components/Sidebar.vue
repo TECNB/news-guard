@@ -10,29 +10,23 @@
                 <li v-for="(menu, index) in menus" :key="index">
                     <div class="menu-item relative" @click="selectMenu(index, menu.children, menu.path)"
                         :class="{ 'active-menu': selectedMenu === index }">
-                        <el-icon color="#000000" v-if="selectedMenu === index">
-                            <component :is="menu.icon"></component>
-                        </el-icon>
-                        <el-icon v-else>
-                            <component :is="menu.icon"></component>
-                        </el-icon>
+                        <!-- 使用FontAwesome图标替换element-plus图标 -->
+                        <i v-if="selectedMenu === index" :class="menu.icon" style="color: #000000;"></i>
+                        <i v-else :class="menu.icon"></i>
                         <p>{{ menu.label }}</p>
 
                         <!-- 在这里插入图标和点击事件 -->
                         <span v-if="menu.label === '虚假新闻助手'" 
                             class="absolute right-4 top-[29px] transform -translate-y-1/2 cursor-pointer"
                             @click="handleReviewClick">
-                            <el-icon>
-                                <ArrowRightBold />
-                            </el-icon>
+                            <i class="fa-solid fa-arrow-right"></i>
                         </span>
 
                         <!-- 如果有子菜单，显示箭头 -->
-                        <el-icon v-if="menu.children" class="ml-7">
-                            <ArrowDownBold v-if="!ifShowSubMenu" />
-                            <ArrowUpBold v-else />
-                        </el-icon>
-
+                        <span v-if="menu.children" class="ml-7">
+                            <i v-if="!ifShowSubMenu" class="fa-solid fa-chevron-down"></i>
+                            <i v-else class="fa-solid fa-chevron-up"></i>
+                        </span>
                     </div>
                     <!-- 如果有子菜单，渲染子菜单 -->
                     <ul v-if="menu.children && ifShowSubMenu">
@@ -51,9 +45,7 @@
 
         <el-scrollbar height="90%" v-else>
             <div class="w-full flex justify-start items-center gap-1 cursor-pointer px-3" @click="handleReviewClick">
-                <el-icon class="">
-                    <ArrowLeftBold />
-                </el-icon>
+                <i class="fa-solid fa-arrow-left"></i>
                 <p class="font-bold">返回</p>
             </div>
             
@@ -64,13 +56,13 @@
                         <button class="toggle-button chat" 
                                 :class="{ 'active': viewMode === 'chat' }" 
                                 @click="viewMode = 'chat'; handleViewModeChange('chat')">
-                            <el-icon class="mr-2"><ChatDotRound /></el-icon>
+                            <i class="fa-solid fa-comment-dots mr-2"></i>
                             对话
                         </button>
                         <button class="toggle-button verify" 
                                 :class="{ 'active': viewMode === 'verify' }" 
                                 @click="viewMode = 'verify'; handleViewModeChange('verify')">
-                            <el-icon class="mr-2"><Search /></el-icon>
+                            <i class="fa-solid fa-magnifying-glass mr-2"></i>
                             检验
                         </button>
                     </div>
@@ -79,7 +71,7 @@
             
             <!-- 添加加载中状态显示 -->
             <div v-if="isLoading" class="flex justify-center items-center py-10">
-                <el-icon class="is-loading mr-2"><Loading /></el-icon>
+                <i class="fa-solid fa-spinner fa-spin mr-2"></i>
                 <span>加载中...</span>
             </div>
             <ul v-else>
@@ -88,12 +80,8 @@
                     <div class="menu-item w-52 relative" 
                          @click="viewMode === 'chat' ? getSessionId(index, item.sessionId) : getTaskDetail(index, item.session_id)"
                          :class="{ 'active-menu': selectedMenu === index }">
-                        <el-icon color="#000000" v-if="selectedMenu === index">
-                            <component :is="item.icon || 'ChatDotRound'"></component>
-                        </el-icon>
-                        <el-icon v-else>
-                            <component :is="item.icon || 'ChatDotRound'"></component>
-                        </el-icon>
+                        <i v-if="selectedMenu === index" :class="item.icon || 'fa-solid fa-comment-dots'" style="color: #000000;"></i>
+                        <i v-else :class="item.icon || 'fa-solid fa-comment-dots'"></i>
                         <p class="text-nowrap text-ellipsis overflow-hidden">
                             {{ viewMode === 'chat' ? item.label : item.title }}
                             <span v-if="viewMode === 'verify' && item.score !== null && item.score !== undefined" class="text-xs ml-1">({{ item.score.toFixed(1) }})</span>
@@ -110,7 +98,8 @@
 import { onMounted, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { getSession, getSessionById, getTasks } from '../api/fakeNewsReview';
-import { Loading, ChatDotRound, Search } from '@element-plus/icons-vue';
+// 删除不再需要的element-plus图标导入
+// import { Loading, ChatDotRound, Search } from '@element-plus/icons-vue';
 
 import { useChatStore } from '../stores/ChatStore.ts';
 
@@ -132,49 +121,42 @@ const viewMode = ref<'chat' | 'verify'>('chat'); // 添加视图模式，默认�
 const menus = [
     {
         label: '统计数据',
-        icon: 'Histogram',
+        icon: 'fa-solid fa-chart-column',
         path: '/',
-
     },
     {
         label: '新闻检验',
-        icon: 'Search',
+        icon: 'fa-solid fa-magnifying-glass',
         path: '/verify-text',
         children: [
             { label: '文字', path: '/verify-text' },
             { label: '图片', path: '/verify-image' },
             { label: '音频', path: '/verify-audio' }
-
         ],
     },
     {
         label: '个人知识库',
-        icon: 'PieChart',
+        icon: 'fa-solid fa-book',
         path: '/knowledge'
     },
     {
-        label: '虚假新闻助手',
-        icon: 'Compass',
+        label: '对话式分析',
+        icon: 'fa-solid fa-comments',
         path: '/review'
     },
     {
-        label: '虚假新闻预测',
-        icon: 'Position',
+        label: '热点风险预测',
+        icon: 'fa-solid fa-fire',
         path: '/prediction'
     },
     {
-        label: '虚假新闻还原',
-        icon: 'MagicStick',
-        path: '/restore'
-    },
-    {
-        label: '虚假新闻智能体',
-        icon: 'Odometer',
+        label: '智能体定制',
+        icon: 'fa-solid fa-wand-magic-sparkles',
         path: '/agent'
     },
     {
         label: '区块链取证',
-        icon: 'Stamp',
+        icon: 'fa-solid fa-shield-halved',
         path: '/blockchain-forensics'
     },
 ];
@@ -238,7 +220,7 @@ const loadChatSessions = async () => {
         if (response && response.data && Array.isArray(response.data)) {
             chat.value = response.data.map((item: any, i: number) => ({
                 label: item.summary || `对话 ${i + 1}`,
-                icon: 'ChatDotRound',
+                icon: 'fa-solid fa-comment-dots',
                 sessionId: item.session_id,
             }));
             
