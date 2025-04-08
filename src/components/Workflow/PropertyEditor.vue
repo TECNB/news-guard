@@ -4,13 +4,13 @@
       <!-- 标题区域和关闭按钮 -->
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-medium text-gray-800">节点属性</h3>
-        <button 
+        <div 
           @click="closeEditor" 
           class="text-gray-500 hover:text-gray-700 p-1"
           title="关闭"
         >
           <i class="fa-solid fa-xmark"></i>
-        </button>
+        </div>
       </div>
       
       <!-- 节点类型信息 -->

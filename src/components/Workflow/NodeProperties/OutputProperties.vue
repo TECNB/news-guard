@@ -4,7 +4,7 @@
     
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-1">输出变量</label>
-      <div class="space-y-2">
+      <div class="space-y-4">
         <div 
           v-for="(output, index) in modelValue" 
           :key="`output-${index}`"
@@ -17,24 +17,26 @@
             @focus="showSuggestion(index, $event)"
             @click="showSuggestion(index, $event)"
             @blur="scheduleHideSuggestion"
-            class="flex-1 px-3 py-1 border border-gray-300 rounded-md shadow-sm text-sm"
+            class="flex-1 px-3 py-2 h-10 border border-gray-300 rounded-md shadow-sm text-sm"
             placeholder="变量名称"
             ref="inputRefs"
           />
-          <button 
+          <div 
             @click="removeOutput(index)" 
-            class="text-red-500 hover:text-red-700"
+            class="delete-btn flex items-center justify-center w-10 h-10 rounded-md bg-red-100 text-red-500 hover:text-white hover:bg-red-500 transition-colors duration-200 cursor-pointer"
             title="删除"
           >
-            <span class="text-xl">×</span>
-          </button>
+            <span class="text-lg font-medium leading-none">×</span>
+          </div>
         </div>
-        <button 
-          @click="addOutput" 
-          class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-        >
-          <span>+</span> 添加输出变量
-        </button>
+        <div class="flex">
+          <div 
+            @click="addOutput" 
+            class="add-btn text-sm inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors duration-200 cursor-pointer"
+          >
+            <span class="font-bold">+</span> 添加输出变量
+          </div>
+        </div>
       </div>
     </div>
     
@@ -178,6 +180,28 @@ onUnmounted(() => {
 input {
   z-index: 1;
   position: relative;
+}
+
+/* 删除按钮悬停效果 */
+.delete-btn {
+  border: 1px solid #fecaca;
+  transition: all 0.2s ease;
+}
+
+.delete-btn:hover {
+  border-color: #ef4444;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* 添加按钮悬停效果 */
+.add-btn {
+  border: 1px solid #dbeafe;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin-left: 0;
+}
+
+.add-btn:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* 确保建议框是最顶层 */

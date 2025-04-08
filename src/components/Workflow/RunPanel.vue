@@ -1,24 +1,76 @@
 <template>
-  <div class="run-panel fixed top-0 right-0 w-96 h-full bg-white border-l border-gray-200 shadow-lg z-20 flex flex-col">
+  <div class="run-panel fixed top-0 right-0 w-96 h-full bg-white shadow-lg z-20 flex flex-col">
     <!-- 面板头部 -->
-    <div class="flex justify-between items-center p-4 border-b border-gray-200">
-      <h2 class="text-xl font-semibold">运行面板</h2>
-      <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700">
-        <i class="fa-solid fa-times"></i>
-      </button>
+    <div class="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+      <div class="flex items-center">
+        <div class="w-1.5 h-6 bg-teal-400 rounded-full mr-3" style="background-color: #49CFAD;"></div>
+        <h2 class="text-lg font-semibold text-gray-800">运行面板</h2>
+      </div>
+      <div 
+        @click="$emit('close')" 
+        class="text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-full hover:bg-gray-100 cursor-pointer"
+        role="button"
+        aria-label="关闭面板"
+        tabindex="0"
+        @keydown.enter="$emit('close')"
+        @keydown.space="$emit('close')"
+      >
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </div>
     </div>
 
     <!-- 标签栏 -->
-    <div class="tabs border-b border-gray-200">
-      <div class="flex">
-        <button 
+    <div class="tabs-container border-b border-gray-100">
+      <!-- 标签导航 -->
+      <div class="flex px-1 pt-2">
+        <div 
           v-for="tab in tabs" 
           :key="tab.value"
           @click="activeTab = tab.value" 
-          :class="['px-4 py-2 text-sm font-medium', activeTab === tab.value ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600']"
+          class="tab-button relative mx-1 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all flex items-center justify-center cursor-pointer"
+          :class="[
+            activeTab === tab.value 
+              ? 'active-tab text-white' 
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+          ]"
+          role="tab"
+          :aria-selected="activeTab === tab.value"
+          tabindex="0"
+          @keydown.enter="activeTab = tab.value"
+          @keydown.space="activeTab = tab.value"
         >
-          {{ tab.label }}
-        </button>
+          <!-- 激活状态背景 -->
+          <div 
+            v-if="activeTab === tab.value" 
+            class="absolute inset-0 rounded-t-lg bg-gradient-to-r z-0"
+            style="background: linear-gradient(90deg, #49CFAD, #4AC5BD); box-shadow: 0 2px 8px rgba(73, 207, 173, 0.25);"
+          ></div>
+          
+          <!-- 图标和文本内容 -->
+          <div class="flex items-center justify-center relative z-10">
+            <i 
+              v-if="tab.value === 'input'" 
+              class="tab-icon fa-regular fa-pen-to-square mr-2"
+              :class="{'text-white': activeTab === tab.value}"
+            ></i>
+            <i 
+              v-if="tab.value === 'result'" 
+              class="tab-icon fa-regular fa-file-lines mr-2"
+              :class="{'text-white': activeTab === tab.value}"
+            ></i>
+            <i 
+              v-if="tab.value === 'detail'" 
+              class="tab-icon fa-regular fa-circle-info mr-2"
+              :class="{'text-white': activeTab === tab.value}"
+            ></i>
+            <i 
+              v-if="tab.value === 'trace'" 
+              class="tab-icon fa-solid fa-chart-line mr-2"
+              :class="{'text-white': activeTab === tab.value}"
+            ></i>
+            {{ tab.label }}
+          </div>
+        </div>
       </div>
     </div>
 
@@ -491,5 +543,37 @@ const recordWorkflowError = (error: any) => {
 
 :deep(.el-scrollbar__wrap) {
   overflow-x: hidden;
+}
+
+.tab-button {
+  min-width: 80px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  transform-origin: bottom;
+}
+
+.tab-button:not(.active-tab):hover {
+  transform: translateY(-1px);
+  background-color: rgba(249, 250, 251, 0.8);
+}
+
+.tab-button:not(.active-tab):active {
+  transform: translateY(0);
+}
+
+.tab-icon {
+  transition: color 0.3s ease;
+}
+
+.active-tab::before {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: white;
+  z-index: 10;
 }
 </style> 
