@@ -216,6 +216,7 @@ onMounted(async () => {
 
 const fetchTableData = async () => {
   loading.value = true;
+  console.log('page', page.value)
   const data = {
     page: page.value,
     size: pageSize.value,
@@ -225,6 +226,8 @@ const fetchTableData = async () => {
     loading.value = false;
     allData.value = res.data.records;
     counts.value = res.data.total;
+
+    console.log('allData', allData.value)
     
     // 获取数据后根据当前选中的分类筛选
     filterDataByCategory();
@@ -287,26 +290,141 @@ const deletion = async (id: number) => {
   // }
 };
 
+// 根据分类筛选数据
+const filterDataByCategory = () => {
+  let filteredData = [];
+  
+  if (selectedCategory.value === '最新') {
+    // 对于"最新"分类，直接使用后端返回的当前页数据
+    tableData.value = [...allData.value];
+    // 总条数已经在fetchTableData中设置，不需要修改
+  } else {
+    // 否则按照所选分类筛选数据
+    filteredData = [...allData.value].filter(item => item.field === selectedCategory.value);
+    // 更新总条数
+    counts.value = filteredData.length;
+    
+    // 手动进行分页计算
+    const startIndex = (page.value - 1) * pageSize.value;
+    const endIndex = Math.min(startIndex + pageSize.value, filteredData.length);
+    
+    // 应用分页
+    tableData.value = filteredData.slice(startIndex, endIndex);
+  }
+  
+  // 应用当前排序
+  applySorting();
+};
+
 // 处理每页显示数量变化逻辑
 const handleSizeChange = (val: number) => {
   pageSize.value = val;
-  fetchTableData();
+  
+  if (selectedCategory.value === '最新') {
+    // 对于"最新"分类，使用后端分页
+    page.value = 1; // 改变页面大小时重置为第一页
+    fetchTableData();
+  } else {
+    // 对于其他分类，使用前端分页
+    filterDataByCategory();
+  }
 };
 
 // 处理当前页变化逻辑
 const handleCurrentChange = (val: number) => {
   page.value = val;
-  if (isSearch) {
-    filterData();
-  } else {
+  
+  if (selectedCategory.value === '最新') {
+    // 对于"最新"分类，使用后端分页
     fetchTableData();
+  } else {
+    // 对于其他分类，使用前端分页
+    // 判断是否需要加载更多数据
+    const totalItems = page.value * pageSize.value;
+    
+    if (totalItems > allData.value.length && !isAllDataLoaded) {
+      // 需要加载更多数据
+      loadAllCategoryData();
+    } else {
+      // 使用现有数据进行前端分页
+      filterDataByCategory();
+    }
   }
 };
 
-const handleSelectionChange = (selection: any[]) => {
-  // 提取选中的 ID
-  selectedIds.value = selection.map((item) => item.id);
-  emits("selectionChange", selectedIds.value);
+// 添加新的变量跟踪是否已加载所有数据
+const isAllDataLoaded = ref(false);
+
+// 加载特定分类的所有数据
+const loadAllCategoryData = async () => {
+  loading.value = true;
+  
+  try {
+    // 这里假设你有一个API可以一次性获取所有数据
+    // 如果没有，可能需要循环请求多页数据并合并
+    const data = {
+      page: 1,
+      size: 1000, // 使用一个很大的数字来获取所有数据
+    };
+    
+    const res = await showHotNews(data);
+    loading.value = false;
+    
+    // 存储所有数据
+    allData.value = res.data.records;
+    isAllDataLoaded.value = true;
+    
+    // 应用分类筛选和分页
+    filterDataByCategory();
+  } catch (error) {
+    loading.value = false;
+    console.error('获取所有数据失败:', error);
+  }
+};
+
+// 处理分类变化
+const handleCategoryChange = (category: string) => {
+  selectedCategory.value = category;
+  // 切换分类时重置到第一页
+  page.value = 1;
+  
+  if (category === '最新') {
+    // 如果切换到"最新"分类，使用后端分页
+    fetchTableData();
+  } else {
+    // 如果切换到其他分类，检查是否需要加载所有数据
+    if (!isAllDataLoaded) {
+      loadAllCategoryData();
+    } else {
+      // 使用现有数据进行筛选
+      filterDataByCategory();
+    }
+  }
+};
+
+// 排序选项
+const sortOptions = [
+  { label: '最新优先', value: 'newest' },
+  { label: '最早优先', value: 'oldest' }
+];
+const currentSort = ref(sortOptions[0]);
+
+// 处理排序变化
+const handleSortChange = (command: string) => {
+  const selected = sortOptions.find(option => option.value === command);
+  if (selected) {
+    currentSort.value = selected;
+    applySorting();
+  }
+};
+
+// 应用排序逻辑
+const applySorting = () => {
+  if (currentSort.value.value === 'newest') {
+    tableData.value.sort((a, b) => parseNewsDate(b.date) - parseNewsDate(a.date));
+  } else {
+    tableData.value.sort((a, b) => parseNewsDate(a.date) - parseNewsDate(b.date));
+  }
 };
 
 // 修改查看新闻详情的函数
@@ -346,49 +464,10 @@ const parseNewsDate = (dateStr: string): number => {
   return date.getTime();
 };
 
-// 处理分类变化
-const handleCategoryChange = (category: string) => {
-  selectedCategory.value = category;
-  filterDataByCategory();
-};
-
-// 排序选项
-const sortOptions = [
-  { label: '最新优先', value: 'newest' },
-  { label: '最早优先', value: 'oldest' }
-];
-const currentSort = ref(sortOptions[0]);
-
-// 处理排序变化
-const handleSortChange = (command: string) => {
-  const selected = sortOptions.find(option => option.value === command);
-  if (selected) {
-    currentSort.value = selected;
-    applySorting();
-  }
-};
-
-// 应用排序逻辑
-const applySorting = () => {
-  if (currentSort.value.value === 'newest') {
-    tableData.value.sort((a, b) => parseNewsDate(b.date) - parseNewsDate(a.date));
-  } else {
-    tableData.value.sort((a, b) => parseNewsDate(a.date) - parseNewsDate(b.date));
-  }
-};
-
-// 根据分类筛选数据
-const filterDataByCategory = () => {
-  if (selectedCategory.value === '最新') {
-    // 如果选择"最新"分类，显示所有数据
-    tableData.value = [...allData.value];
-  } else {
-    // 否则按照所选分类筛选数据
-    tableData.value = [...allData.value].filter(item => item.field === selectedCategory.value);
-  }
-  
-  // 应用当前排序
-  applySorting();
+const handleSelectionChange = (selection: any[]) => {
+  // 提取选中的 ID
+  selectedIds.value = selection.map((item) => item.id);
+  emits("selectionChange", selectedIds.value);
 };
 </script>
 
