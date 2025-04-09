@@ -16,8 +16,8 @@
                         <p>{{ menu.label }}</p>
 
                         <!-- 在这里插入图标和点击事件 -->
-                        <span v-if="menu.label === '虚假新闻助手'" 
-                            class="absolute right-4 top-[29px] transform -translate-y-1/2 cursor-pointer"
+                        <span v-if="menu.label === '对话式分析'" 
+                            class="absolute right-4 top-[27px] transform -translate-y-1/2 cursor-pointer"
                             @click="handleReviewClick">
                             <i class="fa-solid fa-arrow-right"></i>
                         </span>

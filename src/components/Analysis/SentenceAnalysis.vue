@@ -57,7 +57,9 @@
                             逻辑一致性问题
                         </h4>
                         <div v-for="(item, idx) in analysisData.logical_consistency" :key="`logic-${idx}`"
-                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-purple-500">
+                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-purple-500"
+                            @mouseenter="emitSentenceHover(item, 'logical_consistency')"
+                            @mouseleave="emitSentenceHover('', '')">
                             <p class="text-gray-600 font-medium">{{ item }}</p>
                         </div>
                     </div>
@@ -69,7 +71,9 @@
                             事实准确性问题
                         </h4>
                         <div v-for="(item, idx) in analysisData.factual_accuracy" :key="`fact-${idx}`"
-                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-blue-500">
+                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-blue-500"
+                            @mouseenter="emitSentenceHover(item, 'factual_accuracy')"
+                            @mouseleave="emitSentenceHover('', '')">
                             <p class="text-gray-600 font-medium">{{ item }}</p>
                         </div>
                     </div>
@@ -82,7 +86,9 @@
                         </h4>
                         <div v-for="(item, idx) in analysisData.subjectivity_and_inflammatory_language"
                             :key="`subj-${idx}`"
-                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-red-500">
+                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-red-500"
+                            @mouseenter="emitSentenceHover(item, 'subjectivity_and_inflammatory_language')"
+                            @mouseleave="emitSentenceHover('', '')">
                             <p class="text-gray-600 font-medium">{{ item }}</p>
                         </div>
                     </div>
@@ -94,7 +100,9 @@
                             因果相关性问题
                         </h4>
                         <div v-for="(item, idx) in analysisData.causal_relevance" :key="`causal-${idx}`"
-                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-yellow-500">
+                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-yellow-500"
+                            @mouseenter="emitSentenceHover(item, 'causal_relevance')"
+                            @mouseleave="emitSentenceHover('', '')">
                             <p class="text-gray-600 font-medium">{{ item }}</p>
                         </div>
                     </div>
@@ -106,7 +114,9 @@
                             来源可信度问题
                         </h4>
                         <div v-for="(item, idx) in analysisData.source_credibility" :key="`source-${idx}`"
-                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-orange-500">
+                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-orange-500"
+                            @mouseenter="emitSentenceHover(item, 'source_credibility')"
+                            @mouseleave="emitSentenceHover('', '')">
                             <p class="text-gray-600 font-medium">{{ item }}</p>
                         </div>
                     </div>
@@ -118,7 +128,9 @@
                             辟谣结果
                         </h4>
                         <div v-for="(item, idx) in analysisData.debunking_result" :key="`debunk-${idx}`"
-                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-green-500">
+                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-green-500"
+                            @mouseenter="emitSentenceHover(item, 'debunking_result')"
+                            @mouseleave="emitSentenceHover('', '')">
                             <p class="text-gray-600 font-medium">{{ item }}</p>
                         </div>
                     </div>
@@ -130,7 +142,9 @@
                             外部佐证信息
                         </h4>
                         <div v-for="(item, idx) in analysisData.external_corroboration" :key="`extern-${idx}`"
-                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-teal-500">
+                            class="p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-2 border-l-3 border-teal-500"
+                            @mouseenter="emitSentenceHover(item, 'external_corroboration')"
+                            @mouseleave="emitSentenceHover('', '')">
                             <p class="text-gray-600 font-medium">{{ item }}</p>
                         </div>
                     </div>
@@ -159,6 +173,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+
+// 定义类别类型，与VerifyTextView.vue中的保持一致
+type CategoryKey = 'logical_consistency' | 'factual_accuracy' | 'subjectivity_and_inflammatory_language' | 
+                  'causal_relevance' | 'source_credibility' | 'debunking_result' | 'external_corroboration' | '';
 
 interface SentencesData {
     logical_consistency: string[];
@@ -210,6 +228,16 @@ const hasSentenceData = computed(() => {
         props.sentencesData.external_corroboration?.length > 0
     );
 });
+
+// 添加自定义事件
+const emit = defineEmits<{
+    (e: 'sentence-hover', sentence: string, category: CategoryKey): void
+}>();
+
+// 添加句子悬停事件处理函数
+const emitSentenceHover = (sentence: string, category: CategoryKey) => {
+    emit('sentence-hover', sentence, category);
+};
 </script>
 
 <style scoped>

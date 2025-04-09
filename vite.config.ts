@@ -64,17 +64,17 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/predict/, ""),
       },
       '/search': {
-        target: 'http://llm.flyfishxu.com/chat_stream',
+        target: 'http://localhost:8001/chat_stream',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/search/, ""),
       },
       '/chat': {
-        target: 'http://llm.flyfishxu.com/chat',
+        target: 'http://localhost:8001/chat',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/chat/, ""),
       },
       '/tasks': {
-        target: 'http://llm.flyfishxu.com/tasks',
+        target: 'http://localhost:8001/tasks',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/tasks/, ""),
       }

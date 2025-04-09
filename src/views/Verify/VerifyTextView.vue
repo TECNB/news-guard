@@ -50,8 +50,17 @@
                 <el-input v-model="articleTitle" placeholder="请输入新闻标题" size="large" />
             </div>
             <!-- 正文输入 -->
-            <div class="mt-5">
-                <el-input v-model="articleContent" placeholder="请输入需要判断的正文内容" :rows="17" type="textarea" />
+            <div class="mt-5 relative">
+                <!-- 高亮显示模式 - 确保高亮内容已生成且不为空才显示 -->
+                <div v-if="hasSentenceAnalysisResults && activeTab === 1 && highlightedContent" 
+                     class="highlighted-content text-area-mimic" 
+                     @mousemove="updateTooltipPosition">
+                    <div v-html="highlightedContent" class="whitespace-pre-wrap"></div>
+                </div>
+                <!-- 普通输入框 - 其他情况下显示 -->
+                <div v-else>
+                    <el-input v-model="articleContent" placeholder="请输入需要判断的正文内容" :rows="17" type="textarea" />
+                </div>
             </div>
             <!-- 检测按钮与字数 -->
             <div class="flex justify-between items-center mt-5">
@@ -90,6 +99,7 @@
                 <SentenceAnalysis 
                     :sentencesData="sourceData.value?.sentences"
                     :loadingStates="{ sentences: sourceData.loadingStates.sentences }" 
+                    @sentence-hover="highlightSentence"
                 />
             </div>
             <div v-else-if="activeTab === 2" class="h-[90%] mt-10">
@@ -100,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Link, Download, Delete } from '@element-plus/icons-vue';
 import CombinedAnalysisView from '@/components/Analysis/CombinedAnalysisView.vue';
 import SentenceAnalysis from '@/components/Analysis/SentenceAnalysis.vue';
@@ -110,6 +120,7 @@ import { ApiService } from '@/utils/apiService';
 import { ElMessage } from 'element-plus';
 import JSON5 from 'json5';
 import { removeNewlinesRecursively, removeAllNewlines, cleanLlmContent } from '@/utils/stringCleaner';
+import { getColorForCategory } from '@/utils/colorUtils';
 
 // 分析能力等级选项
 const abilityLevels = ref([
@@ -190,6 +201,165 @@ const sourceData = ref({
         analysis: false,
         sentences: false,
         calculate: false
+    }
+});
+
+// 删除编辑模式状态
+// const editMode = ref(true);
+const highlightedContent = ref('');
+const hoveredSentence = ref('');
+
+// 判断是否有分析结果 (用于其他组件)
+const hasAnalysisResults = computed(() => {
+    return sourceData.value.steps.sentences;
+});
+
+// 专门判断句子分析结果是否已加载完成
+const hasSentenceAnalysisResults = computed(() => {
+    // 检查步骤是否完成且数据是否存在
+    return sourceData.value.steps.sentences && 
+           sourceData.value.value?.sentences && 
+           !sourceData.value.loadingStates.sentences;
+});
+
+// 定义类别类型，用于类型安全
+type CategoryKey = 'logical_consistency' | 'factual_accuracy' | 'subjectivity_and_inflammatory_language' | 
+                  'causal_relevance' | 'source_credibility' | 'debunking_result' | 'external_corroboration';
+
+// 修改类别名称映射类型
+const categoryNameMap: Record<CategoryKey, string> = {
+    'logical_consistency': '逻辑一致性问题',
+    'factual_accuracy': '事实准确性问题',
+    'subjectivity_and_inflammatory_language': '主观和煽动性语言',
+    'causal_relevance': '因果相关性问题',
+    'source_credibility': '来源可信度问题',
+    'debunking_result': '辟谣结果',
+    'external_corroboration': '外部佐证信息'
+};
+
+// 生成高亮内容
+const generateHighlightedContent = () => {
+    let content = articleContent.value;
+    const sentences = sourceData.value.value?.sentences;
+    
+    // 确保有文本内容和句子数据
+    if (!content || !sentences) {
+        highlightedContent.value = ''; // 清空高亮内容
+        return;
+    }
+    
+    // 创建一个包含所有句子及其类别的数组
+    const allSentencesWithCategories: {text: string, category: CategoryKey}[] = [];
+    
+    // 收集所有句子和它们的类别
+    const categories: CategoryKey[] = [
+        'logical_consistency', 
+        'factual_accuracy', 
+        'subjectivity_and_inflammatory_language',
+        'causal_relevance',
+        'source_credibility',
+        'debunking_result',
+        'external_corroboration'
+    ];
+    
+    // 检查是否至少有一个类别有句子
+    let hasSentences = false;
+    
+    categories.forEach(category => {
+        if (sentences[category] && Array.isArray(sentences[category]) && sentences[category].length > 0) {
+            hasSentences = true;
+            sentences[category].forEach(sentence => {
+                if (sentence && typeof sentence === 'string' && sentence.trim()) {
+                    allSentencesWithCategories.push({
+                        text: sentence,
+                        category
+                    });
+                }
+            });
+        }
+    });
+    
+    // 如果没有有效句子，清空高亮内容并返回
+    if (!hasSentences || allSentencesWithCategories.length === 0) {
+        highlightedContent.value = '';
+        return;
+    }
+    
+    // 按句子长度降序排列，防止短句子被长句子包含时出现嵌套高亮问题
+    allSentencesWithCategories.sort((a, b) => b.text.length - a.text.length);
+    
+    // 为每个句子添加高亮
+    try {
+        allSentencesWithCategories.forEach(({ text, category }) => {
+            if (!text || typeof text !== 'string' || !text.trim()) return;
+            
+            const color = getColorForCategory(category);
+            const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // 转义特殊字符
+            const regex = new RegExp(escapedText, 'g');
+            
+            // 获取中文类别名称
+            const categoryName = categoryNameMap[category] || category;
+            
+            // 添加title属性来显示悬浮提示，并添加data-tooltip-content属性用于自定义提示
+            content = content.replace(regex, `<span class="highlighted-sentence" 
+                data-category="${category}" 
+                data-tooltip="${categoryName}"
+                style="background-color: ${color}; opacity: 0.3; border-radius: 3px; padding: 2px; position: relative;"
+                >${text}</span>`);
+        });
+        
+        // 只有当内容变化时才更新高亮内容
+        if (content !== articleContent.value) {
+            highlightedContent.value = content;
+        } else {
+            // 如果没有变化，可能是没有匹配到句子，清空高亮内容
+            highlightedContent.value = '';
+        }
+    } catch (error) {
+        console.error('生成高亮内容时出错:', error);
+        highlightedContent.value = ''; // 出错时清空高亮内容
+    }
+};
+
+// 高亮特定句子（鼠标悬停时）
+const highlightSentence = (sentence: string, category: string) => {
+    hoveredSentence.value = sentence;
+    
+    // 重新生成高亮内容
+    generateHighlightedContent();
+    
+    // 增强悬停句子的显示效果
+    if (sentence) {
+        const escapedSentence = sentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`<span class="highlighted-sentence" [^>]*>${escapedSentence}</span>`, 'g');
+        
+        // 使用类型断言确保category是有效的键
+        const safeCategory = category as CategoryKey;
+        const categoryName = categoryNameMap[safeCategory] || category;
+        
+        highlightedContent.value = highlightedContent.value.replace(regex, 
+            `<span class="highlighted-sentence" 
+                data-category="${category}" 
+                data-tooltip="${categoryName}"
+                style="background-color: ${getColorForCategory(category)}; opacity: 0.6; border-radius: 3px; padding: 2px; box-shadow: 0 0 5px rgba(0,0,0,0.3); position: relative;"
+                >${sentence}</span>`
+        );
+    }
+};
+
+// 观察activeTab变化
+watch(activeTab, (newVal) => {
+    // 当切换到句子分析标签(1)且已有句子分析结果时，自动生成高亮内容
+    if (newVal === 1 && hasSentenceAnalysisResults.value) {
+        generateHighlightedContent();
+    }
+});
+
+// 观察sourceData.steps.sentences变化
+watch(() => sourceData.value.steps.sentences, (newVal) => {
+    // 当句子分析完成且当前是句子分析标签时，自动生成高亮内容
+    if (newVal && activeTab.value === 1 && !sourceData.value.loadingStates.sentences) {
+        generateHighlightedContent();
     }
 });
 
@@ -568,6 +738,29 @@ const updateSourceAnalysisFromSearch = (searchResults: any[]) => {
         importance: Math.floor(Math.random() * 3) + 1
     })).slice(0, 5);
 };
+
+// 处理tooltip位置
+const updateTooltipPosition = (event: MouseEvent) => {
+    // 获取所有当前悬停的高亮句子
+    const hoveredElements = document.querySelectorAll('.highlighted-sentence:hover');
+    
+    if (hoveredElements.length > 0) {
+        // 更新伪元素位置 (通过CSS变量实现)
+        document.documentElement.style.setProperty('--tooltip-x', `${event.clientX}px`);
+        document.documentElement.style.setProperty('--tooltip-y', `${event.clientY - 15}px`);
+    }
+};
+
+// 添加额外的检查
+watch(() => sourceData.value.loadingStates.sentences, (isLoading) => {
+    // 当句子分析完成加载且当前是句子分析选项卡时
+    if (!isLoading && activeTab.value === 1 && sourceData.value.steps.sentences) {
+        // 延迟一点执行，确保数据已完全更新
+        setTimeout(() => {
+            generateHighlightedContent();
+        }, 100);
+    }
+});
 </script>
 
 <style lang="scss" scoped>
@@ -611,5 +804,84 @@ const updateSourceAnalysisFromSearch = (searchResults: any[]) => {
 
 :deep(.el-input__wrapper.is-focused) {
     box-shadow: 0 0 0 1px #49CFAD;
+}
+
+// 添加根元素CSS变量
+:root {
+    --tooltip-x: 0px;
+    --tooltip-y: 0px;
+}
+
+// 模拟el-textarea样式的div
+.text-area-mimic {
+  height: 370px;
+  overflow-y: auto;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  padding: 5px 11px; // 匹配Element Plus textarea的内边距
+  font-size: 16px;
+  font-weight: normal;
+  background: #fff;
+  font-family: inherit;
+  line-height: 1.5;
+  color: #606266; // Element Plus默认文本颜色
+  
+  // 匹配Element Plus textarea的滚动条样式
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+  }
+  
+  &:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+  }
+}
+
+.highlighted-content {
+  line-height: 1.5; // 与textarea一致的行高
+  
+  &:deep(.highlighted-sentence) {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    
+    &:hover {
+      opacity: 0.8 !important;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    }
+    
+    // 修改自定义tooltip，使用CSS变量定位
+    &:hover::after {
+      content: attr(data-tooltip);
+      position: fixed;
+      left: var(--tooltip-x);
+      top: var(--tooltip-y);
+      transform: translateX(-50%) translateY(-100%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 100;
+      pointer-events: none;
+    }
+    
+    // 修改小三角形位置
+    &:hover::before {
+      content: '';
+      position: fixed;
+      left: var(--tooltip-x);
+      top: var(--tooltip-y);
+      transform: translateX(-50%);
+      border-width: 5px;
+      border-style: solid;
+      border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+      pointer-events: none;
+    }
+  }
 }
 </style>
