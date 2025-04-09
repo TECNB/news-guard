@@ -1,4 +1,4 @@
-export const radarData = {
+export let radarData = {
     indicatorData: [
         { name: 'MFCC', max: 100 },
         { name: '频谱', max: 100 },

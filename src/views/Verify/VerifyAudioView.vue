@@ -218,7 +218,17 @@ import { UploadFilled, Loading } from '@element-plus/icons-vue'
 import AudioWaveform from '../../components/AudioWaveform.vue';
 import RadarContainer from '../../components/Container/RadarContainer.vue';
 import { ElMessage } from 'element-plus'
-import { radarData } from '../../constants/radarData'
+// import { radarData } from '../../constants/radarData'
+
+const radarData = ref({
+    indicatorData: [
+        { name: 'MFCC', max: 100 },
+        { name: '频谱', max: 100 },
+        { name: '过零率', max: 100 },
+        { name: '韵律', max: 100 },
+    ],
+    seriesData: [0, 0, 0, 0],
+});
 
 // 定义上传文件列表
 const fileList = ref<UploadFile[]>([]) // 上传文件列表
@@ -257,7 +267,7 @@ const resetAudio = () => {
         }
     };
     // 重置雷达图数据
-    radarData.seriesData = [0, 0, 0, 0];
+    radarData.value.seriesData = [0, 0, 0, 0];
 }
 
 // 定义音频分析结果类型
@@ -370,7 +380,7 @@ const handleUploadSuccess = async (response: any, file: UploadFile) => {
         audioResult.value = verifyResponse.data;
         
         // 更新雷达图数据
-        radarData.seriesData = [
+        radarData.value.seriesData = [
             audioResult.value.feature_scores.mfcc_score || 0,
             audioResult.value.feature_scores.spectrogram_score || 0,
             audioResult.value.feature_scores.prosody_score || 0,
