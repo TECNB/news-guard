@@ -9,7 +9,12 @@
     <div class="h-full">
       <el-scrollbar v-if="resultContent" height="100%">
         <div class="text-left py-1 w-full">
-          <div v-if="isJsonMode" class="bg-gray-50 border border-gray-200 rounded-md m-0">
+          <!-- HTML报告模式 -->
+          <div v-if="shouldRenderAsHtml" class="report-container p-4">
+            <div v-html="currentContent" class="report-content"></div>
+          </div>
+          <!-- JSON模式 -->
+          <div v-else-if="isJsonMode" class="bg-gray-50 border border-gray-200 rounded-md m-0">
             <div class="flex justify-between items-center px-4 py-2 border-b border-gray-200">
               <span class="text-gray-500 text-xs font-semibold">JSON</span>
               <button @click="copyJson" class="bg-transparent border-none text-blue-600 text-xs cursor-pointer px-1.5 py-0.5 rounded transition-colors duration-200 hover:bg-blue-50">
@@ -19,6 +24,7 @@
             </div>
             <pre class="m-0 p-4 break-words break-all whitespace-pre-wrap"><code class="hljs language-json font-mono text-xs leading-relaxed" v-html="currentFormatted"></code></pre>
           </div>
+          <!-- 普通文本模式 -->
           <pre v-else class="bg-gray-50 border border-gray-200 rounded-md m-0 p-4 font-mono text-xs leading-relaxed break-words break-all whitespace-pre-wrap">{{ currentContent }}</pre>
         </div>
       </el-scrollbar>
@@ -47,8 +53,25 @@ const resultContent = computed(() => workflowStore.result);
 // 复制状态
 const copied = ref(false);
 
+// 检查是否应该渲染为HTML
+const shouldRenderAsHtml = computed(() => {
+  // 检查结果内容是否有HTML标记
+  if (resultContent.value && resultContent.value.startsWith('```html')) {
+    return true;
+  }
+  
+  // 检查是否有结束节点配置为HTML输出
+  const endNode = workflowStore.nodes.find(node => 
+    node.type === 'end' && node.config && 'outputAsHtml' in (node.config || {})
+    && node.config.outputAsHtml
+  );
+  return !!endNode;
+});
+
 // 检查是否处于JSON模式
 const isJsonMode = computed(() => {
+  // 当设置为HTML渲染时，不应该按JSON解析
+  if (shouldRenderAsHtml.value) return false;
   return resultContent.value && resultContent.value.startsWith('```json');
 });
 
@@ -59,6 +82,13 @@ const currentContent = computed(() => {
     const match = resultContent.value.match(/```json\n?([\s\S]*?)(\n?```)?$/);
     return match ? match[1] : '';
   }
+  
+  if (shouldRenderAsHtml.value && resultContent.value && resultContent.value.startsWith('```html')) {
+    // 去除 ```html 和 ``` 标记
+    const match = resultContent.value.match(/```html\n?([\s\S]*?)(\n?```)?$/);
+    return match ? match[1] : resultContent.value;
+  }
+  
   return resultContent.value || '';  // 确保返回有效的字符串
 });
 
@@ -108,5 +138,45 @@ isLoading.value = workflowStore.isRunning;
 
 .whitespace-pre-wrap {
   white-space: pre-wrap;
+}
+
+/* HTML报告样式 */
+.report-container {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.report-content {
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  color: #111827;
+}
+
+.report-content :deep(h1) {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.report-content :deep(h2) {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+
+
+.report-content :deep(table) {
+  border-collapse: collapse;
+}
+
+.report-content :deep(th), .report-content :deep(td) {
+  border: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.report-content :deep(th) {
+  background-color: #f9fafb;
 }
 </style> 

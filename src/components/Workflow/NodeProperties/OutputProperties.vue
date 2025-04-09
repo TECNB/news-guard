@@ -40,6 +40,25 @@
       </div>
     </div>
     
+    <!-- 新增：HTML报告输出选项 -->
+    <div class="pt-2">
+      <div class="flex items-center">
+        <input 
+          type="checkbox" 
+          id="outputAsHtml" 
+          :checked="outputAsHtml"
+          @change="toggleOutputAsHtml"
+          class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+        />
+        <label for="outputAsHtml" class="ml-2 block text-sm font-medium text-gray-700">
+          输出报告
+        </label>
+      </div>
+      <p class="mt-1 text-xs text-left text-gray-500">
+        启用此选项可以将输出内容自动渲染
+      </p>
+    </div>
+    
     <!-- 变量建议弹窗 (移到外层以避免定位问题) -->
     <VariableSuggestions
       v-if="activeIndex !== null && showSuggestions"
@@ -52,9 +71,40 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import VariableSuggestions from './VariableSuggestions.vue';
+import { useWorkflowStore } from '../../../stores/workflowStore';
+
+// 使用store
+const workflowStore = useWorkflowStore();
 
 // 使用defineModel创建双向绑定
 const modelValue = defineModel<string[]>({ default: () => [] });
+
+// 新增：HTML报告输出选项状态
+const outputAsHtml = ref(false);
+
+// 获取当前选中节点，并初始化HTML输出设置
+onMounted(() => {
+  const selectedNode = workflowStore.selectedNode;
+  if (selectedNode && selectedNode.config && 'outputAsHtml' in (selectedNode.config || {})) {
+    outputAsHtml.value = !!selectedNode.config.outputAsHtml;
+  }
+});
+
+// 切换HTML输出选项
+const toggleOutputAsHtml = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  outputAsHtml.value = target.checked;
+  
+  // 更新节点配置
+  const selectedNode = workflowStore.selectedNode;
+  if (selectedNode) {
+    const updatedNode = { ...selectedNode };
+    if (!updatedNode.config) updatedNode.config = {};
+    
+    updatedNode.config.outputAsHtml = outputAsHtml.value;
+    workflowStore.updateNode(updatedNode);
+  }
+};
 
 // 用于变量建议功能
 const inputRefs = ref<HTMLInputElement[]>([]);

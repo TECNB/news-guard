@@ -88,6 +88,7 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue';
 import { streamDeepSeekResponse } from '../../utils/deepseekApi';
+import { performSearch } from '../../utils/searchApi'; // 导入搜索API
 import { useWorkflowStore } from '../../stores/workflowStore';
 import { Node as WorkflowNode } from '../../types/workflow'; // 导入自定义Node类型
 
@@ -232,6 +233,10 @@ const executeNode = async (nodeId: string, context: any): Promise<void> => {
       await executeLlmNode(node, context);
       break;
       
+    case 'search': // 新增: 搜索节点处理
+      await executeSearchNode(node, context);
+      break;
+      
     case 'knowledge':
       // 知识检索节点
       workflowStore.startNodeExecution(node.id);
@@ -336,7 +341,7 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
         model: "deepseek-chat",
         messages: [{ role: "user", content: prompt }],
         temperature: (node.config as any)?.temperature || 0.7,
-        max_tokens: 800,
+        max_tokens: 8192,
         stream: true
       },
       // 流式处理
@@ -397,6 +402,104 @@ const executeLlmNode = async (node: WorkflowNode, context: any): Promise<void> =
     // 更新节点状态为错误
     workflowStore.completeNodeExecution(node.id, false, error instanceof Error ? error.message : '未知错误');
   }
+};
+
+// 执行搜索节点
+const executeSearchNode = async (node: WorkflowNode, context: any): Promise<void> => {
+  console.log(`[RunPanel] 执行搜索节点: ${node.name}`);
+  
+  // 更新节点状态为开始执行
+  workflowStore.startNodeExecution(node.id);
+  
+  // 执行前先准备节点 - 这会替换提示词中的变量
+  workflowStore.prepareNodeExecution(node.id, context.variables);
+  
+  // 获取搜索配置
+  const searchEngine = node.config?.searchEngine || 'google';
+  const maxResults = node.config?.maxResults || 5;
+  let queryPrompt = node.config?.queryPrompt || '';
+  
+  // 替换查询中的变量
+  queryPrompt = workflowStore.replaceVariables(queryPrompt, node.id, context.variables);
+  
+  console.log(`[RunPanel] 搜索节点查询: ${queryPrompt}, 引擎: ${searchEngine}, 最大结果数: ${maxResults}`);
+  
+  // 确定当前节点是否是结束节点需要的输出节点
+  const isRequiredNode = workflowStore.isNodeRequiredForOutput(node.id, context.requiredOutputVariables);
+  
+  try {
+    // 执行搜索
+    const searchResults = await performSearch(searchEngine, queryPrompt, maxResults);
+    
+    // 格式化搜索结果为易读文本
+    const formattedResults = formatSearchResults(searchResults);
+
+    console.log(`[RunPanel] 搜索结果: ${formattedResults}`);
+    
+    // 记录搜索结果到详情
+    workflowStore.details.push({
+      name: '搜索执行',
+      description: node.name || '搜索节点',
+      value: `查询: "${queryPrompt}" 找到 ${searchResults.length} 条结果`
+    });
+    
+    // 保存节点输出 - 确保输出格式化文本而不是对象
+    if (node.outputs && node.outputs.includes('results')) {
+      // 直接使用格式化文本作为主要输出，避免[object Object]问题
+      workflowStore.setNodeOutputValue(node.id, 'results', formattedResults);
+      
+      // 在变量中保存两种格式
+      // 1. 格式化文本 - 用于显示和传递给其他节点
+      context.variables[`results_${node.id}`] = formattedResults;
+      context.variables['results'] = formattedResults;
+      
+      // 如果是需要的节点，更新结果面板显示格式化文本
+      if (isRequiredNode && activeTab.value === 'result') {
+        workflowStore.result = formattedResults;
+      }
+    }
+    
+    // 更新节点状态为完成
+    workflowStore.completeNodeExecution(node.id, true);
+  } catch (error) {
+    console.error(`搜索节点 "${node.name}" 执行失败:`, error);
+    
+    // 记录错误到详情
+    workflowStore.details.push({
+      name: '搜索错误',
+      description: node.name || '搜索节点',
+      value: error instanceof Error ? error.message : '未知错误'
+    });
+    
+    // 如果是需要的节点才更新结果显示
+    if (isRequiredNode) {
+      const errorMessage = `搜索失败: ${error instanceof Error ? error.message : '未知错误'}`;
+      workflowStore.result = errorMessage;
+    }
+    
+    // 更新节点状态为错误
+    workflowStore.completeNodeExecution(node.id, false, error instanceof Error ? error.message : '未知错误');
+  }
+};
+
+// 格式化搜索结果为文本
+const formatSearchResults = (results: any[]): string => {
+  if (!results || results.length === 0) {
+    return "没有找到相关搜索结果。";
+  }
+  
+  let formattedText = `找到 ${results.length} 条搜索结果:\n\n`;
+  
+  results.forEach((result, index) => {
+    formattedText += `${index + 1}. ${result.title}\n`;
+    formattedText += `   链接: ${result.link}\n`;
+    if (result.snippet) {
+      formattedText += `   摘要: ${result.snippet}\n`;
+    }
+    formattedText += '\n';
+  });
+  
+  return formattedText;
 };
 
 // 获取结束节点需要的输出变量

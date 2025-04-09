@@ -56,6 +56,7 @@ export interface NodeConfig extends Partial<LLMConfig>,
   variableValues?: Record<string, any>;
   trueSystemPrompt?: string;
   trueExpression?: string;  // 条件节点的实际执行表达式（替换变量后）
+  outputAsHtml?: boolean;   // 是否将输出内容渲染为HTML
 }
 
 /**
