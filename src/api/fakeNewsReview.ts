@@ -26,15 +26,15 @@ export const generateChart = (userContent: string, chartType: string): Promise<a
 
 // 获取聊天记录
 export const getSession = (): Promise<any> => {
-    return axios.get('/chat');
+    return axios.get('http://192.168.43.20:8000/chat');
 };
 
 // 根据ID获取对话
 export const getSessionById = (sessionId: string): Promise<any> => {
-    return axios.get(`/chat/${sessionId}`);
+    return axios.get(`http://192.168.43.20:8000/chat/${sessionId}`);
 };
 
 // 获取任务列表
 export const getTasks = (): Promise<any> => {
-    return axios.get('/tasks');
+    return axios.get('http://192.168.43.20:8000/tasks');
 };

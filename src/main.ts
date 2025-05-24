@@ -16,15 +16,12 @@ const pinia = createPinia()
 
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
-
 // 1 引入数据持久化插件
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 // 2 pinia使用数据持久化插件
 pinia.use(piniaPluginPersistedstate)
 
-
-
-
+import 'element-plus/dist/index.css'
 
 const app = createApp(App)
 for (const name in ElIcons) {

@@ -4,8 +4,8 @@
 
 import type { ChunkCallback, StartCallback, StreamTag, Tag } from '../types/api';
 
-const API_BASE_URL = "http://llm.flyfishxu.com/";
-// const API_BASE_URL = "http://127.0.0.1:8001/";
+// const API_BASE_URL = "http://192.168.43.20:8000/";
+const API_BASE_URL = "http://127.0.0.1:8001/";
 
 class StreamProcessor {
     private activeTags: StreamTag[] = [];

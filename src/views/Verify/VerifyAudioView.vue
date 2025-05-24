@@ -14,7 +14,7 @@
                     
                     <!-- 未上传文件时显示上传组件 -->
                     <div v-if="!audioFile" class="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-4 h-full flex items-center">
-                        <el-upload class="w-full" drag action="http://localhost:8000/upload/" multiple accept=".mp3,.wav"
+                        <el-upload class="w-full" drag action="http://10.248.68.50:8000/upload/" multiple accept=".mp3,.wav,.flac"
                             :file-list="fileList" :on-success="handleUploadSuccess">
                             <el-icon class="el-icon--upload text-gray-400">
                                 <upload-filled />
@@ -94,7 +94,7 @@
                                 
                                 <!-- AI分析结论部分 -->
                                 <div class="bg-white rounded-lg p-3 h-40">
-                                    <p class="text-gray-700 font-bold mb-2">AI分析结论</p>
+                                    <p class="text-gray-700 font-bold mb-2">模型分析结论</p>
                                     <el-scrollbar height="calc(100% - 30px)">
                                         <p v-if="audioResult.ai_analysis" class="text-gray-800 text-sm leading-relaxed px-1">
                                             {{ audioResult.ai_analysis }}
@@ -120,6 +120,48 @@
                         </div>
                     </div>
                     
+                    
+                    
+                    <!-- 音频属性数据 -->
+                    <div class="border border-gray-200 rounded-xl bg-gray-50 p-4 shadow-sm">
+                        <p class="text-gray-700 font-bold mb-3">音频属性数据</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-white rounded-lg p-3">
+                                <p class="text-xs font-medium text-gray-500 mb-1">MFCC均值</p>
+                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.mfcc_mean.toFixed(2) }}</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-3">
+                                <p class="text-xs font-medium text-gray-500 mb-1">MFCC标准差</p>
+                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.mfcc_std.toFixed(2) }}</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-3">
+                                <p class="text-xs font-medium text-gray-500 mb-1">频谱复杂度</p>
+                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.spectrogram_complexity.toFixed(2) }}</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-3">
+                                <p class="text-xs font-medium text-gray-500 mb-1">基频均值</p>
+                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.f0_mean.toFixed(2) }}</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-3">
+                                <p class="text-xs font-medium text-gray-500 mb-1">基频范围</p>
+                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.f0_range.toFixed(2) }}</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-3">
+                                <p class="text-xs font-medium text-gray-500 mb-1">能量变化</p>
+                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.energy_variation.toFixed(4) }}</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-3">
+                                <p class="text-xs font-medium text-gray-500 mb-1">过零率均值</p>
+                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.zcr_mean.toFixed(4) }}</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-3">
+                                <p class="text-xs font-medium text-gray-500 mb-1">过零率标准差</p>
+                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.zcr_std.toFixed(4) }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+
                     <!-- 特征评分区域 -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="border border-gray-200 rounded-xl bg-gray-50 p-4 shadow-sm">
@@ -161,45 +203,6 @@
                                         {{ audioResult.feature_scores.zcr_score || 0 }}
                                     </p>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 音频属性数据 -->
-                    <div class="border border-gray-200 rounded-xl bg-gray-50 p-4 shadow-sm">
-                        <p class="text-gray-700 font-bold mb-3">音频属性数据</p>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div class="bg-white rounded-lg p-3">
-                                <p class="text-xs font-medium text-gray-500 mb-1">MFCC均值</p>
-                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.mfcc_mean.toFixed(2) }}</p>
-                            </div>
-                            <div class="bg-white rounded-lg p-3">
-                                <p class="text-xs font-medium text-gray-500 mb-1">MFCC标准差</p>
-                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.mfcc_std.toFixed(2) }}</p>
-                            </div>
-                            <div class="bg-white rounded-lg p-3">
-                                <p class="text-xs font-medium text-gray-500 mb-1">频谱复杂度</p>
-                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.spectrogram_complexity.toFixed(2) }}</p>
-                            </div>
-                            <div class="bg-white rounded-lg p-3">
-                                <p class="text-xs font-medium text-gray-500 mb-1">基频均值</p>
-                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.f0_mean.toFixed(2) }}</p>
-                            </div>
-                            <div class="bg-white rounded-lg p-3">
-                                <p class="text-xs font-medium text-gray-500 mb-1">基频范围</p>
-                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.f0_range.toFixed(2) }}</p>
-                            </div>
-                            <div class="bg-white rounded-lg p-3">
-                                <p class="text-xs font-medium text-gray-500 mb-1">能量变化</p>
-                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.energy_variation.toFixed(4) }}</p>
-                            </div>
-                            <div class="bg-white rounded-lg p-3">
-                                <p class="text-xs font-medium text-gray-500 mb-1">过零率均值</p>
-                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.zcr_mean.toFixed(4) }}</p>
-                            </div>
-                            <div class="bg-white rounded-lg p-3">
-                                <p class="text-xs font-medium text-gray-500 mb-1">过零率标准差</p>
-                                <p class="text-sm font-bold text-gray-800">{{ audioResult.audio_properties.zcr_std.toFixed(4) }}</p>
                             </div>
                         </div>
                     </div>
@@ -357,7 +360,7 @@ const handleUploadSuccess = async (response: any, file: UploadFile) => {
         })
     }
     // 假设返回的 response 中包含了音频文件的 URL
-    audioFile.value = "http://localhost:8000" + response.data;
+    audioFile.value = "http://10.248.68.50:8000" + response.data;
     console.log('audioFile.value:', audioFile.value)
     
     // 设置分析状态为加载中（立即显示加载状态）

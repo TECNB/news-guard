@@ -339,6 +339,32 @@ const verifyImage = async () => {
 };
 </script>
 
+<style lang="scss">
+/* 全局样式，不使用 scoped */
+.el-message {
+  z-index: 9999 !important;
+  min-width: 300px;
+  padding: 12px 15px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  border-width: 1px;
+  
+  &.el-message--success {
+    background-color: #f0f9eb;
+    border-color: #e1f3d8;
+  }
+  
+  &.el-message--warning {
+    background-color: #fdf6ec;
+    border-color: #faecd8;
+  }
+  
+  &.el-message--error {
+    background-color: #fef0f0;
+    border-color: #fde2e2;
+  }
+}
+</style>
+
 <style lang="scss" scoped>
 // 自定义颜色类
 .custom-green {

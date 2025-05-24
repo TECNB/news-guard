@@ -49,7 +49,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://10.248.68.50:8000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },
@@ -59,7 +59,7 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/ask_fake_news/, ""),
       },
       '/predict': {
-        target: 'http://10.248.68.50:8000/predict',
+        target: 'http://10.248.68.50:8002/predict',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/predict/, ""),
       },
@@ -68,15 +68,10 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/search/, ""),
       },
-      '/chat': {
-        target: 'http://localhost:8001/chat',
+      '/news': {
+        target: 'http://192.168.43.20:8000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/chat/, ""),
-      },
-      '/tasks': {
-        target: 'http://localhost:8001/tasks',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/tasks/, ""),
+        rewrite: (path) => path.replace(/^\/news/, ""),
       }
     }
   },
